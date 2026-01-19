@@ -1,3 +1,6 @@
 <Solution>
+  <Project Path="RewardProgram.Application/RewardProgram.Application.csproj" Id="bdd56ff6-b24d-4f18-82d6-6cfa5560a16a" />
+  <Project Path="RewardProgram.Domain/RewardProgram.Domain.csproj" Id="69dcd167-85fe-420d-8220-96409f6ca45a" />
+  <Project Path="RewardProgram.Infrastructure/RewardProgram.Infrastructure.csproj" Id="38a9ce07-ee29-4bf4-b965-dd672afb6d69" />
   <Project Path="RewardProgram/RewardProgram.API.csproj" />
 </Solution>
