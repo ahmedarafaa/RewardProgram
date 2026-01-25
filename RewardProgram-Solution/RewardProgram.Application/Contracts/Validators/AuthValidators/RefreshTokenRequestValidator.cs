@@ -6,9 +6,9 @@ using System.Text;
 
 namespace RewardProgram.Application.Contracts.Validators.AuthValidators;
 
-public class RefreshTokenRequestValidator : AbstractValidator<RefreshTokenRequest>
+public class RefreshTokenResponseValidator : AbstractValidator<RefreshTokenResponse>
 {
-    public RefreshTokenRequestValidator()
+    public RefreshTokenResponseValidator()
     {
         RuleFor(x => x.Token)
             .NotEmpty().WithMessage("التوكن مطلوب");

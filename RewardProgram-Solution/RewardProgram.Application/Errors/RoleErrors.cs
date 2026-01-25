@@ -1,4 +1,7 @@
-﻿using RewardProgram.Application.Abstractions;
+﻿
+using Microsoft.AspNetCore.Http;
+using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Abstractions;
 
 namespace RewardProgram.API.Errors;
 

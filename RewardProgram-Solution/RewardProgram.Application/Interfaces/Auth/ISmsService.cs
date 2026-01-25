@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace RewardProgram.Application.Interfaces;
+namespace RewardProgram.Application.Interfaces.Auth;
 
 public interface ISmsService
 {

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RewardProgram.Application.DTOs.Auth;
 
-public record RefreshTokenRequest
+public record RefreshTokenResponse
 (
     string Token,
     string RefreshToken

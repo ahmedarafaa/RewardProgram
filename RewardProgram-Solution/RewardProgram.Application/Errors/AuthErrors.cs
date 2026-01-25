@@ -1,4 +1,5 @@
-﻿namespace RewardProgram.API.Errors;
+﻿
+namespace RewardProgram.API.Errors;
 
 public static class AuthErrors
 {

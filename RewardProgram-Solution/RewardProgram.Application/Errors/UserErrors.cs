@@ -1,5 +1,7 @@
 ﻿
 
+using Microsoft.AspNetCore.Http;
+using RewardProgram.Application.Abstractions;
 namespace RewardProgram.API.Errors;
 
 public record UserErrors

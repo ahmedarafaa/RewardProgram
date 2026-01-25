@@ -1,8 +1,8 @@
-﻿using FluentValidation;
-using FluentValidation.AspNetCore;
+﻿using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RewardProgram.Application.Interfaces.Auth;
+using RewardProgram.Application.Services.Auth;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
@@ -44,8 +44,9 @@ public static class DependencyInjection
 
 
         // Register Services
-
-
+        services.AddScoped<ISmsService, SmsService>();
+        services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IAuthService, AuthService>();
 
         return services;
     }

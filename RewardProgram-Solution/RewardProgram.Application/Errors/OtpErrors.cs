@@ -1,4 +1,7 @@
-﻿namespace RewardProgram.API.Errors;
+﻿
+using Microsoft.AspNetCore.Http;
+using RewardProgram.Application.Abstractions;
+namespace RewardProgram.API.Errors;
 
 public static class OtpErrors
 {
