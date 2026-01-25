@@ -1,12 +1,13 @@
 
 using RewardProgram.API;
+using RewardProgram.Infrastructure.Persistance.Data;
 using Serilog;
 
 namespace RewardProgram
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -16,10 +17,13 @@ namespace RewardProgram
                 configuration.ReadFrom.Configuration(context.Configuration)
             );
             
-            //builder.Services.AddOpenApi();
-            
+            builder.Services.AddOpenApi();
             
             var app = builder.Build();
+
+
+            // Seed data
+            await DataSeeder.SeedAsync(app.Services);
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

@@ -1,4 +1,4 @@
-﻿using RewardProgram.Application.Abstractions;
+﻿
 
 namespace RewardProgram.API.Errors;
 
