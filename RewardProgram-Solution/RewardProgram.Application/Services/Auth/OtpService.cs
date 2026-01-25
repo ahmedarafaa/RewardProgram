@@ -1,11 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using RewardProgram.API.Errors;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities.OTP;
 using RewardProgram.Domain.Enums;
 using RewardProgram.Infrastructure.Persistance;
+using System.Security.Cryptography;
 
 namespace RewardProgram.Application.Services.Auth;
 
@@ -86,16 +87,6 @@ public class OtpService : IOtpService
         return Result.Success(code);
     }
 
-    public async Task<Result<OtpCode>> VerifyAsync(string otp, OtpPurpose purpose)
-    {
-        var otpCode = await _context.OtpCodes
-            .Where(o => o.Code == otp && o.Purpose == purpose && !o.IsUsed)
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefaultAsync();
-
-        return await ValidateOtpCode(otpCode);
-    }
-
     public async Task<Result<OtpCode>> VerifyAsync(string mobileNumber, string otp, OtpPurpose purpose)
     {
         var otpCode = await _context.OtpCodes
@@ -135,7 +126,7 @@ public class OtpService : IOtpService
 
     private static string GenerateCode()
     {
-        var random = new Random();
-        return random.Next(100000, 999999).ToString();
+        // Use cryptographically secure random number generator
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 }

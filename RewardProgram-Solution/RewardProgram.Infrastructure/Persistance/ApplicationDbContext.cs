@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.OTP;
 using RewardProgram.Domain.Entities.Users;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace RewardProgram.Infrastructure.Persistance;
@@ -24,9 +25,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);  // ✅ Call base FIRST for Identity
+        base.OnModelCreating(modelBuilder);  // Call base FIRST for Identity
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        // Apply soft delete query filter to all TrackableEntity derived types
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(TrackableEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                var parameter = Expression.Parameter(entityType.ClrType, "e");
+                var property = Expression.Property(parameter, nameof(TrackableEntity.IsDeleted));
+                var falseConstant = Expression.Constant(false);
+                var condition = Expression.Equal(property, falseConstant);
+                var lambda = Expression.Lambda(condition, parameter);
+
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+            }
+        }
 
         // Disable cascade delete
         var cascadeFKs = modelBuilder.Model
@@ -40,21 +56,30 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.GetUserId();
         var entries = ChangeTracker.Entries<TrackableEntity>();
 
         foreach (var entityEntry in entries)
         {
-            var currentUserId = _httpContextAccessor.HttpContext?.User.GetUserId();
+            switch (entityEntry.State)
+            {
+                case EntityState.Added:
+                    entityEntry.Property(x => x.CreatedBy).CurrentValue = currentUserId;
+                    entityEntry.Property(x => x.CreatedAt).CurrentValue = DateTime.UtcNow;
+                    break;
 
-            if (entityEntry.State == EntityState.Added)
-            {
-                entityEntry.Property(x => x.CreatedBy).CurrentValue = currentUserId;
-                entityEntry.Property(x => x.CreatedAt).CurrentValue = DateTime.UtcNow;
-            }
-            else if (entityEntry.State == EntityState.Modified)
-            {
-                entityEntry.Property(x => x.UpdatedBy).CurrentValue = currentUserId;
-                entityEntry.Property(x => x.UpdatedAt).CurrentValue = DateTime.UtcNow;
+                case EntityState.Modified:
+                    entityEntry.Property(x => x.UpdatedBy).CurrentValue = currentUserId;
+                    entityEntry.Property(x => x.UpdatedAt).CurrentValue = DateTime.UtcNow;
+                    break;
+
+                case EntityState.Deleted:
+                    // Convert hard delete to soft delete
+                    entityEntry.State = EntityState.Modified;
+                    entityEntry.Property(x => x.IsDeleted).CurrentValue = true;
+                    entityEntry.Property(x => x.DeletedAt).CurrentValue = DateTime.UtcNow;
+                    entityEntry.Property(x => x.DeletedBy).CurrentValue = currentUserId;
+                    break;
             }
         }
 

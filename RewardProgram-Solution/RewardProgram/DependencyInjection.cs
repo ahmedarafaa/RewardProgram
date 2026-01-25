@@ -1,12 +1,12 @@
 ﻿using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using RewardProgram.Application.Contracts.Validators;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Services.Auth;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
-using System.Reflection;
 using System.Text;
 
 namespace RewardProgram.API;
@@ -19,12 +19,17 @@ public static class DependencyInjection
         services.AddControllers();
         services.AddHttpContextAccessor();  
 
-        // Cors
-        var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();
+        // CORS
+        var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+
+        if (allowedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException("AllowedOrigins configuration is missing or empty.");
+        }
 
         services.AddCors(options =>
             options.AddDefaultPolicy(builder =>
-                builder.WithOrigins(allowedOrigins!)
+                builder.WithOrigins(allowedOrigins)
                         .AllowAnyHeader()
                         .AllowAnyMethod()
             )
@@ -63,7 +68,8 @@ public static class DependencyInjection
     {
         services
             .AddFluentValidationAutoValidation()
-            .AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+            // Scan Application assembly where validators are defined
+            .AddValidatorsFromAssemblyContaining<NationalAddressDtoValidator>();
 
         return services;
     }
@@ -76,7 +82,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        services.AddSingleton<IJwtProvider, JwtProvider>();
+        services.AddScoped<IJwtProvider, JwtProvider>();
 
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)

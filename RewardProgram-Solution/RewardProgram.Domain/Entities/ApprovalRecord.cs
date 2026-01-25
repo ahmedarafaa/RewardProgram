@@ -8,8 +8,8 @@ namespace RewardProgram.Domain.Entities;
 
 public class ApprovalRecord : TrackableEntity
 {
-    public string UserId { get; set; }                    // المستخدم المراد الموافقة عليه
-    public string ApproverId { get; set; }                // من قام بالموافقة/الرفض
+    public required string UserId { get; set; }           // المستخدم المراد الموافقة عليه
+    public required string ApproverId { get; set; }       // من قام بالموافقة/الرفض
 
     public ApprovalAction Action { get; set; }        
     public string? RejectionReason { get; set; }       // سبب الرفض (إن وجد)

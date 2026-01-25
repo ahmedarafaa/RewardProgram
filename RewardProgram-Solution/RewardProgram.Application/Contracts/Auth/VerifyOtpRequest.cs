@@ -6,5 +6,6 @@ namespace RewardProgram.Application.DTOs.Auth;
 
 public record VerifyOtpRequest
 (
+    string MobileNumber,
     string Otp
 );

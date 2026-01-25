@@ -10,6 +10,10 @@ namespace RewardProgram.Application.Interfaces.Auth;
 public interface IOtpService
 {
     Task<Result<string>> GenerateAndSendAsync(string mobileNumber, OtpPurpose purpose, string? registrationData = null);
-    Task<Result<OtpCode>> VerifyAsync(string otp, OtpPurpose purpose);
+
+    /// <summary>
+    /// Verifies OTP code for the specified mobile number and purpose.
+    /// Always requires mobile number to prevent OTP hijacking attacks.
+    /// </summary>
     Task<Result<OtpCode>> VerifyAsync(string mobileNumber, string otp, OtpPurpose purpose);
 }

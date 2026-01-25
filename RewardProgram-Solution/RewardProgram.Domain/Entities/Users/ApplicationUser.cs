@@ -48,7 +48,7 @@ public class NationalAddress
     public int BuildingNumber { get; set; }
     public string City { get; set; } = string.Empty;
     public string Street { get; set; } = string.Empty;
-    public string neighborhood { get; set; } = string.Empty;
+    public string Neighborhood { get; set; } = string.Empty;
     public string PostalCode { get; set; } = string.Empty;
-    public int subNumber { get; set; }
+    public int SubNumber { get; set; }
 }

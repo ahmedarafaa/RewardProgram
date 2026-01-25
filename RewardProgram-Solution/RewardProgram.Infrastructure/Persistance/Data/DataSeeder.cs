@@ -60,10 +60,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "الرياض",
-                neighborhood = "العليا",
+                Neighborhood = "العليا",
                 Street = "شارع العليا",
                 BuildingNumber = 1000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "12211"
             }
         }, "SystemAdmin");
@@ -82,10 +82,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "الرياض",
-                neighborhood = "الملز",
+                Neighborhood = "الملز",
                 Street = "شارع الضباب",
                 BuildingNumber = 2000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "12629"
             }
         }, "DistrictManager");
@@ -104,10 +104,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "جدة",
-                neighborhood = "الحمراء",
+                Neighborhood = "الحمراء",
                 Street = "شارع فلسطين",
                 BuildingNumber = 3000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "23326"
             }
         }, "DistrictManager");
@@ -127,10 +127,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "الرياض",
-                neighborhood = "النخيل",
+                Neighborhood = "النخيل",
                 Street = "شارع الملك فهد",
                 BuildingNumber = 4000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "12345"
             }
         }, "SalesMan");
@@ -150,10 +150,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "جدة",
-                neighborhood = "الروضة",
+                Neighborhood = "الروضة",
                 Street = "شارع الأمير سلطان",
                 BuildingNumber = 5000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "23434"
             }
         }, "SalesMan");
@@ -173,10 +173,10 @@ public static class DataSeeder
             NationalAddress = new NationalAddress
             {
                 City = "مكة",
-                neighborhood = "العزيزية",
+                Neighborhood = "العزيزية",
                 Street = "شارع الحج",
                 BuildingNumber = 6000,
-                subNumber = 1,
+                SubNumber = 1,
                 PostalCode = "24231"
             }
         }, "SalesMan");

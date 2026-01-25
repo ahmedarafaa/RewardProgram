@@ -1,5 +1,8 @@
 ﻿
-namespace RewardProgram.API.Errors;
+using Microsoft.AspNetCore.Http;
+using RewardProgram.Application.Abstractions;
+
+namespace RewardProgram.Application.Errors;
 
 public static class AuthErrors
 {

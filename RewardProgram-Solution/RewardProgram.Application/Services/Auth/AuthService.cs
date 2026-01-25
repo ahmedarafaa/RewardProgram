@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using RewardProgram.API.Errors;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.DTOs.Auth;
 using RewardProgram.Application.DTOs.Auth.Additional;
@@ -221,8 +221,8 @@ public class AuthService : IAuthService
 
     public async Task<Result> VerifyRegistrationAsync(VerifyOtpRequest request)
     {
-        // Verify OTP
-        var otpResult = await _otpService.VerifyAsync(request.Otp, OtpPurpose.Registration);
+        // Verify OTP with mobile number to prevent OTP hijacking
+        var otpResult = await _otpService.VerifyAsync(request.MobileNumber, request.Otp, OtpPurpose.Registration);
 
         if (otpResult.IsFailure)
         {
@@ -257,9 +257,9 @@ public class AuthService : IAuthService
                 BuildingNumber = root.GetProperty("BuildingNumber").GetInt32(),
                 City = root.GetProperty("City").GetString() ?? string.Empty,
                 Street = root.GetProperty("Street").GetString() ?? string.Empty,
-                neighborhood = root.GetProperty("Neighborhood").GetString() ?? string.Empty,
+                Neighborhood = root.GetProperty("Neighborhood").GetString() ?? string.Empty,
                 PostalCode = root.GetProperty("PostalCode").GetString() ?? string.Empty,
-                subNumber = root.GetProperty("SubNumber").GetInt32()
+                SubNumber = root.GetProperty("SubNumber").GetInt32()
             }
         };
 
@@ -273,56 +273,87 @@ public class AuthService : IAuthService
             user.Name = root.GetProperty("Name").GetString() ?? string.Empty;
         }
 
-        // Create user
-        var createResult = await _userManager.CreateAsync(user);
-        if (!createResult.Succeeded)
+        // Use transaction to ensure atomicity of user creation, role assignment, and profile creation
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-            _logger.LogError("Failed to create user: {Errors}", errors);
-            return Result.Failure(new Error("Auth.CreateFailed", errors, StatusCodes.Status500InternalServerError));
+            // Create user
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                _logger.LogError("Failed to create user: {Errors}", errors);
+                return Result.Failure(new Error("Auth.CreateFailed", errors, StatusCodes.Status500InternalServerError));
+            }
+
+            // Add role
+            var roleName = userType.ToString();
+            var roleResult = await _userManager.AddToRoleAsync(user, roleName);
+            if (!roleResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                _logger.LogError("Failed to assign role: {Errors}", errors);
+                return Result.Failure(new Error("Auth.RoleAssignFailed", errors, StatusCodes.Status500InternalServerError));
+            }
+
+            // Create profile based on type
+            switch (userType)
+            {
+                case UserType.ShopOwner:
+                    var shopOwnerProfile = new ShopOwnerProfile
+                    {
+                        UserId = user.Id,
+                        StoreName = root.GetProperty("StoreName").GetString() ?? string.Empty,
+                        VAT = root.GetProperty("VAT").GetString() ?? string.Empty,
+                        CRN = root.GetProperty("CRN").GetString() ?? string.Empty,
+                        ShopImageUrl = root.GetProperty("ShopImageUrl").GetString() ?? string.Empty,
+                        ShopCode = await GenerateUniqueShopCodeAsync()
+                    };
+                    await _context.ShopOwnerProfiles.AddAsync(shopOwnerProfile);
+                    break;
+
+                case UserType.Seller:
+                    var sellerProfile = new SellerProfile
+                    {
+                        UserId = user.Id,
+                        ShopOwnerId = root.GetProperty("ShopOwnerId").GetString() ?? string.Empty
+                    };
+                    await _context.SellerProfiles.AddAsync(sellerProfile);
+                    break;
+
+                case UserType.Technician:
+                    var technicianProfile = new TechnicianProfile
+                    {
+                        UserId = user.Id
+                    };
+                    await _context.TechnicianProfiles.AddAsync(technicianProfile);
+                    break;
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Result.Success();
         }
-
-        // Add role
-        var roleName = userType.ToString();
-        await _userManager.AddToRoleAsync(user, roleName);
-
-        // Create profile based on type
-        switch (userType)
+        catch (Exception ex)
         {
-            case UserType.ShopOwner:
-                var shopOwnerProfile = new ShopOwnerProfile
-                {
-                    UserId = user.Id,
-                    StoreName = root.GetProperty("StoreName").GetString() ?? string.Empty,
-                    VAT = root.GetProperty("VAT").GetString() ?? string.Empty,
-                    CRN = root.GetProperty("CRN").GetString() ?? string.Empty,
-                    ShopImageUrl = root.GetProperty("ShopImageUrl").GetString() ?? string.Empty,
-                    ShopCode = null
-                };
-                await _context.ShopOwnerProfiles.AddAsync(shopOwnerProfile);
-                break;
-
-            case UserType.Seller:
-                var sellerProfile = new SellerProfile
-                {
-                    UserId = user.Id,
-                    ShopOwnerId = root.GetProperty("ShopOwnerId").GetString() ?? string.Empty
-                };
-                await _context.SellerProfiles.AddAsync(sellerProfile);
-                break;
-
-            case UserType.Technician:
-                var technicianProfile = new TechnicianProfile
-                {
-                    UserId = user.Id
-                };
-                await _context.TechnicianProfiles.AddAsync(technicianProfile);
-                break;
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to complete registration for {MobileNumber}", request.MobileNumber);
+            return Result.Failure(new Error("Auth.RegistrationFailed", "فشل في إتمام التسجيل", StatusCodes.Status500InternalServerError));
         }
+    }
 
-        await _context.SaveChangesAsync();
+    private async Task<string> GenerateUniqueShopCodeAsync()
+    {
+        string code;
+        do
+        {
+            code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+        } while (await _context.ShopOwnerProfiles.AnyAsync(s => s.ShopCode == code));
 
-        return Result.Success();
+        return code;
     }
 
     #endregion
@@ -390,6 +421,22 @@ public class AuthService : IAuthService
         if (user == null)
         {
             return Result.Failure<AuthResponse>(AuthErrors.UserNotFound);
+        }
+
+        // Re-validate user status (could have changed between LoginAsync and VerifyLoginAsync)
+        if (user.IsDisabled)
+        {
+            return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
+        }
+
+        if (user.RegistrationStatus == RegistrationStatus.Rejected)
+        {
+            return Result.Failure<AuthResponse>(AuthErrors.UserRejected);
+        }
+
+        if (user.RegistrationStatus != RegistrationStatus.Approved)
+        {
+            return Result.Failure<AuthResponse>(AuthErrors.UserNotApproved);
         }
 
         // Generate tokens

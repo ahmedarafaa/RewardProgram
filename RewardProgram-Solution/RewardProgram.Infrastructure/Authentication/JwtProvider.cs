@@ -45,12 +45,16 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
 
         try
         {
+            // Use consistent validation parameters with DI configuration
             tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 IssuerSigningKey = symmetricSecurityKey,
                 ValidateIssuerSigningKey = true,
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidIssuer = _options.Issuer,
+                ValidAudience = _options.Audience,
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);
 

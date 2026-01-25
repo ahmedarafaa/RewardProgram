@@ -79,9 +79,9 @@ private void NationalAddressConfiguration(EntityTypeBuilder<ApplicationUser> bui
             na.Property(a => a.BuildingNumber).HasColumnName("BuildingNumber");
             na.Property(a => a.City).HasColumnName("City").HasMaxLength(50);
             na.Property(a => a.Street).HasColumnName("Street").HasMaxLength(100);
-            na.Property(a => a.neighborhood).HasColumnName("Neighborhood").HasMaxLength(100);
+            na.Property(a => a.Neighborhood).HasColumnName("Neighborhood").HasMaxLength(100);
             na.Property(a => a.PostalCode).HasColumnName("PostalCode").HasMaxLength(5);
-            na.Property(a => a.subNumber).HasColumnName("SubNumber");
+            na.Property(a => a.SubNumber).HasColumnName("SubNumber");
         });
     }
 }
