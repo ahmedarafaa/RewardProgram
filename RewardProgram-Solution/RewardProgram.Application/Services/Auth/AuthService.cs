@@ -534,6 +534,23 @@ public class AuthService : IAuthService
             CreatedOn = DateTime.UtcNow
         };
     }
+    public async Task<Result<UserResponse>> GetUserByIdAsync(string userId)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return Result.Failure<UserResponse>(AuthErrors.UserNotFound);
+        }
+
+        return Result.Success(new UserResponse(
+            Id: user.Id,
+            Name: user.Name,
+            MobileNumber: user.MobileNumber,
+            UserType: user.UserType
+        ));
+    }
 
     #endregion
 }
