@@ -1,8 +1,5 @@
-﻿using FluentValidation;
-using RewardProgram.Application.DTOs.Auth;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using FluentValidation;
+using RewardProgram.Application.Contracts.Auth;
 
 namespace RewardProgram.Application.Contracts.Validators.AuthValidators;
 

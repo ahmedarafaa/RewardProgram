@@ -1,18 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities.OTP;
 using RewardProgram.Domain.Enums;
-using RewardProgram.Infrastructure.Persistance;
 using System.Security.Cryptography;
 
 namespace RewardProgram.Application.Services.Auth;
 
 public class OtpService : IOtpService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IApplicationDbContext _context;
     private readonly ISmsService _smsService;
     private readonly ILogger<OtpService> _logger;
 
@@ -21,7 +21,7 @@ public class OtpService : IOtpService
     private const int MAX_ATTEMPTS_PER_HOUR = 5;
 
     public OtpService(
-        ApplicationDbContext context,
+        IApplicationDbContext context,
         ISmsService smsService,
         ILogger<OtpService> logger)
     {

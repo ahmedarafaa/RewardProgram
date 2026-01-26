@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.OTP;
 using RewardProgram.Domain.Entities.Users;
@@ -11,7 +12,7 @@ namespace RewardProgram.Infrastructure.Persistance;
 
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor) :
-    IdentityDbContext<ApplicationUser, ApplicationRole, string>(options)
+    IdentityDbContext<ApplicationUser, ApplicationRole, string>(options), IApplicationDbContext
 {
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 

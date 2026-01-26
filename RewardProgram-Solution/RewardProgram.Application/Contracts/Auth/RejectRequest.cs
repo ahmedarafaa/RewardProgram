@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RewardProgram.Application.DTOs.Auth;
+namespace RewardProgram.Application.Contracts.Auth;
 
 public record RejectRequest
 (

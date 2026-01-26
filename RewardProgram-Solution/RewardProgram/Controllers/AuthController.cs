@@ -1,13 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Abstractions;
-using RewardProgram.Application.DTOs.Auth;
-using RewardProgram.Application.DTOs.Auth.Additional;
-using RewardProgram.Application.DTOs.Auth.UsersDTO;
+using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Contracts.Auth.Additional;
+using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 using RewardProgram.Application.Interfaces.Auth;
-using RewardProgram.Application.Services.Auth;
-using System.Security.Claims;
 
 namespace RewardProgram.API.Controllers;
 
@@ -101,23 +98,23 @@ public class AuthController(IAuthService authservice, ILogger<AuthController> lo
             : result.ToProblem();
     }
 
-    [HttpGet("me")]
-    [Authorize]
-    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetCurrentUser()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    //[HttpGet("me")]
+    //[Authorize]
+    //[ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    //[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    //public async Task<IActionResult> GetCurrentUser()
+    //{
+    //    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Unauthorized();
-        }
+    //    if (string.IsNullOrEmpty(userId))
+    //    {
+    //        return Unauthorized();
+    //    }
 
-        var user = await _authservice.GetUserByIdAsync(userId);
+    //    var user = await _authservice.GetUserByIdAsync(userId);
 
-        return user.IsSuccess
-            ? Ok(user.Value)
-            : user.ToProblem();
-    }
+    //    return user.IsSuccess
+    //        ? Ok(user.Value)
+    //        : user.ToProblem();
+    //}
 }

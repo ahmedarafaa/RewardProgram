@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RewardProgram.Application\RewardProgram.Application.csproj" />
+    <ProjectReference Include="..\RewardProgram.Infrastructure\RewardProgram.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

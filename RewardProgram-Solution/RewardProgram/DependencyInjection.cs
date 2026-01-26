@@ -1,7 +1,8 @@
-﻿using FluentValidation.AspNetCore;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using RewardProgram.Application.Contracts.Validators;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Services.Auth;
 using RewardProgram.Domain.Entities.Users;
@@ -41,7 +42,10 @@ public static class DependencyInjection
             throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
         services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString));
+
+        services.AddScoped<IApplicationDbContext>(provider =>
+            provider.GetRequiredService<ApplicationDbContext>());
 
         services
             .AddSwaggerServices()

@@ -1,30 +1,26 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Abstractions;
-using RewardProgram.Application.DTOs.Auth;
-using RewardProgram.Application.DTOs.Auth.Additional;
-using RewardProgram.Application.DTOs.Auth.UsersDTO;
+using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Contracts.Auth.Additional;
+using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Domain.Enums;
 using RewardProgram.Domain.Enums.UserEnums;
-using RewardProgram.Infrastructure.Authentication;
-using RewardProgram.Infrastructure.Persistance;
-using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace RewardProgram.Application.Services.Auth;
 
 public class AuthService : IAuthService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOtpService _otpService;
     private readonly IJwtProvider _jwtProvider;
@@ -33,7 +29,7 @@ public class AuthService : IAuthService
     private const int REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
     public AuthService(
-        ApplicationDbContext context,
+        IApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         IOtpService otpService,
         IJwtProvider jwtProvider,

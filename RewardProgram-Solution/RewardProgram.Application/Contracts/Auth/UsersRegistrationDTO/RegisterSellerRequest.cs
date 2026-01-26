@@ -1,9 +1,4 @@
-﻿using RewardProgram.Application.Contracts.Auth;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RewardProgram.Application.DTOs.Auth.UsersDTO;
+namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterSellerRequest
 (

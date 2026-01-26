@@ -1,9 +1,6 @@
-﻿using RewardProgram.Domain.Enums.UserEnums;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using RewardProgram.Domain.Enums.UserEnums;
 
-namespace RewardProgram.Application.DTOs.Auth;
+namespace RewardProgram.Application.Contracts.Auth;
 
 public record AuthResponse
 (

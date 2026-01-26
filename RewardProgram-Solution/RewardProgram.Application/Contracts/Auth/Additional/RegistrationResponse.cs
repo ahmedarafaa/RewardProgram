@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RewardProgram.Application.DTOs.Auth.Additional;
+namespace RewardProgram.Application.Contracts.Auth.Additional;
 
 public record RegistrationResponse
 (

@@ -1,6 +1,4 @@
-﻿using RewardProgram.Application.Contracts.Auth;
-
-namespace RewardProgram.Application.DTOs.Auth.UsersDTO;
+namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterShopOwnerRequest
 (

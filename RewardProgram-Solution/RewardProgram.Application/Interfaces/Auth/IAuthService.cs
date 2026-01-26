@@ -1,10 +1,7 @@
-﻿using RewardProgram.Application.Abstractions;
-using RewardProgram.Application.DTOs.Auth;
-using RewardProgram.Application.DTOs.Auth.Additional;
-using RewardProgram.Application.DTOs.Auth.UsersDTO;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Contracts.Auth.Additional;
+using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 namespace RewardProgram.Application.Interfaces.Auth;
 

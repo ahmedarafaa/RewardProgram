@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RewardProgram.Domain\RewardProgram.Domain.csproj" />
+    <ProjectReference Include="..\RewardProgram.Application\RewardProgram.Application.csproj" />
   </ItemGroup>
 
 </Project>
