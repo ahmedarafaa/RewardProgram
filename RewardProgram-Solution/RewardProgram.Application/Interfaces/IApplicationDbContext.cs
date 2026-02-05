@@ -14,8 +14,7 @@ public interface IApplicationDbContext
     DbSet<TechnicianProfile> TechnicianProfiles { get; }
     DbSet<ApprovalRecord> ApprovalRecords { get; }
     DbSet<OtpCode> OtpCodes { get; }
-    DbSet<CitySalesManMapping> CitySalesManMappings { get; }
-
+    
     DatabaseFacade Database { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

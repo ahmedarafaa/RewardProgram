@@ -10,6 +10,6 @@ public enum UserType
     Seller = 2,           
     Technician = 3,      
     SalesMan = 4,         
-    DistrictManager = 5,  
+    ZoneManager = 5,  
     SystemAdmin = 6     
 }

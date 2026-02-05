@@ -55,6 +55,13 @@ public class ApprovalRecordConfiguration : IEntityTypeConfiguration<ApprovalReco
         // Indexes
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.ApproverId);
+        builder.HasIndex(x => x.Action);
+        builder.HasIndex(x => x.FromStatus);
+        builder.HasIndex(x => x.ToStatus);
+        builder.HasIndex(x => x.CreatedAt);
         builder.HasIndex(x => new { x.UserId, x.CreatedAt });
+        builder.HasIndex(x => new { x.ApproverId, x.CreatedAt });
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

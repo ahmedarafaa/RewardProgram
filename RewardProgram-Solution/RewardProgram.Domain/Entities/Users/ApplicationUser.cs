@@ -18,37 +18,47 @@ public class ApplicationUser : IdentityUser
     public string Name { get; set; } = string.Empty;
     public string MobileNumber { get; set; } = string.Empty;
     public bool IsDisabled { get; set; }
-
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public UserType UserType { get; set; }
     public RegistrationStatus RegistrationStatus { get; set; }
     public NationalAddress? NationalAddress { get; set; }
 
-    // SalesMan assignment (for ShopOwner, Seller, Technician)
-    public string? AssignedSalesManId { get; set; }
-    public ApplicationUser? AssignedSalesMan { get; set; }
-    public List<ApplicationUser> AssignedUsers { get; set; } = [];  // Users assigned to this SalesMan
+    // === SalesMan Fields ===
+    public string? DistrictId { get; set; } // SalesMan belongs to District
+    public District? District { get; set; }
+    public string? ZoneManagerId { get; set; } // SalesMan reports to ZoneManager
+    public ApplicationUser? ZoneManager { get; set; }
 
-    // DistrictManager assignment (for SalesMan only)
-    public string? DistrictManagerId { get; set; }
-    public ApplicationUser? DistrictManager { get; set; }
-    public List<ApplicationUser> ManagedSalesMen { get; set; } = [];  // SalesMen under this DM
+    // ZoneManager assignment (for SalesMan only)
+    public string? ManagedCityId { get; set; } // ZoneManager's City
+    public City? ManagedCity { get; set; }
+    public Zone? ManagedZone { get; set; } // ZoneManager's Zone
+
+
+    // ShopOwner/Technician Fields 
+    public string? AssignedSalesManId { get; set; }     
+    public ApplicationUser? AssignedSalesMan { get; set; }
 
     // Profiles (one-to-one, based on UserType)
     public ShopOwnerProfile? ShopOwnerProfile { get; set; }
     public SellerProfile? SellerProfile { get; set; }
     public TechnicianProfile? TechnicianProfile { get; set; }
 
-    public List<RefreshToken> RefreshTokens { get; set; } = [];
+    // Navigation properties for assignments 
+    public List<ApplicationUser> AssignedUsers { get; set; } = [];  // Users assigned to this SalesMan
+    public List<ApplicationUser> ManagedSalesMen { get; set; } = [];  // SalesMen under this DM
     public List<ApprovalRecord> ApprovalRecords { get; set; } = [];
+    public List<District> ApprovalDistricts { get; set; } = [];
+    public List<RefreshToken> RefreshTokens { get; set; } = [];
 }
 
 [Owned]
 public class NationalAddress
 {
-    public int BuildingNumber { get; set; }
-    public string City { get; set; } = string.Empty;
+    public int CityId { get; set; }
+    public int DistrictId { get; set; }
     public string Street { get; set; } = string.Empty;
-    public string Neighborhood { get; set; } = string.Empty;
+    public int BuildingNumber { get; set; }
     public string PostalCode { get; set; } = string.Empty;
     public int SubNumber { get; set; }
 }

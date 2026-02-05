@@ -15,18 +15,12 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.PinId)
+            .HasMaxLength(100)
+            .IsRequired();
+
         builder.Property(x => x.MobileNumber)
             .HasMaxLength(15)
-            .IsRequired();
-
-        builder.Property(x => x.Code)
-            .HasMaxLength(6)
-            .IsRequired();
-
-        builder.Property(x => x.Purpose)
-            .IsRequired();
-
-        builder.Property(x => x.ExpiresAt)
             .IsRequired();
 
         builder.Property(x => x.IsUsed)
@@ -40,8 +34,11 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
             .HasColumnType("nvarchar(max)");
 
         // Indexes
+        builder.HasIndex(x => x.PinId).IsUnique();
         builder.HasIndex(x => x.MobileNumber);
-        builder.HasIndex(x => x.Code);
-        builder.HasIndex(x => new { x.MobileNumber, x.Code, x.Purpose });
+        builder.HasIndex(x => x.IsUsed);
+        builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.MobileNumber, x.IsUsed });
+        builder.HasIndex(x => new { x.PinId, x.IsUsed });
     }
 }

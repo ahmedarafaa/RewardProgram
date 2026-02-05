@@ -8,6 +8,7 @@ using RewardProgram.Application.Services.Auth;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
+using RewardProgram.Infrastructure.Services.WhatsAppService;
 using System.Text;
 
 namespace RewardProgram.API;
@@ -51,11 +52,13 @@ public static class DependencyInjection
             .AddSwaggerServices()
             .AddFluentValidationConfig();
 
+        // Configure Infobip Options
+        services.Configure<InfobipOptions>(configuration.GetSection(InfobipOptions.SectionName));
 
         // Register Services
-        services.AddScoped<ISmsService, SmsService>();
+        services.AddHttpClient<IInfobipRepository, InfobipRepository>();
         services.AddScoped<IOtpService, OtpService>();
-        services.AddScoped<IAuthService, AuthService>();
+        //services.AddScoped<IAuthService, AuthService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();

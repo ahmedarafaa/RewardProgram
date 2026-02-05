@@ -7,41 +7,38 @@ using System.Text;
 
 namespace RewardProgram.Infrastructure.Persistance.EntitiesConfigurations;
 
-public class CitySalesManMappingConfiguration : IEntityTypeConfiguration<CitySalesManMapping>
+public class CityConfiguration : IEntityTypeConfiguration<City>
 {
-    public void Configure(EntityTypeBuilder<CitySalesManMapping> builder)
+    public void Configure(EntityTypeBuilder<City> builder)
     {
-        builder.ToTable("CitySalesManMappings");
+        builder.ToTable("Cities");
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.City)
-            .HasMaxLength(50)
+        builder.Property(x => x.NameAr)
+            .HasMaxLength(100)
             .IsRequired();
 
-        builder.Property(x => x.SalesManId)
-            .HasMaxLength(450)
+        builder.Property(x => x.NameEn)
+            .HasMaxLength(100)
             .IsRequired();
 
         builder.Property(x => x.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
 
-        // Audit fields from TrackableEntity
+        // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);
         builder.Property(x => x.UpdatedBy).HasMaxLength(450);
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
-        // Relationships
-        builder.HasOne(x => x.SalesMan)
-            .WithMany()
-            .HasForeignKey(x => x.SalesManId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // Indexes
-        builder.HasIndex(x => x.City);
-        builder.HasIndex(x => x.SalesManId);
-        builder.HasIndex(x => new { x.City, x.IsActive });
+        builder.HasIndex(x => x.NameAr).IsUnique();
+        builder.HasIndex(x => x.NameEn).IsUnique();
+        builder.HasIndex(x => x.IsActive);
+
+        // Query filter for soft delete
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

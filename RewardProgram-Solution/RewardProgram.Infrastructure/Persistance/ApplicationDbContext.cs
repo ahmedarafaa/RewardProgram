@@ -17,12 +17,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
     // DbSets
-    public DbSet<ShopOwnerProfile> ShopOwnerProfiles => Set<ShopOwnerProfile>();
-    public DbSet<SellerProfile> SellerProfiles => Set<SellerProfile>();
-    public DbSet<TechnicianProfile> TechnicianProfiles => Set<TechnicianProfile>();
-    public DbSet<ApprovalRecord> ApprovalRecords => Set<ApprovalRecord>();
-    public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
-    public DbSet<CitySalesManMapping> CitySalesManMappings => Set<CitySalesManMapping>();
+    public DbSet<City> Cities { get; set; }
+    public DbSet<District> Districts { get; set; }
+    public DbSet<ShopOwnerProfile> ShopOwnerProfiles { get; set; }
+    public DbSet<SellerProfile> SellerProfiles { get; set; }
+    public DbSet<TechnicianProfile> TechnicianProfiles { get; set; }
+    public DbSet<ApprovalRecord> ApprovalRecords { get; set; }
+    public DbSet<OtpCode> OtpCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

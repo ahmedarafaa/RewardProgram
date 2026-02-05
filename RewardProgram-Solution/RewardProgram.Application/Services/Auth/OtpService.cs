@@ -12,121 +12,94 @@ namespace RewardProgram.Application.Services.Auth;
 
 public class OtpService : IOtpService
 {
+    private readonly IInfobipRepository _infobipRepository;
     private readonly IApplicationDbContext _context;
-    private readonly ISmsService _smsService;
     private readonly ILogger<OtpService> _logger;
 
-    private const int OTP_LENGTH = 6;
-    private const int OTP_EXPIRY_MINUTES = 5;
-    private const int MAX_ATTEMPTS_PER_HOUR = 5;
-
     public OtpService(
+        IInfobipRepository infobipRepository,
         IApplicationDbContext context,
-        ISmsService smsService,
         ILogger<OtpService> logger)
     {
+        _infobipRepository = infobipRepository;
         _context = context;
-        _smsService = smsService;
         _logger = logger;
     }
-
-    public async Task<Result<string>> GenerateAndSendAsync(
-        string mobileNumber,
-        OtpPurpose purpose,
-        string? registrationData = null)
+    public async Task<Result<string>> SendAsync(string mobileNumber, string? registrationData = null)
     {
-        // Check rate limiting
-        var oneHourAgo = DateTime.UtcNow.AddHours(-1);
-        var recentAttempts = await _context.OtpCodes
-            .CountAsync(o => o.MobileNumber == mobileNumber &&
-                            o.Purpose == purpose &&
-                            o.CreatedAt >= oneHourAgo);
+        var result = await _infobipRepository.SendOtpAsync(mobileNumber);
 
-        if (recentAttempts >= MAX_ATTEMPTS_PER_HOUR)
+        if (result.IsFailure)
         {
-            return Result.Failure<string>(OtpErrors.TooManyAttempts);
+            return result;
         }
 
-        // Invalidate previous unused OTPs
-        var previousOtps = await _context.OtpCodes
-            .Where(o => o.MobileNumber == mobileNumber &&
-                       o.Purpose == purpose &&
-                       !o.IsUsed)
-            .ToListAsync();
+        var pinId = result.Value;
 
-        foreach (var previousOtp in previousOtps)
-        {
-            previousOtp.IsUsed = true;
-        }
-
-        // Generate new OTP
-        var code = GenerateCode();
-
+        // Store OTP record in database
         var otpCode = new OtpCode
         {
+            PinId = pinId,
             MobileNumber = mobileNumber,
-            Code = code,
-            Purpose = purpose,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(OTP_EXPIRY_MINUTES),
-            IsUsed = false,
-            RegistrationData = registrationData
+            RegistrationData = registrationData,
+            CreatedAt = DateTime.UtcNow,
+            IsUsed = false
         };
 
         await _context.OtpCodes.AddAsync(otpCode);
         await _context.SaveChangesAsync();
 
-        // Send SMS
-        var message = $"رمز التحقق الخاص بك هو: {code}";
-        var sent = await _smsService.SendAsync(mobileNumber, message);
+        _logger.LogInformation("OTP sent and stored for PinId: {PinId}, Mobile: {Mobile}",
+            pinId, MaskMobileNumber(mobileNumber));
 
-        if (!sent)
-        {
-            return Result.Failure<string>(OtpErrors.SendingFailed);
-        }
-
-        return Result.Success(code);
+        return Result.Success(pinId);
     }
 
-    public async Task<Result<OtpCode>> VerifyAsync(string mobileNumber, string otp, OtpPurpose purpose)
+    public async Task<Result<string?>> VerifyAsync(string pinId, string otp)
     {
+        // Find OTP record
         var otpCode = await _context.OtpCodes
-            .Where(o => o.MobileNumber == mobileNumber &&
-                       o.Code == otp &&
-                       o.Purpose == purpose &&
-                       !o.IsUsed)
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(o => o.PinId == pinId && !o.IsUsed);
 
-        return await ValidateOtpCode(otpCode);
-    }
-
-    private async Task<Result<OtpCode>> ValidateOtpCode(OtpCode? otpCode)
-    {
         if (otpCode == null)
         {
-            return Result.Failure<OtpCode>(OtpErrors.InvalidOtp);
+            _logger.LogWarning("OTP record not found for PinId: {PinId}", pinId);
+            return Result.Failure<string?>(new Error(
+                "Otp.NotFound",
+                "رمز التحقق غير موجود",
+                400));
         }
 
-        if (otpCode.IsExpired)
+        // Verify with Infobip
+        var result = await _infobipRepository.VerifyOtpAsync(pinId, otp);
+
+        if (result.IsFailure)
         {
-            return Result.Failure<OtpCode>(OtpErrors.ExpiredOtp);
+            return Result.Failure<string?>(result.Error);
         }
 
-        if (otpCode.IsUsed)
+        if (!result.Value)
         {
-            return Result.Failure<OtpCode>(OtpErrors.AlreadyUsedOtp);
+            return Result.Failure<string?>(new Error(
+                "Otp.InvalidOtp",
+                "رمز التحقق غير صحيح",
+                400));
         }
 
         // Mark as used
         otpCode.IsUsed = true;
         await _context.SaveChangesAsync();
 
-        return Result.Success(otpCode);
+        _logger.LogInformation("OTP verified successfully for PinId: {PinId}", pinId);
+
+        return Result.Success(otpCode.RegistrationData);
     }
 
-    private static string GenerateCode()
+    private static string MaskMobileNumber(string mobileNumber)
     {
-        // Use cryptographically secure random number generator
-        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+        if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length < 4)
+            return "****";
+
+        return $"{mobileNumber[..3]}****{mobileNumber[^3..]}";
     }
 }

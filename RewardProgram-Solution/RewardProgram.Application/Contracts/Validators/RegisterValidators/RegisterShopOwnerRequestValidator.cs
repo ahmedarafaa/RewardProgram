@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 namespace RewardProgram.Application.Contracts.Validators.RegisterValidators;
@@ -28,12 +29,29 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
                 .NotEmpty().WithMessage("السجل التجاري مطلوب")
                 .Length(10).WithMessage("السجل التجاري يجب أن يتكون من 10 أرقام");
 
-        RuleFor(x => x.ShopImageUrl)
-                .NotEmpty().WithMessage("صورة المحل مطلوبة");
+        RuleFor(x => x.ShopImage)
+                .NotEmpty().WithMessage("صورة المحل مطلوبة")
+                .Must(BeValidImage).WithMessage("صورة المتجر يجب أن تكون بصيغة JPG أو PNG")
+                .Must(BeValidSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت");
 
         RuleFor(x => x.NationalAddress)
         .NotNull().WithMessage("العنوان الوطني مطلوب")
         .SetValidator(new NationalAddressDtoValidator(), "Default");
+    }
+    private bool BeValidImage(IFormFile? file)
+    {
+        if (file == null) return false;
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/jpg" };
+        return allowedTypes.Contains(file.ContentType.ToLower());
+    }
+
+    private bool BeValidSize(IFormFile? file)
+    {
+        if (file == null) return false;
+
+        const int maxSizeInBytes = 5 * 1024 * 1024; // 5 MB
+        return file.Length <= maxSizeInBytes;
     }
 
 }

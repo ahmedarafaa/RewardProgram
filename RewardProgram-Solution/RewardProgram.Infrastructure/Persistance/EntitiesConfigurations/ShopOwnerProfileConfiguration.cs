@@ -50,9 +50,14 @@ public class ShopOwnerProfileConfiguration : IEntityTypeConfiguration<ShopOwnerP
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes
+        builder.HasIndex(x => x.StoreName);
         builder.HasIndex(x => x.UserId).IsUnique();
-        builder.HasIndex(x => x.ShopCode).IsUnique();
         builder.HasIndex(x => x.CRN).IsUnique();
         builder.HasIndex(x => x.VAT).IsUnique();
+        builder.HasIndex(x => x.ShopCode)
+           .IsUnique()
+           .HasFilter("[ShopCode] IS NOT NULL");
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

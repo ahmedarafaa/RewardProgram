@@ -27,8 +27,20 @@ public class SellerProfileConfiguration : IEntityTypeConfiguration<SellerProfile
         builder.Property(x => x.UpdatedBy).HasMaxLength(450);
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
+        // Relationships
+        builder.HasOne(x => x.ShopOwner)
+            .WithMany(x => x.Sellers)
+            .HasForeignKey(x => x.ShopOwnerId)
+            .HasPrincipalKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+
         // Indexes
         builder.HasIndex(x => x.UserId).IsUnique();
         builder.HasIndex(x => x.ShopOwnerId);
+        builder.HasIndex(x => new { x.ShopOwnerId, x.CreatedAt });
+        
+        
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

@@ -1,6 +1,4 @@
-
 using RewardProgram.API;
-using RewardProgram.Infrastructure.Persistance.Data;
 using Serilog;
 
 namespace RewardProgram
@@ -23,7 +21,7 @@ namespace RewardProgram
 
 
             // Seed data
-            await DataSeeder.SeedAsync(app.Services);
+            //await DataSeeder.SeedAsync(app.Services);
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

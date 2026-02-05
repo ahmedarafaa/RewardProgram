@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RewardProgram.Infrastructure.Persistance;
 
@@ -11,9 +12,11 @@ using RewardProgram.Infrastructure.Persistance;
 namespace RewardProgram.Infrastructure.Persistance.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201122713_EditOtpCodeTable")]
+    partial class EditOtpCodeTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -182,19 +185,9 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Action");
-
                     b.HasIndex("ApproverId");
 
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("FromStatus");
-
-                    b.HasIndex("ToStatus");
-
                     b.HasIndex("UserId");
-
-                    b.HasIndex("ApproverId", "CreatedAt");
 
                     b.HasIndex("UserId", "CreatedAt");
 
@@ -213,9 +206,7 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsUsed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
+                        .HasColumnType("bit");
 
                     b.Property<string>("MobileNumber")
                         .IsRequired()
@@ -232,18 +223,12 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
-
                     b.HasIndex("IsUsed");
 
                     b.HasIndex("MobileNumber");
 
                     b.HasIndex("PinId")
                         .IsUnique();
-
-                    b.HasIndex("MobileNumber", "IsUsed");
-
-                    b.HasIndex("PinId", "IsUsed");
 
                     b.ToTable("OtpCodes", (string)null);
                 });
@@ -300,10 +285,7 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DistrictId")
+                    b.Property<string>("DistrictManagerId")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Email")
@@ -314,21 +296,13 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDisabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ManagedCityId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int?>("ManagedZone")
-                        .HasColumnType("int");
 
                     b.Property<string>("MobileNumber")
                         .IsRequired()
@@ -373,20 +347,11 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.Property<int>("UserType")
                         .HasColumnType("int");
 
-                    b.Property<string>("ZoneManagerId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedSalesManId");
 
-                    b.HasIndex("DistrictId");
-
-                    b.HasIndex("IsDisabled");
-
-                    b.HasIndex("ManagedCityId");
-
-                    b.HasIndex("ManagedZone");
+                    b.HasIndex("DistrictManagerId");
 
                     b.HasIndex("MobileNumber")
                         .IsUnique();
@@ -403,148 +368,7 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasIndex("UserType");
 
-                    b.HasIndex("ZoneManagerId");
-
-                    b.HasIndex("ManagedCityId", "ManagedZone")
-                        .IsUnique()
-                        .HasFilter("[UserType] = 5 AND [ManagedCityId] IS NOT NULL AND [ManagedZone] IS NOT NULL");
-
-                    b.HasIndex("UserType", "IsDisabled");
-
-                    b.HasIndex("UserType", "RegistrationStatus");
-
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.City", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("NameAr")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NameEn")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("NameAr")
-                        .IsUnique();
-
-                    b.HasIndex("NameEn")
-                        .IsUnique();
-
-                    b.ToTable("Cities", (string)null);
-                });
-
-            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.District", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ApprovalSalesManId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CityId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("NameAr")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NameEn")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Zone")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApprovalSalesManId");
-
-                    b.HasIndex("CityId");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("Zone");
-
-                    b.HasIndex("CityId", "NameAr")
-                        .IsUnique();
-
-                    b.HasIndex("CityId", "NameEn")
-                        .IsUnique();
-
-                    b.ToTable("Districts", (string)null);
                 });
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.SellerProfile", b =>
@@ -590,8 +414,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasIndex("UserId")
                         .IsUnique();
-
-                    b.HasIndex("ShopOwnerId", "CreatedAt");
 
                     b.ToTable("SellerProfiles", (string)null);
                 });
@@ -661,8 +483,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasIndex("ShopCode")
                         .IsUnique()
                         .HasFilter("[ShopCode] IS NOT NULL");
-
-                    b.HasIndex("StoreName");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -791,19 +611,9 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasForeignKey("AssignedSalesManId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("RewardProgram.Domain.Entities.Users.District", "District")
-                        .WithMany("SalesMen")
-                        .HasForeignKey("DistrictId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("RewardProgram.Domain.Entities.Users.City", "ManagedCity")
-                        .WithMany()
-                        .HasForeignKey("ManagedCityId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("RewardProgram.Domain.Entities.Users.ApplicationUser", "ZoneManager")
+                    b.HasOne("RewardProgram.Domain.Entities.Users.ApplicationUser", "DistrictManager")
                         .WithMany("ManagedSalesMen")
-                        .HasForeignKey("ZoneManagerId")
+                        .HasForeignKey("DistrictManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.OwnsOne("RewardProgram.Domain.Entities.Users.NationalAddress", "NationalAddress", b1 =>
@@ -815,14 +625,17 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                                 .HasColumnType("int")
                                 .HasColumnName("BuildingNumber");
 
-                            b1.Property<int>("CityId")
-                                .HasColumnType("int")
-                                .HasColumnName("NationalAddress_CityId");
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("nvarchar(50)")
+                                .HasColumnName("City");
 
-                            b1.Property<int>("DistrictId")
+                            b1.Property<string>("Neighborhood")
+                                .IsRequired()
                                 .HasMaxLength(100)
-                                .HasColumnType("int")
-                                .HasColumnName("NationalAddress_DistrictId");
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("Neighborhood");
 
                             b1.Property<string>("PostalCode")
                                 .IsRequired()
@@ -842,10 +655,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                             b1.HasKey("ApplicationUserId");
 
-                            b1.HasIndex("CityId");
-
-                            b1.HasIndex("DistrictId");
-
                             b1.ToTable("AspNetUsers");
 
                             b1.WithOwner()
@@ -857,9 +666,11 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                             b1.Property<string>("UserId")
                                 .HasColumnType("nvarchar(450)");
 
-                            b1.Property<string>("Token")
-                                .HasMaxLength(500)
-                                .HasColumnType("nvarchar(500)");
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
 
                             b1.Property<DateTime>("CreatedOn")
                                 .HasColumnType("datetime2");
@@ -870,13 +681,14 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                             b1.Property<DateTime?>("RevokedOn")
                                 .HasColumnType("datetime2");
 
-                            b1.HasKey("UserId", "Token");
+                            b1.Property<string>("Token")
+                                .IsRequired()
+                                .HasMaxLength(500)
+                                .HasColumnType("nvarchar(500)");
 
-                            b1.HasIndex("ExpiresOn");
+                            b1.HasKey("UserId", "Id");
 
-                            b1.HasIndex("RevokedOn");
-
-                            b1.ToTable("RefreshTokens", (string)null);
+                            b1.ToTable("RefreshToken");
 
                             b1.WithOwner()
                                 .HasForeignKey("UserId");
@@ -884,33 +696,11 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.Navigation("AssignedSalesMan");
 
-                    b.Navigation("District");
-
-                    b.Navigation("ManagedCity");
+                    b.Navigation("DistrictManager");
 
                     b.Navigation("NationalAddress");
 
                     b.Navigation("RefreshTokens");
-
-                    b.Navigation("ZoneManager");
-                });
-
-            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.District", b =>
-                {
-                    b.HasOne("RewardProgram.Domain.Entities.Users.ApplicationUser", "ApprovalSalesMan")
-                        .WithMany("ApprovalDistricts")
-                        .HasForeignKey("ApprovalSalesManId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("RewardProgram.Domain.Entities.Users.City", "City")
-                        .WithMany("Districts")
-                        .HasForeignKey("CityId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ApprovalSalesMan");
-
-                    b.Navigation("City");
                 });
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.SellerProfile", b =>
@@ -918,7 +708,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasOne("RewardProgram.Domain.Entities.Users.ShopOwnerProfile", "ShopOwner")
                         .WithMany("Sellers")
                         .HasForeignKey("ShopOwnerId")
-                        .HasPrincipalKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -957,8 +746,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.ApplicationUser", b =>
                 {
-                    b.Navigation("ApprovalDistricts");
-
                     b.Navigation("ApprovalRecords");
 
                     b.Navigation("AssignedUsers");
@@ -970,16 +757,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.Navigation("ShopOwnerProfile");
 
                     b.Navigation("TechnicianProfile");
-                });
-
-            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.City", b =>
-                {
-                    b.Navigation("Districts");
-                });
-
-            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.District", b =>
-                {
-                    b.Navigation("SalesMen");
                 });
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.ShopOwnerProfile", b =>

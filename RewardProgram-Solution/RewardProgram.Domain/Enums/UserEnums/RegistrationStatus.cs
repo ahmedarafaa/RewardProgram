@@ -6,9 +6,8 @@ namespace RewardProgram.Domain.Enums.UserEnums;
 
 public enum RegistrationStatus
 {
-    PendingSalesman,        // Just registered, waiting for SalesMan
-    PendingDistrictManager, // SalesMan approved, waiting for DM
-    PendingAdmin,           // DM approved, waiting for Admin
-    Approved,               // Admin approved
-    Rejected                
+    PendingSalesman = 1,        // Just registered, waiting for SalesMan
+    PendingZoneManager = 2, // SalesMan approved, waiting for DM
+    Approved = 3,             
+    Rejected = 4               
 }
