@@ -5,7 +5,10 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet ef migrations add:*)",
       "Bash(tree:*)",
-      "Bash(dotnet ef database update:*)"
+      "Bash(dotnet ef database update:*)",
+      "Bash(dotnet add:*)",
+      "Bash(del \"RewardProgram.Infrastructure\\\\Authentication\\\\JwtProvider.cs\")",
+      "Bash(del \"RewardProgram.Application\\\\Interfaces\\\\Auth\\\\IJwtProvider.cs\")"
     ]
   }
 }

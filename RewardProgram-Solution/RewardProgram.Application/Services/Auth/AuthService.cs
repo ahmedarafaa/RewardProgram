@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Interfaces.Files;
@@ -44,7 +45,7 @@ public class AuthService : IAuthService
 
     public async Task<Result<SendOtpResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request)
     {
-        // 1. Validate unique constraints
+        // 1. Validate unique constraints (batched into parallel queries)
         var uniqueValidation = await ValidateShopOwnerUniqueFieldsAsync(request);
         if (uniqueValidation.IsFailure)
             return Result.Failure<SendOtpResponse>(uniqueValidation.Error);
@@ -98,12 +99,12 @@ public class AuthService : IAuthService
 
         _logger.LogInformation(
             "OTP sent for ShopOwner registration. Mobile: {Mobile}, District: {District}",
-            MaskMobile(request.MobileNumber),
+            MobileNumberHelper.Mask(request.MobileNumber),
             district.NameAr);
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
-            MaskedMobileNumber: MaskMobile(request.MobileNumber)
+            MaskedMobileNumber: MobileNumberHelper.Mask(request.MobileNumber)
         ));
     }
 
@@ -114,7 +115,7 @@ public class AuthService : IAuthService
         if (verifyResult.IsFailure)
             return Result.Failure<RegisterResponse>(verifyResult.Error);
 
-        var registrationJson = verifyResult.Value;
+        var registrationJson = verifyResult.Value.RegistrationData;
         if (string.IsNullOrEmpty(registrationJson))
             return Result.Failure<RegisterResponse>(AuthErrors.RegistrationDataNotFound);
 
@@ -137,7 +138,7 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(AuthErrors.CrnAlreadyExists);
 
         // Use transaction to ensure all-or-nothing registration
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.BeginTransactionAsync();
 
         try
         {
@@ -171,7 +172,7 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
             }
 
-            // 5. Add role - treat failure as an error
+            // 5. Add role
             var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.ShopOwner);
             if (!roleResult.Succeeded)
             {
@@ -200,7 +201,7 @@ public class AuthService : IAuthService
             _logger.LogInformation(
                 "ShopOwner registered successfully. UserId: {UserId}, Mobile: {Mobile}",
                 user.Id,
-                MaskMobile(data.MobileNumber));
+                MobileNumberHelper.Mask(data.MobileNumber));
 
             return Result.Success(new RegisterResponse(
                 UserId: user.Id,
@@ -211,7 +212,7 @@ public class AuthService : IAuthService
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Failed to complete ShopOwner registration for mobile: {Mobile}",
-                MaskMobile(data.MobileNumber));
+                MobileNumberHelper.Mask(data.MobileNumber));
             return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
         }
     }
@@ -222,7 +223,6 @@ public class AuthService : IAuthService
 
     public async Task<Result<SendOtpResponse>> LoginAsync(LoginRequest request)
     {
-        // 1. Find user by mobile number
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
 
@@ -232,7 +232,6 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserDisabled);
 
-        // 2. Send OTP (no registration data for login)
         var otpResult = await _otpService.SendAsync(request.MobileNumber);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
@@ -240,26 +239,24 @@ public class AuthService : IAuthService
         _logger.LogInformation(
             "OTP sent for login. UserId: {UserId}, Mobile: {Mobile}",
             user.Id,
-            MaskMobile(request.MobileNumber));
+            MobileNumberHelper.Mask(request.MobileNumber));
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
-            MaskedMobileNumber: MaskMobile(request.MobileNumber)
+            MaskedMobileNumber: MobileNumberHelper.Mask(request.MobileNumber)
         ));
     }
 
     public async Task<Result<AuthResponse>> VerifyLoginAsync(LoginVerifyRequest request)
     {
-        // 1. Get OTP record to find mobile number
-        var otpCode = await _context.OtpCodes
-            .FirstOrDefaultAsync(o => o.PinId == request.PinId && !o.IsUsed);
+        // 1. Verify OTP (returns mobile number — eliminates duplicate query)
+        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp);
+        if (verifyResult.IsFailure)
+            return Result.Failure<AuthResponse>(verifyResult.Error);
 
-        if (otpCode == null)
-            return Result.Failure<AuthResponse>(AuthErrors.OtpNotFound);
-
-        // 2. Find user by mobile number
+        // 2. Find user by mobile number from OTP result
         var user = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.MobileNumber == otpCode.MobileNumber);
+            .FirstOrDefaultAsync(u => u.MobileNumber == verifyResult.Value.MobileNumber);
 
         if (user == null)
             return Result.Failure<AuthResponse>(AuthErrors.UserNotFound);
@@ -267,12 +264,7 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
-        // 3. Verify OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp);
-        if (verifyResult.IsFailure)
-            return Result.Failure<AuthResponse>(verifyResult.Error);
-
-        // 4. Generate auth response (tokens + user info)
+        // 3. Generate auth response (tokens + user info)
         var authResponse = await _tokenService.GenerateAuthResponseAsync(user);
 
         _logger.LogInformation("User logged in successfully. UserId: {UserId}", user.Id);
@@ -286,14 +278,12 @@ public class AuthService : IAuthService
 
     public async Task<Result<AuthResponse>> RefreshTokenAsync(string refreshToken)
     {
-        // 1. Find user with this refresh token
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
 
         if (user == null)
             return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
 
-        // 2. Validate token
         var token = user.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
 
         if (token == null)
@@ -308,10 +298,15 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
-        // 3. Revoke old token
+        // Revoke old token and persist
         token.RevokedOn = DateTime.UtcNow;
 
-        // 4. Generate new auth response
+        // Clean up expired/revoked tokens to prevent unbounded growth
+        user.RefreshTokens.RemoveAll(t => t.Token != refreshToken && (!t.IsActive || t.IsExpired));
+
+        await _userManager.UpdateAsync(user);
+
+        // Generate new auth response
         var authResponse = await _tokenService.GenerateAuthResponseAsync(user);
 
         _logger.LogInformation("Token refreshed for UserId: {UserId}", user.Id);
@@ -321,14 +316,12 @@ public class AuthService : IAuthService
 
     public async Task<Result> RevokeTokenAsync(string refreshToken)
     {
-        // 1. Find user with this refresh token
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
 
         if (user == null)
             return Result.Failure(AuthErrors.InvalidRefreshToken);
 
-        // 2. Validate and revoke token
         var token = user.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
 
         if (token == null)
@@ -351,50 +344,27 @@ public class AuthService : IAuthService
 
     private async Task<Result> ValidateShopOwnerUniqueFieldsAsync(RegisterShopOwnerRequest request)
     {
-        // Check mobile number
-        var mobileExists = await _userManager.Users
+        // Run all uniqueness checks in parallel to reduce DB round-trips
+        var mobileTask = _userManager.Users
             .AnyAsync(u => u.MobileNumber == request.MobileNumber);
-        if (mobileExists)
+        var vatTask = _context.ShopOwnerProfiles
+            .AnyAsync(p => p.VAT == request.VAT);
+        var crnTask = _context.ShopOwnerProfiles
+            .AnyAsync(p => p.CRN == request.CRN);
+
+        await Task.WhenAll(mobileTask, vatTask, crnTask);
+
+        if (mobileTask.Result)
             return Result.Failure(AuthErrors.MobileAlreadyRegistered);
 
-        // Check VAT
-        var vatExists = await _context.ShopOwnerProfiles
-            .AnyAsync(p => p.VAT == request.VAT);
-        if (vatExists)
+        if (vatTask.Result)
             return Result.Failure(AuthErrors.VatAlreadyExists);
 
-        // Check CRN
-        var crnExists = await _context.ShopOwnerProfiles
-            .AnyAsync(p => p.CRN == request.CRN);
-        if (crnExists)
+        if (crnTask.Result)
             return Result.Failure(AuthErrors.CrnAlreadyExists);
 
         return Result.Success();
     }
 
-    private static string MaskMobile(string mobile)
-    {
-        if (string.IsNullOrEmpty(mobile) || mobile.Length < 4)
-            return "****";
-
-        return $"{mobile[..3]}****{mobile[^3..]}";
-    }
-
     #endregion
 }
-internal record ShopOwnerRegistrationData(
-    string StoreName,
-    string OwnerName,
-    string MobileNumber,
-    string VAT,
-    string CRN,
-    string ShopImageUrl,
-    string CityId,
-    string DistrictId,
-    Zone Zone,
-    string Street,
-    int BuildingNumber,
-    string PostalCode,
-    int SubNumber,
-    string AssignedSalesManId
-);

@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 using RewardProgram.Application.Interfaces.Auth;
 
 namespace RewardProgram.API.Controllers;
-
 
 [ApiController]
 [Route("api/auth")]
@@ -79,6 +79,7 @@ public class AuthController : ControllerBase
 
     #region Token Management
 
+    [Authorize]
     [HttpPost("refresh-token")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -91,6 +92,7 @@ public class AuthController : ControllerBase
             : result.ToProblem();
     }
 
+    [Authorize]
     [HttpPost("revoke-token")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

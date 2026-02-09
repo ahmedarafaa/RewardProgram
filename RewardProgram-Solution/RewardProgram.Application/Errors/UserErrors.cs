@@ -1,41 +1,39 @@
-﻿
-
-using Microsoft.AspNetCore.Http;
 using RewardProgram.Application.Abstractions;
+
 namespace RewardProgram.Application.Errors;
 
-public record UserErrors
+public static class UserErrors
 {
     public static readonly Error InvalidCredentials =
-        new("User.InvalidCredentials", "Invalid email/password", StatusCodes.Status401Unauthorized);
+        new("User.InvalidCredentials", "Invalid email/password", 401);
 
     public static readonly Error DisabledUser =
-        new("User.DisabledUser", "Disabled user, please contact your administrator", StatusCodes.Status401Unauthorized);
+        new("User.DisabledUser", "Disabled user, please contact your administrator", 401);
 
     public static readonly Error LockedUser =
-        new("User.LockedUser", "Locked user, please contact your administrator", StatusCodes.Status401Unauthorized);
+        new("User.LockedUser", "Locked user, please contact your administrator", 401);
 
     public static readonly Error InvalidJwtToken =
-        new("User.InvalidJwtToken", "Invalid Jwt token", StatusCodes.Status401Unauthorized);
+        new("User.InvalidJwtToken", "Invalid Jwt token", 401);
 
     public static readonly Error InvalidRefreshToken =
-        new("User.InvalidRefreshToken", "Invalid refresh token", StatusCodes.Status401Unauthorized);
+        new("User.InvalidRefreshToken", "Invalid refresh token", 401);
 
     public static readonly Error DuplicatedEmail =
-        new("User.DuplicatedEmail", "Another user with the same email is already exists", StatusCodes.Status409Conflict);
+        new("User.DuplicatedEmail", "Another user with the same email is already exists", 409);
 
     public static readonly Error EmailNotConfirmed =
-        new("User.EmailNotConfirmed", "Email is not confirmed", StatusCodes.Status401Unauthorized);
+        new("User.EmailNotConfirmed", "Email is not confirmed", 401);
 
     public static readonly Error InvalidCode =
-        new("User.InvalidCode", "Invalid code", StatusCodes.Status401Unauthorized);
+        new("User.InvalidCode", "Invalid code", 401);
 
     public static readonly Error DuplicatedConfirmation =
-        new("User.DuplicatedConfirmation", "Email already confirmed", StatusCodes.Status400BadRequest);
+        new("User.DuplicatedConfirmation", "Email already confirmed", 400);
 
     public static readonly Error UserNotFound =
-    new("User.UserNotFound", "User is not found", StatusCodes.Status404NotFound);
+        new("User.UserNotFound", "User is not found", 404);
 
     public static readonly Error InvalidRoles =
-        new("Role.InvalidRoles", "Invalid roles", StatusCodes.Status400BadRequest);
+        new("Role.InvalidRoles", "Invalid roles", 400);
 }

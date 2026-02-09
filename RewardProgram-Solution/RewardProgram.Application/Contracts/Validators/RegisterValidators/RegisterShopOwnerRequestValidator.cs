@@ -8,6 +8,7 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
 {
     private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
+
     public RegisterShopOwnerRequestValidator()
     {
         RuleFor(x => x.StoreName)
@@ -34,16 +35,24 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
             .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
             .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
 
+        RuleFor(x => x.CityId)
+            .NotEmpty().WithMessage("المدينة مطلوبة");
+
+        RuleFor(x => x.DistrictId)
+            .NotEmpty().WithMessage("الحي مطلوب");
+
         RuleFor(x => x.ShopImage)
             .NotNull().WithMessage("صورة المحل مطلوبة")
             .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")
             .Must(BeValidImageSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت");
 
         RuleFor(x => x.NationalAddress)
-        .NotNull().WithMessage("العنوان الوطني مطلوب")
-        .SetValidator(new NationalAddressDtoValidator(), "Default");
+            .NotNull().WithMessage("العنوان الوطني مطلوب")
+            .SetValidator(new NationalAddressDtoValidator(), "Default");
     }
+
     #region Helpers
+
     private bool BeValidImageType(IFormFile? file)
     {
         if (file == null) return false;

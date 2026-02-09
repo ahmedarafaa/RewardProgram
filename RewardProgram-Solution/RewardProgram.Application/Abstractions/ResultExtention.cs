@@ -1,25 +1,22 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RewardProgram.Application.Abstractions;
 
-public static class ResultExtention
+public static class ResultExtension
 {
     public static ObjectResult ToProblem(this Result result)
     {
         if (result.IsSuccess)
             throw new InvalidOperationException("cannot convert Success result to Problem");
 
-        var problem = Results.Problem(statusCode: result.Error.StatusCode);
-        var problemDetails = problem.GetType().GetProperty(nameof(ProblemDetails))!.GetValue(problem) as ProblemDetails;
-
-        problemDetails!.Extensions = new Dictionary<string, object?>
+        var problemDetails = new ProblemDetails
         {
+            Status = result.Error.StatusCode,
+            Extensions =
             {
-                "error", new[] {
+                ["error"] = new[]
+                {
                     new
                     {
                         result.Error.Code,
@@ -28,6 +25,10 @@ public static class ResultExtention
                 }
             }
         };
-        return new ObjectResult(problemDetails);
+
+        return new ObjectResult(problemDetails)
+        {
+            StatusCode = result.Error.StatusCode
+        };
     }
 }

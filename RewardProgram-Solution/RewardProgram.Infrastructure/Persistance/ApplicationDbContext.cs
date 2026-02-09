@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.OTP;
@@ -9,7 +10,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 namespace RewardProgram.Infrastructure.Persistance;
-
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor) :
     IdentityDbContext<ApplicationUser, ApplicationRole, string>(options), IApplicationDbContext
@@ -24,6 +24,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TechnicianProfile> TechnicianProfiles { get; set; }
     public DbSet<ApprovalRecord> ApprovalRecords { get; set; }
     public DbSet<OtpCode> OtpCodes { get; set; }
+
+    public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        var transaction = await Database.BeginTransactionAsync(cancellationToken);
+        return new EfTransaction(transaction);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

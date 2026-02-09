@@ -23,7 +23,7 @@ public static class DependencyInjection
     {
         services.AddControllers();
         services.AddHttpContextAccessor();
-        services.AddMemoryCache();  
+        services.AddMemoryCache();
 
         // CORS
         var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
@@ -56,7 +56,7 @@ public static class DependencyInjection
             .AddSwaggerServices()
             .AddFluentValidationConfig();
 
-        // Configure Infobip Options
+        // Configure Twilio Options
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
 
         // Register Services
@@ -85,7 +85,6 @@ public static class DependencyInjection
     {
         services
             .AddFluentValidationAutoValidation()
-            // Scan Application assembly where validators are defined
             .AddValidatorsFromAssemblyContaining<NationalAddressDtoValidator>();
 
         return services;
@@ -94,7 +93,7 @@ public static class DependencyInjection
     private static IServiceCollection AddAuthConfig(this IServiceCollection services,
         IConfiguration configuration)
     {
-        
+
         services.AddIdentity<ApplicationUser, ApplicationRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
@@ -104,7 +103,11 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
+        var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+            ?? throw new InvalidOperationException("JWT configuration section is missing.");
+
+        if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+            throw new InvalidOperationException("JWT signing key must not be empty. Configure 'Jwt:Key' in appsettings.");
 
         services.AddAuthentication(options =>
         {
@@ -120,9 +123,9 @@ public static class DependencyInjection
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!)),
-                ValidIssuer = jwtSettings?.Issuer,
-                ValidAudience = jwtSettings?.Audience
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience
             };
         });
 

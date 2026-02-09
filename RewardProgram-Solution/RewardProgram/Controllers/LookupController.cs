@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Lookups;
 using RewardProgram.Application.Interfaces;
 
@@ -25,9 +26,13 @@ public class LookupController : ControllerBase
 
     [HttpGet("cities/{cityId}/districts")]
     [ProducesResponseType(typeof(List<DistrictResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDistrictsByCity(string cityId)
     {
-        var districts = await _lookupService.GetDistrictsByCityAsync(cityId);
-        return Ok(districts);
+        var result = await _lookupService.GetDistrictsByCityAsync(cityId);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
     }
 }

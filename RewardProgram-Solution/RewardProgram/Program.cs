@@ -31,6 +31,7 @@ namespace RewardProgram
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
             app.UseCors();
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();

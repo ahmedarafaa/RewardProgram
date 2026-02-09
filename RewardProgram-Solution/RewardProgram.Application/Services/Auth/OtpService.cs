@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using RewardProgram.Application.Errors;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities.OTP;
@@ -26,23 +28,16 @@ public class OtpService : IOtpService
 
     public async Task<Result<string>> SendAsync(string mobileNumber, string? registrationData = null)
     {
-        // Rate limiting check
         var rateLimitResult = await CheckRateLimitAsync(mobileNumber);
         if (rateLimitResult.IsFailure)
-        {
             return Result.Failure<string>(rateLimitResult.Error);
-        }
 
         var result = await _twilioRepository.SendOtpAsync(mobileNumber);
-
         if (result.IsFailure)
-        {
             return result;
-        }
 
         var pinId = result.Value;
 
-        // Store OTP record in database
         var otpCode = new OtpCode
         {
             PinId = pinId,
@@ -58,63 +53,57 @@ public class OtpService : IOtpService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("OTP sent and stored for PinId: {PinId}, Mobile: {Mobile}",
-            pinId, MaskMobileNumber(mobileNumber));
+            pinId, MobileNumberHelper.Mask(mobileNumber));
 
         return Result.Success(pinId);
     }
 
-    public async Task<Result<string?>> VerifyAsync(string pinId, string otp)
+    public async Task<Result<OtpVerificationResult>> VerifyAsync(string pinId, string otp)
     {
-        // Find OTP record (not used yet)
         var otpCode = await _context.OtpCodes
             .FirstOrDefaultAsync(o => o.PinId == pinId && !o.IsUsed);
 
         if (otpCode == null)
         {
             _logger.LogWarning("OTP record not found for PinId: {PinId}", pinId);
-            return Result.Failure<string?>(AuthErrors.OtpNotFound);
+            return Result.Failure<OtpVerificationResult>(AuthErrors.OtpNotFound);
         }
 
-        // Check if OTP has expired
         if (otpCode.IsExpired)
         {
             _logger.LogWarning("OTP expired for PinId: {PinId}", pinId);
-            return Result.Failure<string?>(AuthErrors.OtpExpired);
+            return Result.Failure<OtpVerificationResult>(AuthErrors.OtpExpired);
         }
 
-        // Check if too many verification attempts
         if (otpCode.VerificationAttempts >= OtpCode.MaxVerificationAttempts)
         {
             _logger.LogWarning("Max verification attempts exceeded for PinId: {PinId}", pinId);
-            return Result.Failure<string?>(AuthErrors.TooManyOtpRequests);
+            return Result.Failure<OtpVerificationResult>(AuthErrors.MaxVerificationAttemptsExceeded);
         }
 
-        // Increment verification attempts before verifying
         otpCode.VerificationAttempts++;
         await _context.SaveChangesAsync();
 
-        // Verify with Twilio
         var result = await _twilioRepository.VerifyOtpAsync(pinId, otp);
-
         if (result.IsFailure)
-        {
-            return Result.Failure<string?>(result.Error);
-        }
+            return Result.Failure<OtpVerificationResult>(result.Error);
 
         if (!result.Value)
         {
             _logger.LogWarning("Invalid OTP for PinId: {PinId}, Attempts: {Attempts}/{Max}",
                 pinId, otpCode.VerificationAttempts, OtpCode.MaxVerificationAttempts);
-            return Result.Failure<string?>(AuthErrors.OtpInvalid);
+            return Result.Failure<OtpVerificationResult>(AuthErrors.OtpInvalid);
         }
 
-        // Mark as used
         otpCode.IsUsed = true;
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("OTP verified successfully for PinId: {PinId}", pinId);
 
-        return Result.Success(otpCode.RegistrationData);
+        return Result.Success(new OtpVerificationResult(
+            MobileNumber: otpCode.MobileNumber,
+            RegistrationData: otpCode.RegistrationData
+        ));
     }
 
     private async Task<Result> CheckRateLimitAsync(string mobileNumber)
@@ -128,7 +117,7 @@ public class OtpService : IOtpService
         {
             _logger.LogWarning(
                 "Rate limit exceeded for mobile: {Mobile}. {Count} requests in last {Window} minutes",
-                MaskMobileNumber(mobileNumber),
+                MobileNumberHelper.Mask(mobileNumber),
                 recentRequestCount,
                 OtpCode.RateLimitWindowMinutes);
 
@@ -136,13 +125,5 @@ public class OtpService : IOtpService
         }
 
         return Result.Success();
-    }
-
-    private static string MaskMobileNumber(string mobileNumber)
-    {
-        if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length < 4)
-            return "****";
-
-        return $"{mobileNumber[..3]}****{mobileNumber[^3..]}";
     }
 }

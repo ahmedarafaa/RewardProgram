@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -43,7 +41,6 @@ public class TokenService : ITokenService
             new("RegistrationStatus", ((int)user.RegistrationStatus).ToString())
         };
 
-        // Add roles
         foreach (var role in roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
@@ -83,13 +80,10 @@ public class TokenService : ITokenService
 
     public async Task<AuthResponse> GenerateAuthResponseAsync(ApplicationUser user)
     {
-        // Generate access token
         var (accessToken, expiresIn) = await GenerateAccessTokenAsync(user);
-
-        // Generate refresh token
         var (refreshToken, refreshTokenExpiration) = GenerateRefreshToken();
 
-        // Store refresh token in user
+        // Store new refresh token
         user.RefreshTokens.Add(new RefreshToken
         {
             Token = refreshToken,
@@ -99,7 +93,6 @@ public class TokenService : ITokenService
 
         await _userManager.UpdateAsync(user);
 
-        // Build response
         var userResponse = new UserResponse(
             Id: user.Id,
             Name: user.Name,

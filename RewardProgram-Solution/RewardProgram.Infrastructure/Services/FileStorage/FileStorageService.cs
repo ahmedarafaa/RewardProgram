@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
@@ -36,11 +36,11 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to upload file");
-            return Result.Failure<string>(new Error("File.UploadFailed", "فشل رفع الملف", StatusCodes.Status500InternalServerError));
+            return Result.Failure<string>(new Error("File.UploadFailed", "فشل رفع الملف", 500));
         }
     }
 
-    public async Task<Result> DeleteAsync(string fileUrl)
+    public Task<Result> DeleteAsync(string fileUrl)
     {
         try
         {
@@ -51,12 +51,12 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
                 File.Delete(filePath);
             }
 
-            return Result.Success();
+            return Task.FromResult(Result.Success());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete file");
-            return Result.Failure(new Error("File.DeleteFailed", "فشل حذف الملف", StatusCodes.Status500InternalServerError));
+            return Task.FromResult(Result.Failure(new Error("File.DeleteFailed", "فشل حذف الملف", 500)));
         }
     }
 }
