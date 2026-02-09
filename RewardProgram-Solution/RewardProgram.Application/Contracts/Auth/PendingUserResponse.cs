@@ -27,6 +27,9 @@ public record PendingUserResponse(
     string? PostalCode,
     int? SubNumber,
 
+    // Seller info
+    string? ShopOwnerName,
+
     // Assignment info
     string? AssignedSalesManName
 );

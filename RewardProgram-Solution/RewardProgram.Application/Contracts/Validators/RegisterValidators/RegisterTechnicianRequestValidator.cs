@@ -15,8 +15,14 @@ public class RegisterTechnicianRequestValidator : AbstractValidator<RegisterTech
             .NotEmpty().WithMessage("رقم الجوال مطلوب")
             .Matches(@"^05\d{8}$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام");
 
-        RuleFor(x => x.NationalAddress)
-        .NotNull().WithMessage("العنوان الوطني مطلوب")
-        .SetValidator(new NationalAddressDtoValidator(), "Default");
+        RuleFor(x => x.CityId)
+            .NotEmpty().WithMessage("المدينة مطلوبة");
+
+        RuleFor(x => x.DistrictId)
+            .NotEmpty().WithMessage("الحي مطلوب");
+
+        RuleFor(x => x.PostalCode)
+            .NotEmpty().WithMessage("الرمز البريدي مطلوب")
+            .Length(5).WithMessage("الرمز البريدي يجب أن يتكون من 5 خانات");
     }
 }

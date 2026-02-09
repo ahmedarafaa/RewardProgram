@@ -11,6 +11,8 @@ public interface IAuthService
 {
     // Registration
     Task<Result<SendOtpResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request);
+    Task<Result<SendOtpResponse>> RegisterSellerAsync(RegisterSellerRequest request);
+    Task<Result<SendOtpResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request);
     Task<Result<RegisterResponse>> VerifyRegistrationAsync(VerifyOtpRequest request);
 
     // Login

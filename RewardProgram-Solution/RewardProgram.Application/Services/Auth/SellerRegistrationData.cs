@@ -2,20 +2,17 @@ using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services.Auth;
 
-internal record ShopOwnerRegistrationData(
+internal record SellerRegistrationData(
     UserType UserType,
-    string StoreName,
-    string OwnerName,
+    string Name,
     string MobileNumber,
-    string VAT,
-    string CRN,
-    string ShopImageUrl,
+    string ShopCode,
+    string ShopOwnerId,
+    string AssignedSalesManId,
     string CityId,
     string DistrictId,
-    Zone Zone,
     string Street,
     int BuildingNumber,
     string PostalCode,
-    int SubNumber,
-    string AssignedSalesManId
+    int SubNumber
 );

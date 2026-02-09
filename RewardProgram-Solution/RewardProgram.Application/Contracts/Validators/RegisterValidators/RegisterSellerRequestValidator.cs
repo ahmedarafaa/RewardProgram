@@ -17,11 +17,7 @@ public class RegisterSellerRequestValidator : AbstractValidator<RegisterSellerRe
 
         RuleFor(x => x.ShopCode)
             .NotEmpty().WithMessage("كود المحل مطلوب")
-            .Length(6).WithMessage("كود المحل يجب أن يتكون من 6 أرقام")
-            .Matches(@"^\d{6}$").WithMessage("كود المحل يجب أن يتكون من أرقام فقط");
-
-        RuleFor(x => x.NationalAddress)
-        .NotNull().WithMessage("العنوان الوطني مطلوب")
-        .SetValidator(new NationalAddressDtoValidator(), "Default");
+            .Length(6).WithMessage("كود المحل يجب أن يتكون من 6 خانات")
+            .Matches(@"^[A-Z0-9]{6}$").WithMessage("كود المحل يجب أن يتكون من أحرف إنجليزية كبيرة وأرقام فقط");
     }
 }

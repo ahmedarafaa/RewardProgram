@@ -65,6 +65,9 @@ public class ApprovalService : IApprovalService
 
         var users = await query
             .Include(u => u.ShopOwnerProfile)
+            .Include(u => u.SellerProfile)
+                .ThenInclude(sp => sp!.ShopOwner)
+                    .ThenInclude(so => so.User)
             .Include(u => u.AssignedSalesMan)
             .ToListAsync();
 
@@ -124,6 +127,7 @@ public class ApprovalService : IApprovalService
                 BuildingNumber: u.NationalAddress?.BuildingNumber,
                 PostalCode: u.NationalAddress?.PostalCode,
                 SubNumber: u.NationalAddress?.SubNumber,
+                ShopOwnerName: u.SellerProfile?.ShopOwner?.User?.Name,
                 AssignedSalesManName: u.AssignedSalesMan?.Name
             );
         }).ToList();
@@ -315,7 +319,10 @@ public class ApprovalService : IApprovalService
     {
         try
         {
-            var message = $"مرحباً {user.Name}! تمت الموافقة على تسجيلك في برنامج المكافآت. كود المحل الخاص بك: {user.ShopOwnerProfile?.ShopCode}";
+            var message = user.UserType == UserType.ShopOwner
+                ? $"مرحباً {user.Name}! تمت الموافقة على تسجيلك في برنامج المكافآت. كود المحل الخاص بك: {user.ShopOwnerProfile?.ShopCode}"
+                : $"مرحباً {user.Name}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
+
             await _twilioRepository.SendWhatsAppMessageAsync(user.MobileNumber, message);
         }
         catch (Exception ex)

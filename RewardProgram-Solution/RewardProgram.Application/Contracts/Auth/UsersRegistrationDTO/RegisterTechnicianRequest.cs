@@ -1,8 +1,9 @@
 namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
-public record RegisterTechnicianRequest
-(
+public record RegisterTechnicianRequest(
    string Name,
    string MobileNumber,
-   NationalAddressResponse NationalAddress
+   string CityId,
+   string DistrictId,
+   string PostalCode
 );

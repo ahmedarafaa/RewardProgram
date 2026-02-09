@@ -33,6 +33,32 @@ public class AuthController : ControllerBase
             : result.ToProblem();
     }
 
+    [HttpPost("register/seller")]
+    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegisterSeller([FromBody] RegisterSellerRequest request)
+    {
+        var result = await _authService.RegisterSellerAsync(request);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
+    [HttpPost("register/technician")]
+    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegisterTechnician([FromBody] RegisterTechnicianRequest request)
+    {
+        var result = await _authService.RegisterTechnicianAsync(request);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
     [HttpPost("register/verify")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
