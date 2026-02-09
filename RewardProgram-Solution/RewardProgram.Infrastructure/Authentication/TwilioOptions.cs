@@ -17,4 +17,9 @@ public class TwilioOptions
     /// When true, accepts any 6-digit OTP code.
     /// </summary>
     public bool UseMockMode { get; set; } = false;
+
+    /// <summary>
+    /// WhatsApp sender number for outbound messages (e.g. "whatsapp:+14155238886").
+    /// </summary>
+    public string WhatsAppFromNumber { get; set; } = string.Empty;
 }

@@ -9,4 +9,5 @@ public interface ITwilioRepository
 {
     Task<Result<string>> SendOtpAsync(string mobileNumber);
     Task<Result<bool>> VerifyOtpAsync(string verificationSid, string otp);
+    Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string message);
 }

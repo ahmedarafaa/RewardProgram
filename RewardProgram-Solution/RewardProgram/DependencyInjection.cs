@@ -65,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<ILookupService, LookupService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();

@@ -8,7 +8,8 @@
       "Bash(dotnet ef database update:*)",
       "Bash(dotnet add:*)",
       "Bash(del \"RewardProgram.Infrastructure\\\\Authentication\\\\JwtProvider.cs\")",
-      "Bash(del \"RewardProgram.Application\\\\Interfaces\\\\Auth\\\\IJwtProvider.cs\")"
+      "Bash(del \"RewardProgram.Application\\\\Interfaces\\\\Auth\\\\IJwtProvider.cs\")",
+      "Bash(ls:*)"
     ]
   }
 }

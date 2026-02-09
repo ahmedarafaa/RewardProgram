@@ -6,7 +6,9 @@ using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Infrastructure.Authentication;
 using Twilio;
+using Twilio.Rest.Api.V2010.Account;
 using Twilio.Rest.Verify.V2.Service;
+using Twilio.Types;
 
 namespace RewardProgram.Infrastructure.Services.WhatsAppService;
 
@@ -135,6 +137,48 @@ public class TwilioRepository : ITwilioRepository
             return Result.Failure<bool>(new Error(
                 "Twilio.Exception",
                 "فشل التحقق من الرمز",
+                500));
+        }
+    }
+
+    public async Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string message)
+    {
+        try
+        {
+            var formattedNumber = FormatMobileNumber(mobileNumber);
+
+            if (_useMockMode)
+            {
+                _logger.LogInformation(
+                    "[MOCK] WhatsApp message sent to {MobileNumber}: {Message}",
+                    MobileNumberHelper.Mask(mobileNumber),
+                    message);
+
+                return Result.Success();
+            }
+
+            TwilioClient.Init(_options.AccountSid, _options.AuthToken);
+
+            await MessageResource.CreateAsync(
+                to: new PhoneNumber($"whatsapp:{formattedNumber}"),
+                from: new PhoneNumber(_options.WhatsAppFromNumber),
+                body: message
+            );
+
+            _logger.LogInformation(
+                "WhatsApp message sent to {MobileNumber}",
+                MobileNumberHelper.Mask(mobileNumber));
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while sending WhatsApp message to {MobileNumber}",
+                MobileNumberHelper.Mask(mobileNumber));
+
+            return Result.Failure(new Error(
+                "Twilio.WhatsAppException",
+                "فشل إرسال رسالة الواتساب",
                 500));
         }
     }
