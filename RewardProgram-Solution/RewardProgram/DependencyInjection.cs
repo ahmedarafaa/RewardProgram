@@ -4,10 +4,13 @@ using Microsoft.IdentityModel.Tokens;
 using RewardProgram.Application.Contracts.Validators;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
+using RewardProgram.Application.Interfaces.Files;
 using RewardProgram.Application.Services.Auth;
+using RewardProgram.Application.Services.Lookups;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
+using RewardProgram.Infrastructure.Services.FileStorage;
 using RewardProgram.Infrastructure.Services.WhatsAppService;
 using System.Text;
 
@@ -19,7 +22,8 @@ public static class DependencyInjection
        IConfiguration configuration)
     {
         services.AddControllers();
-        services.AddHttpContextAccessor();  
+        services.AddHttpContextAccessor();
+        services.AddMemoryCache();  
 
         // CORS
         var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
@@ -53,12 +57,15 @@ public static class DependencyInjection
             .AddFluentValidationConfig();
 
         // Configure Infobip Options
-        services.Configure<InfobipOptions>(configuration.GetSection(InfobipOptions.SectionName));
+        services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
 
         // Register Services
-        services.AddHttpClient<IInfobipRepository, InfobipRepository>();
+        services.AddScoped<ITwilioRepository, TwilioRepository>();
         services.AddScoped<IOtpService, OtpService>();
-        //services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ILookupService, LookupService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
@@ -91,8 +98,6 @@ public static class DependencyInjection
         services.AddIdentity<ApplicationUser, ApplicationRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
-
-        services.AddScoped<IJwtProvider, JwtProvider>();
 
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)

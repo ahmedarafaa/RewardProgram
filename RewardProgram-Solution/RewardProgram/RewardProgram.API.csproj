@@ -22,8 +22,4 @@
     <ProjectReference Include="..\RewardProgram.Infrastructure\RewardProgram.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>

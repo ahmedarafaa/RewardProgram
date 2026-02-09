@@ -6,9 +6,9 @@ using System.Text;
 namespace RewardProgram.Application.Contracts.Lookups;
 
 public record DistrictResponse(
-    int Id,
+    string Id,
     string NameAr,
     string NameEn,
-    int CityId,
+    string CityId,
     Zone Zone
 );

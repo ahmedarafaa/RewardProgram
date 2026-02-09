@@ -1,7 +1,6 @@
 namespace RewardProgram.Application.Contracts.Auth;
 
-public record RefreshTokenResponse
+public record RefreshTokenRequest
 (
-    string Token,
     string RefreshToken
 );

@@ -46,11 +46,20 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             rt.Property(t => t.ExpiresOn).IsRequired();
             rt.Property(t => t.CreatedOn).IsRequired();
             rt.HasKey("UserId", "Token");
+            // Index for token lookup queries (RefreshTokenAsync, RevokeTokenAsync)
+            rt.HasIndex(t => t.Token);
             // Index for cleanup queries
             rt.HasIndex(t => t.ExpiresOn);
             rt.HasIndex(t => t.RevokedOn);
         });
 
+        // === SalesMan Fields ===
+        builder.Property(x => x.DistrictId).HasMaxLength(450);
+        builder.Property(x => x.ZoneManagerId).HasMaxLength(450);
+
+        // === ZoneManager Fields ===
+        builder.Property(x => x.ManagedCityId).HasMaxLength(450);
+        builder.Property(x => x.ManagedZone);
 
         // SalesMan → District
         builder.HasOne(x => x.District)

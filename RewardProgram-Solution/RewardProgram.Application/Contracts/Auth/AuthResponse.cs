@@ -16,5 +16,6 @@ public record UserResponse
     string Id,
     string Name,
     string MobileNumber,
-    UserType UserType
+    UserType UserType,
+    RegistrationStatus RegistrationStatus
 );

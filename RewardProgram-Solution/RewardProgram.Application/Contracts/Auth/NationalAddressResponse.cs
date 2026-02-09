@@ -5,7 +5,7 @@ public record NationalAddressResponse
     int BuildingNumber,
     string City,
     string Street,
-    string Neighborhood,
+    string District,
     string PostalCode,
     int SubNumber
 );

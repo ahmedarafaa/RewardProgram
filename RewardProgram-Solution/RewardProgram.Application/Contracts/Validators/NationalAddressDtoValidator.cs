@@ -27,7 +27,7 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
             .MaximumLength(100).WithMessage("الشارع يجب ألا يتجاوز 100 حرف");
 
 
-            RuleFor(x => x.Neighborhood)
+            RuleFor(x => x.District)
             .NotEmpty().WithMessage("الحي مطلوب")
             .MaximumLength(100).WithMessage("الحي يجب ألا تتجاوز 100 حرف");
 

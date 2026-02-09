@@ -3,7 +3,9 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(dotnet build:*)",
-      "Bash(dotnet ef migrations add:*)"
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(tree:*)",
+      "Bash(dotnet ef database update:*)"
     ]
   }
 }

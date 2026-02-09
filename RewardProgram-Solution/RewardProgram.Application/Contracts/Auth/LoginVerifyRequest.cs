@@ -1,7 +1,6 @@
 namespace RewardProgram.Application.Contracts.Auth;
 
-public record VerifyLoginRequest
-(
-    string MobileNumber,
+public record LoginVerifyRequest(
+    string PinId,
     string Otp
 );
