@@ -20,26 +20,5 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
         });
 
 
-        RuleSet("Strict", () =>
-        {
-            RuleFor(x => x.Street)
-            .NotEmpty().WithMessage("الشارع مطلوب")
-            .MaximumLength(100).WithMessage("الشارع يجب ألا يتجاوز 100 حرف");
-
-
-            RuleFor(x => x.District)
-            .NotEmpty().WithMessage("الحي مطلوب")
-            .MaximumLength(100).WithMessage("الحي يجب ألا تتجاوز 100 حرف");
-
-
-            RuleFor(x => x.PostalCode)
-            .NotEmpty().WithMessage("الرمز البريدي مطلوب")
-            .Length(5).WithMessage("الرمز البريدي يجب أن يتكون من 5 أرقام");
-
-
-            RuleFor(x => x.SubNumber)
-            .GreaterThan(0)
-            .WithMessage("الرقم الفرعي مطلوب");
-        });
     }
 }

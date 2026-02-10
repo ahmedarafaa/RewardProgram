@@ -12,14 +12,8 @@ public class TwilioOptions
     public string AuthToken { get; set; } = string.Empty;
     public string VerifyServiceSid { get; set; } = string.Empty;
 
-    /// <summary>
     /// Enable mock mode for development/testing. MUST be false in production.
     /// When true, accepts any 6-digit OTP code.
-    /// </summary>
     public bool UseMockMode { get; set; } = false;
-
-    /// <summary>
-    /// WhatsApp sender number for outbound messages (e.g. "whatsapp:+14155238886").
-    /// </summary>
     public string WhatsAppFromNumber { get; set; } = string.Empty;
 }

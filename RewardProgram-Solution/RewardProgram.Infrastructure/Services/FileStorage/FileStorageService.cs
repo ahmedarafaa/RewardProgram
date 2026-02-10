@@ -11,7 +11,7 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
     private readonly IWebHostEnvironment _environment = environment;
     private readonly ILogger<FileStorageService> _logger = logger;
 
-    public async Task<Result<string>> UploadAsync(IFormFile file, string folder)
+    public async Task<Result<string>> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
     {
         try
         {
@@ -27,7 +27,7 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
 
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                await file.CopyToAsync(stream);
+                await file.CopyToAsync(stream, ct);
             }
 
             var fileUrl = $"/uploads/{folder}/{uniqueFileName}";

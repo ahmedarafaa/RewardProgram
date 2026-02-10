@@ -12,16 +12,16 @@ using Twilio.Types;
 
 namespace RewardProgram.Infrastructure.Services.WhatsAppService;
 
-public class TwilioRepository : ITwilioRepository
+public class TwilioService : ITwilioService
 {
     private readonly TwilioOptions _options;
-    private readonly ILogger<TwilioRepository> _logger;
+    private readonly ILogger<TwilioService> _logger;
     private readonly bool _useMockMode;
 
-    public TwilioRepository(
+    public TwilioService(
         IOptions<TwilioOptions> options,
         IHostEnvironment environment,
-        ILogger<TwilioRepository> logger)
+        ILogger<TwilioService> logger)
     {
         _options = options.Value;
         _logger = logger;
@@ -41,9 +41,13 @@ public class TwilioRepository : ITwilioRepository
         {
             _logger.LogWarning("Twilio is running in MOCK MODE. OTP verification is bypassed!");
         }
+        else
+        {
+            TwilioClient.Init(_options.AccountSid, _options.AuthToken);
+        }
     }
 
-    public async Task<Result<string>> SendOtpAsync(string mobileNumber)
+    public async Task<Result<string>> SendOtpAsync(string mobileNumber, CancellationToken ct = default)
     {
         try
         {
@@ -60,8 +64,6 @@ public class TwilioRepository : ITwilioRepository
 
                 return Result.Success(mockVerificationSid);
             }
-
-            TwilioClient.Init(_options.AccountSid, _options.AuthToken);
 
             var verification = await VerificationResource.CreateAsync(
                 to: formattedNumber,
@@ -97,7 +99,7 @@ public class TwilioRepository : ITwilioRepository
         }
     }
 
-    public async Task<Result<bool>> VerifyOtpAsync(string verificationSid, string otp)
+    public async Task<Result<bool>> VerifyOtpAsync(string verificationSid, string otp, CancellationToken ct = default)
     {
         try
         {
@@ -112,8 +114,6 @@ public class TwilioRepository : ITwilioRepository
 
                 return Result.Success(isValid);
             }
-
-            TwilioClient.Init(_options.AccountSid, _options.AuthToken);
 
             var verificationCheck = await VerificationCheckResource.CreateAsync(
                 code: otp,
@@ -141,7 +141,7 @@ public class TwilioRepository : ITwilioRepository
         }
     }
 
-    public async Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string message)
+    public async Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string message, CancellationToken ct = default)
     {
         try
         {
@@ -156,8 +156,6 @@ public class TwilioRepository : ITwilioRepository
 
                 return Result.Success();
             }
-
-            TwilioClient.Init(_options.AccountSid, _options.AuthToken);
 
             await MessageResource.CreateAsync(
                 to: new PhoneNumber($"whatsapp:{formattedNumber}"),

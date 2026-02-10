@@ -1,6 +1,8 @@
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using RewardProgram.Application.Contracts.Validators;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
@@ -60,7 +62,8 @@ public static class DependencyInjection
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
 
         // Register Services
-        services.AddScoped<ITwilioRepository, TwilioRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITwilioService, TwilioService>();
         services.AddScoped<IOtpService, OtpService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
@@ -77,7 +80,21 @@ public static class DependencyInjection
     private static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "JWT Authorization header using the Bearer scheme."
+            });
+
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("bearer", document)] = []
+            });
+        });
 
         return services;
     }

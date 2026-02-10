@@ -24,7 +24,7 @@ public class LookupService : ILookupService
         _cache = cache;
     }
 
-    public async Task<List<CityResponse>> GetCitiesAsync()
+    public async Task<List<CityResponse>> GetCitiesAsync(CancellationToken ct = default)
     {
         return await _cache.GetOrCreateAsync(CitiesCacheKey, async entry =>
         {
@@ -38,24 +38,16 @@ public class LookupService : ILookupService
                     c.NameAr,
                     c.NameEn
                 ))
-                .ToListAsync();
+                .ToListAsync(ct);
         }) ?? [];
     }
 
-    public async Task<Result<List<DistrictResponse>>> GetDistrictsByCityAsync(string cityId)
+    public async Task<Result<List<DistrictResponse>>> GetDistrictsByCityAsync(string cityId, CancellationToken ct = default)
     {
-        // Validate city exists
-        var cityExists = await _cache.GetOrCreateAsync(CitiesCacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-            return await _context.Cities
-                .Where(c => c.IsActive)
-                .OrderBy(c => c.NameAr)
-                .Select(c => new CityResponse(c.Id, c.NameAr, c.NameEn))
-                .ToListAsync();
-        }) ?? [];
+        // Validate city exists (reuse GetCitiesAsync to avoid cache duplication — P4 fix)
+        var cities = await GetCitiesAsync(ct);
 
-        if (!cityExists.Any(c => c.Id == cityId))
+        if (!cities.Any(c => c.Id == cityId))
             return Result.Failure<List<DistrictResponse>>(LookupErrors.CityNotFound);
 
         var cacheKey = $"{DistrictsByCityCacheKeyPrefix}{cityId}";
@@ -74,13 +66,13 @@ public class LookupService : ILookupService
                     d.CityId,
                     d.Zone
                 ))
-                .ToListAsync();
+                .ToListAsync(ct);
         }) ?? [];
 
         return Result.Success(districts);
     }
 
-    public async Task<DistrictResponse?> GetDistrictByIdAsync(string districtId)
+    public async Task<DistrictResponse?> GetDistrictByIdAsync(string districtId, CancellationToken ct = default)
     {
         var cacheKey = $"{DistrictByIdCacheKeyPrefix}{districtId}";
 
@@ -97,7 +89,7 @@ public class LookupService : ILookupService
                     d.CityId,
                     d.Zone
                 ))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ct);
         });
     }
 }

@@ -28,14 +28,15 @@ namespace RewardProgram
             {
                 app.MapOpenApi();
             }
+            app.UseExceptionHandler();
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
+            app.UseStaticFiles();
             app.UseCors();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
-            app.UseExceptionHandler();
 
             app.Run();
         }

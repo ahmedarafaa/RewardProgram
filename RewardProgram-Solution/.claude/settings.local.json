@@ -9,7 +9,27 @@
       "Bash(dotnet add:*)",
       "Bash(del \"RewardProgram.Infrastructure\\\\Authentication\\\\JwtProvider.cs\")",
       "Bash(del \"RewardProgram.Application\\\\Interfaces\\\\Auth\\\\IJwtProvider.cs\")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(dotnet user-secrets set \"Jwt:Key\" \"DevOnly-SuperSecret-Key-At-Least-32-Characters-Long!\")",
+      "Bash(del \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Errors\\\\OtpErrors.cs\")",
+      "Bash(dotnet remove:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet list:*)",
+      "Bash(findstr:*)",
+      "Bash(dotnet script eval \"using System.Reflection; var asm = Assembly.LoadFrom\\(System.IO.Path.Combine\\(Environment.GetFolderPath\\(Environment.SpecialFolder.UserProfile\\), \"\".nuget/packages/microsoft.openapi/2.3.0/lib/net8.0/Microsoft.OpenApi.dll\"\"\\)\\); foreach \\(var t in asm.GetTypes\\(\\).Select\\(t => t.Namespace\\).Distinct\\(\\).OrderBy\\(n => n\\)\\) Console.WriteLine\\(t\\);\")",
+      "Bash(powershell -Command \"[System.Reflection.Assembly]::LoadFrom\\(\"\"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.openapi\\\\2.3.0\\\\lib\\\\net8.0\\\\Microsoft.OpenApi.dll\"\"\\).GetTypes\\(\\) | ForEach-Object { $_Namespace } | Sort-Object -Unique\")",
+      "Bash(powershell -Command \"$asm = [System.Reflection.Assembly]::LoadFrom\\(\"\"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.openapi\\\\2.3.0\\\\lib\\\\net8.0\\\\Microsoft.OpenApi.dll\"\"\\); $asm.GetTypes\\(\\) | ForEach-Object { $_Namespace } | Sort-Object -Unique\")",
+      "Bash(powershell -NoProfile -Command '$dllPath = Join-Path $env:USERPROFILE \"\".nuget\\\\packages\\\\microsoft.openapi\\\\2.3.0\\\\lib\\\\net8.0\\\\Microsoft.OpenApi.dll\"\"; $asm = [System.Reflection.Assembly]::LoadFrom\\($dllPath\\); $asm.GetTypes\\(\\) | ForEach-Object { $_.Namespace } | Sort-Object -Unique')",
+      "Bash(powershell -NoProfile -Command '$dllPath = Join-Path $env:USERPROFILE \"\".nuget\\\\packages\\\\microsoft.openapi\\\\2.3.0\\\\lib\\\\net8.0\\\\Microsoft.OpenApi.dll\"\"; $asm = [System.Reflection.Assembly]::LoadFrom\\($dllPath\\); try { $types = $asm.GetTypes\\(\\) } catch [System.Reflection.ReflectionTypeLoadException] { $types = $_.Exception.Types | Where-Object { $_ -ne $null } }; $types | ForEach-Object { $_.Namespace } | Sort-Object -Unique')",
+      "Bash(powershell -NoProfile -Command '$dllPath = Join-Path $env:USERPROFILE \"\".nuget\\\\packages\\\\microsoft.openapi\\\\2.3.0\\\\lib\\\\net8.0\\\\Microsoft.OpenApi.dll\"\"; $asm = [System.Reflection.Assembly]::LoadFrom\\($dllPath\\); try { $types = $asm.GetTypes\\(\\) } catch [System.Reflection.ReflectionTypeLoadException] { $types = $_.Exception.Types | Where-Object { $_ -ne $null } }; $types | Where-Object { $_.IsPublic } | ForEach-Object { $_.FullName } | Sort-Object')",
+      "Bash(powershell -NoProfile -Command '$dllPath = Join-Path $env:USERPROFILE \"\".nuget\\\\packages\\\\swashbuckle.aspnetcore.swaggergen\\\\10.1.0\\\\lib\\\\net10.0\\\\Swashbuckle.AspNetCore.SwaggerGen.dll\"\"; $asm = [System.Reflection.Assembly]::LoadFrom\\($dllPath\\); try { $types = $asm.GetTypes\\(\\) } catch [System.Reflection.ReflectionTypeLoadException] { $types = $_.Exception.Types | Where-Object { $_ -ne $null } }; $types | ForEach-Object { $_.Namespace } | Sort-Object -Unique')",
+      "Bash(powershell -NoProfile -Command:*)",
+      "WebSearch",
+      "WebFetch(domain:iifx.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.nuget.org)"
     ]
   }
 }

@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
@@ -17,59 +18,62 @@ namespace RewardProgram.Application.Services.Auth;
 public class ApprovalService : IApprovalService
 {
     private readonly IApplicationDbContext _context;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ITwilioRepository _twilioRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly ITwilioService _twilioService;
     private readonly ILogger<ApprovalService> _logger;
 
     public ApprovalService(
         IApplicationDbContext context,
-        UserManager<ApplicationUser> userManager,
-        ITwilioRepository twilioRepository,
+        IUserRepository userRepository,
+        ITwilioService twilioService,
         ILogger<ApprovalService> logger)
     {
         _context = context;
-        _userManager = userManager;
-        _twilioRepository = twilioRepository;
+        _userRepository = userRepository;
+        _twilioService = twilioService;
         _logger = logger;
     }
 
-    public async Task<Result<List<PendingUserResponse>>> GetPendingRequestsAsync(string approverId)
+    public async Task<Result<PaginatedResult<PendingUserResponse>>> GetPendingRequestsAsync(string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
-        var approver = await _userManager.FindByIdAsync(approverId);
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)
-            return Result.Failure<List<PendingUserResponse>>(AuthErrors.UserNotFound);
+            return Result.Failure<PaginatedResult<PendingUserResponse>>(AuthErrors.UserNotFound);
 
-        var roles = await _userManager.GetRolesAsync(approver);
+        var roles = await _userRepository.GetRolesAsync(approver);
 
         IQueryable<ApplicationUser> query;
 
         if (roles.Contains(UserRoles.SalesMan))
         {
-            // SalesMan sees users assigned to them with PendingSalesman status
-            query = _userManager.Users
+            query = _userRepository.Query()
                 .Where(u => u.AssignedSalesManId == approverId
                          && u.RegistrationStatus == RegistrationStatus.PendingSalesman);
         }
         else if (roles.Contains(UserRoles.ZoneManager))
         {
-            // ZoneManager sees users whose assigned salesman reports to them, with PendingZoneManager status
-            query = _userManager.Users
+            query = _userRepository.Query()
                 .Where(u => u.RegistrationStatus == RegistrationStatus.PendingZoneManager
                          && u.AssignedSalesMan != null
                          && u.AssignedSalesMan.ZoneManagerId == approverId);
         }
         else
         {
-            return Result.Failure<List<PendingUserResponse>>(ApprovalErrors.NotAuthorizedToApprove);
+            return Result.Failure<PaginatedResult<PendingUserResponse>>(ApprovalErrors.NotAuthorizedToApprove);
         }
 
+        var totalCount = await query.CountAsync(ct);
+
         var users = await query
+            .OrderBy(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Include(u => u.ShopOwnerProfile)
             .Include(u => u.SellerProfile)
                 .ThenInclude(sp => sp!.ShopOwner)
                     .ThenInclude(so => so.User)
             .Include(u => u.AssignedSalesMan)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         // Resolve city/district names in bulk
         var cityIds = users
@@ -86,13 +90,13 @@ public class ApprovalService : IApprovalService
 
         var cities = await _context.Cities
             .Where(c => cityIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.NameAr);
+            .ToDictionaryAsync(c => c.Id, c => c.NameAr, ct);
 
         var districts = await _context.Districts
             .Where(d => districtIds.Contains(d.Id))
-            .ToDictionaryAsync(d => d.Id, d => new { d.NameAr, d.Zone });
+            .ToDictionaryAsync(d => d.Id, d => new { d.NameAr, d.Zone }, ct);
 
-        var result = users.Select(u =>
+        var items = users.Select(u =>
         {
             string? cityName = null;
             string? districtName = null;
@@ -132,24 +136,25 @@ public class ApprovalService : IApprovalService
             );
         }).ToList();
 
+        var result = new PaginatedResult<PendingUserResponse>(items, totalCount, page, pageSize);
         return Result.Success(result);
     }
 
-    public async Task<Result> ApproveAsync(string userId, string approverId)
+    public async Task<Result> ApproveAsync(string userId, string approverId, CancellationToken ct = default)
     {
-        var user = await _userManager.Users
+        var user = await _userRepository.Query()
             .Include(u => u.ShopOwnerProfile)
             .Include(u => u.AssignedSalesMan)
-            .FirstOrDefaultAsync(u => u.Id == userId);
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
             return Result.Failure(AuthErrors.UserNotFound);
 
-        var approver = await _userManager.FindByIdAsync(approverId);
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)
             return Result.Failure(AuthErrors.UserNotFound);
 
-        var roles = await _userManager.GetRolesAsync(approver);
+        var roles = await _userRepository.GetRolesAsync(approver);
 
         // SalesMan approval: PendingSalesman → PendingZoneManager
         if (user.RegistrationStatus == RegistrationStatus.PendingSalesman
@@ -158,15 +163,14 @@ public class ApprovalService : IApprovalService
             if (user.AssignedSalesManId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
-            // Verify the salesman has a zone manager
             if (string.IsNullOrEmpty(approver.ZoneManagerId))
                 return Result.Failure(ApprovalErrors.SalesManHasNoZoneManager);
 
             var fromStatus = user.RegistrationStatus;
             user.RegistrationStatus = RegistrationStatus.PendingZoneManager;
 
-            await _userManager.UpdateAsync(user);
-            await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus);
+            await _userRepository.UpdateAsync(user);
+            await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
 
             _logger.LogInformation(
                 "SalesMan {ApproverId} approved user {UserId}. Status: PendingSalesman → PendingZoneManager",
@@ -179,37 +183,38 @@ public class ApprovalService : IApprovalService
         if (user.RegistrationStatus == RegistrationStatus.PendingZoneManager
             && roles.Contains(UserRoles.ZoneManager))
         {
-            // Verify this zone manager is the one the salesman reports to
             if (user.AssignedSalesMan?.ZoneManagerId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
             var fromStatus = user.RegistrationStatus;
             user.RegistrationStatus = RegistrationStatus.Approved;
 
-            // Generate unique ShopCode
             if (user.ShopOwnerProfile != null)
             {
-                var shopCode = await GenerateShopCodeAsync();
+                var shopCode = await GenerateShopCodeAsync(ct: ct);
                 if (shopCode is null)
                     return Result.Failure(ApprovalErrors.ShopCodeGenerationFailed);
 
                 user.ShopOwnerProfile.ShopCode = shopCode;
             }
 
-            await _userManager.UpdateAsync(user);
-            await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus);
+            await _userRepository.UpdateAsync(user);
+            await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
 
             _logger.LogInformation(
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved. ShopCode: {ShopCode}",
                 approverId, userId, user.ShopOwnerProfile?.ShopCode);
 
-            // Send WhatsApp welcome (fire-and-forget, don't fail approval)
-            _ = SendWelcomeMessageAsync(user);
+            // Send WhatsApp welcome (fire-and-forget with captured data to avoid disposed-context issues)
+            var welcomeMobile = user.MobileNumber;
+            var welcomeName = user.Name;
+            var welcomeUserType = user.UserType;
+            var welcomeShopCode = user.ShopOwnerProfile?.ShopCode;
+            _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName, welcomeUserType, welcomeShopCode);
 
             return Result.Success();
         }
 
-        // User is not in a pending state that matches the approver's role
         if (user.RegistrationStatus != RegistrationStatus.PendingSalesman
             && user.RegistrationStatus != RegistrationStatus.PendingZoneManager)
         {
@@ -219,20 +224,20 @@ public class ApprovalService : IApprovalService
         return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
     }
 
-    public async Task<Result> RejectAsync(string userId, string reason, string approverId)
+    public async Task<Result> RejectAsync(string userId, string reason, string approverId, CancellationToken ct = default)
     {
-        var user = await _userManager.Users
+        var user = await _userRepository.Query()
             .Include(u => u.AssignedSalesMan)
-            .FirstOrDefaultAsync(u => u.Id == userId);
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
             return Result.Failure(AuthErrors.UserNotFound);
 
-        var approver = await _userManager.FindByIdAsync(approverId);
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)
             return Result.Failure(AuthErrors.UserNotFound);
 
-        var roles = await _userManager.GetRolesAsync(approver);
+        var roles = await _userRepository.GetRolesAsync(approver);
 
         // Validate authorization
         if (user.RegistrationStatus == RegistrationStatus.PendingSalesman
@@ -260,8 +265,8 @@ public class ApprovalService : IApprovalService
         var fromStatus = user.RegistrationStatus;
         user.RegistrationStatus = RegistrationStatus.Rejected;
 
-        await _userManager.UpdateAsync(user);
-        await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Rejected, fromStatus, RegistrationStatus.Rejected, reason);
+        await _userRepository.UpdateAsync(user);
+        await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Rejected, fromStatus, RegistrationStatus.Rejected, reason, ct);
 
         _logger.LogInformation(
             "Approver {ApproverId} rejected user {UserId}. Status: {FromStatus} → Rejected. Reason: {Reason}",
@@ -272,12 +277,12 @@ public class ApprovalService : IApprovalService
 
     #region Private Helpers
 
-    private async Task<string?> GenerateShopCodeAsync(int maxAttempts = 10)
+    private async Task<string?> GenerateShopCodeAsync(int maxAttempts = 10, CancellationToken ct = default)
     {
         for (int i = 0; i < maxAttempts; i++)
         {
             var code = GenerateRandomCode(6);
-            var exists = await _context.ShopOwnerProfiles.AnyAsync(p => p.ShopCode == code);
+            var exists = await _context.ShopOwnerProfiles.AnyAsync(p => p.ShopCode == code, ct);
             if (!exists)
                 return code;
         }
@@ -298,7 +303,8 @@ public class ApprovalService : IApprovalService
         ApprovalAction action,
         RegistrationStatus fromStatus,
         RegistrationStatus toStatus,
-        string? rejectionReason = null)
+        string? rejectionReason = null,
+        CancellationToken ct = default)
     {
         var record = new ApprovalRecord
         {
@@ -312,22 +318,22 @@ public class ApprovalService : IApprovalService
         };
 
         _context.ApprovalRecords.Add(record);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(ct);
     }
 
-    private async Task SendWelcomeMessageAsync(ApplicationUser user)
+    private async Task SendWelcomeMessageAsync(string mobileNumber, string userName, UserType userType, string? shopCode)
     {
         try
         {
-            var message = user.UserType == UserType.ShopOwner
-                ? $"مرحباً {user.Name}! تمت الموافقة على تسجيلك في برنامج المكافآت. كود المحل الخاص بك: {user.ShopOwnerProfile?.ShopCode}"
-                : $"مرحباً {user.Name}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
+            var message = userType == UserType.ShopOwner
+                ? $"مرحباً {userName}! تمت الموافقة على تسجيلك في برنامج المكافآت. كود المحل الخاص بك: {shopCode}"
+                : $"مرحباً {userName}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
 
-            await _twilioRepository.SendWhatsAppMessageAsync(user.MobileNumber, message);
+            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send welcome WhatsApp message to user {UserId}", user.Id);
+            _logger.LogError(ex, "Failed to send welcome WhatsApp message to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
         }
     }
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
@@ -21,12 +22,12 @@ public class ApprovalController : ControllerBase
     }
 
     [HttpGet("pending")]
-    [ProducesResponseType(typeof(List<PendingUserResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResult<PendingUserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetPendingRequests()
+    public async Task<IActionResult> GetPendingRequests([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _approvalService.GetPendingRequestsAsync(approverId);
+        var result = await _approvalService.GetPendingRequestsAsync(approverId, page, pageSize, ct);
 
         return result.IsSuccess
             ? Ok(result.Value)
@@ -37,10 +38,10 @@ public class ApprovalController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Approve([FromBody] ApproveRequest request)
+    public async Task<IActionResult> Approve([FromBody] ApproveRequest request, CancellationToken ct = default)
     {
         var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _approvalService.ApproveAsync(request.UserId, approverId);
+        var result = await _approvalService.ApproveAsync(request.UserId, approverId, ct);
 
         return result.IsSuccess
             ? Ok(new { message = "تمت الموافقة بنجاح" })
@@ -51,10 +52,10 @@ public class ApprovalController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Reject([FromBody] RejectRequest request)
+    public async Task<IActionResult> Reject([FromBody] RejectRequest request, CancellationToken ct = default)
     {
         var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _approvalService.RejectAsync(request.UserId, request.Reason, approverId);
+        var result = await _approvalService.RejectAsync(request.UserId, request.Reason, approverId, ct);
 
         return result.IsSuccess
             ? Ok(new { message = "تم الرفض بنجاح" })
