@@ -9,6 +9,7 @@ public class RegisterSellerRequestValidator : AbstractValidator<RegisterSellerRe
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("الاسم مطلوب")
+            .MinimumLength(2).WithMessage("الاسم يجب أن يكون حرفين على الأقل")
             .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف");
 
         RuleFor(x => x.MobileNumber)

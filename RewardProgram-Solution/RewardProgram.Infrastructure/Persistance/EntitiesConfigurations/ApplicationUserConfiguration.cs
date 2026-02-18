@@ -1,9 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RewardProgram.Domain.Entities.Users;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RewardProgram.Infrastructure.Persistance.EntitiesConfigurations;
 
@@ -46,45 +43,12 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             rt.Property(t => t.ExpiresOn).IsRequired();
             rt.Property(t => t.CreatedOn).IsRequired();
             rt.HasKey("UserId", "Token");
-            // Index for token lookup queries (RefreshTokenAsync, RevokeTokenAsync)
             rt.HasIndex(t => t.Token);
-            // Index for cleanup queries
             rt.HasIndex(t => t.ExpiresOn);
             rt.HasIndex(t => t.RevokedOn);
         });
 
-        // === SalesMan Fields ===
-        builder.Property(x => x.DistrictId).HasMaxLength(450);
-        builder.Property(x => x.ZoneManagerId).HasMaxLength(450);
-
-        // === ZoneManager Fields ===
-        builder.Property(x => x.ManagedCityId).HasMaxLength(450);
-        builder.Property(x => x.ManagedZone);
-
-        // SalesMan → District
-        builder.HasOne(x => x.District)
-            .WithMany(x => x.SalesMen)
-            .HasForeignKey(x => x.DistrictId)
-            .OnDelete(DeleteBehavior.SetNull);
-
-        // SalesMan → ZoneManager
-        builder.HasOne(x => x.ZoneManager)
-            .WithMany(x => x.ManagedSalesMen)
-            .HasForeignKey(x => x.ZoneManagerId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // ZoneManager → ManagedCity
-        builder.HasOne(x => x.ManagedCity)
-            .WithMany()
-            .HasForeignKey(x => x.ManagedCityId)
-            .OnDelete(DeleteBehavior.SetNull);
-
-        // One ZoneManager per City + Zone
-        builder.HasIndex(x => new { x.ManagedCityId, x.ManagedZone })
-            .IsUnique()
-            .HasFilter("[UserType] = 5 AND [ManagedCityId] IS NOT NULL AND [ManagedZone] IS NOT NULL");
-
-        // ShopOwner/Technician → AssignedSalesMan
+        // ShopOwner/Seller/Technician → AssignedSalesMan
         builder.HasOne(x => x.AssignedSalesMan)
             .WithMany(x => x.AssignedUsers)
             .HasForeignKey(x => x.AssignedSalesManId)
@@ -106,22 +70,20 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .HasForeignKey<TechnicianProfile>(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Region.ZoneManagerId → ApplicationUser.ManagedRegion is configured in RegionConfiguration
+
         // Indexes
         builder.HasIndex(x => x.MobileNumber).IsUnique();
         builder.HasIndex(x => x.UserType);
         builder.HasIndex(x => x.RegistrationStatus);
-        builder.HasIndex(x => x.DistrictId);
-        builder.HasIndex(x => x.ZoneManagerId);
-        builder.HasIndex(x => x.ManagedCityId);
-        builder.HasIndex(x => x.ManagedZone);
         builder.HasIndex(x => x.AssignedSalesManId);
         builder.HasIndex(x => x.IsDisabled);
 
         // Composite indexes
-        builder.HasIndex(x => new { x.ManagedCityId, x.ManagedZone });
         builder.HasIndex(x => new { x.UserType, x.RegistrationStatus });
         builder.HasIndex(x => new { x.UserType, x.IsDisabled });
     }
+
     private void NationalAddressConfiguration(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.OwnsOne(x => x.NationalAddress, na =>
@@ -135,7 +97,6 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 
             // Indexes
             na.HasIndex(a => a.CityId);
-            na.HasIndex(a => a.DistrictId);
         });
     }
 }

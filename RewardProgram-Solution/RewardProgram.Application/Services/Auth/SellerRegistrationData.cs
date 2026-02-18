@@ -10,7 +10,7 @@ internal record SellerRegistrationData(
     string ShopOwnerId,
     string AssignedSalesManId,
     string CityId,
-    string DistrictId,
+    string? DistrictId,
     string Street,
     int BuildingNumber,
     string PostalCode,

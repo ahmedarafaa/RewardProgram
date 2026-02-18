@@ -4,11 +4,11 @@ using RewardProgram.Domain.Entities.Users;
 
 namespace RewardProgram.Infrastructure.Persistance.EntitiesConfigurations;
 
-public class CityConfiguration : IEntityTypeConfiguration<City>
+public class RegionConfiguration : IEntityTypeConfiguration<Region>
 {
-    public void Configure(EntityTypeBuilder<City> builder)
+    public void Configure(EntityTypeBuilder<Region> builder)
     {
-        builder.ToTable("Cities");
+        builder.ToTable("Regions");
 
         builder.HasKey(x => x.Id);
 
@@ -20,15 +20,12 @@ public class CityConfiguration : IEntityTypeConfiguration<City>
             .HasMaxLength(100)
             .IsRequired();
 
-        builder.Property(x => x.RegionId)
-            .IsRequired();
-
-        builder.Property(x => x.ApprovalSalesManId)
-            .HasMaxLength(450);
-
         builder.Property(x => x.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
+
+        builder.Property(x => x.ZoneManagerId)
+            .HasMaxLength(450);
 
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
@@ -36,23 +33,18 @@ public class CityConfiguration : IEntityTypeConfiguration<City>
         builder.Property(x => x.UpdatedBy).HasMaxLength(450);
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
-        // Relationships
-        builder.HasOne(x => x.Region)
-            .WithMany(x => x.Cities)
-            .HasForeignKey(x => x.RegionId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(x => x.ApprovalSalesMan)
-            .WithMany(x => x.ApprovalCities)
-            .HasForeignKey(x => x.ApprovalSalesManId)
+        // Region → ZoneManager (one-to-one)
+        builder.HasOne(x => x.ZoneManager)
+            .WithOne(x => x.ManagedRegion)
+            .HasForeignKey<Region>(x => x.ZoneManagerId)
             .OnDelete(DeleteBehavior.SetNull);
 
         // Indexes
-        builder.HasIndex(x => x.RegionId);
-        builder.HasIndex(x => x.ApprovalSalesManId);
+        builder.HasIndex(x => x.NameAr).IsUnique();
+        builder.HasIndex(x => x.NameEn).IsUnique();
         builder.HasIndex(x => x.IsActive);
-        builder.HasIndex(x => new { x.RegionId, x.NameAr }).IsUnique();
-        builder.HasIndex(x => new { x.RegionId, x.NameEn }).IsUnique();
+        builder.HasIndex(x => x.ZoneManagerId).IsUnique()
+            .HasFilter("[ZoneManagerId] IS NOT NULL");
 
         // Query filter for soft delete
         builder.HasQueryFilter(x => !x.IsDeleted);

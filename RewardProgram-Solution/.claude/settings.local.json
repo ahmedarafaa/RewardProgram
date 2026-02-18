@@ -29,7 +29,11 @@
       "WebFetch(domain:iifx.dev)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:www.nuget.org)"
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(dotnet ef database drop:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(taskkill:*)",
+      "Bash(test:*)"
     ]
   }
 }

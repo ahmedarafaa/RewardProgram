@@ -1,10 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Domain.Enums.UserEnums;
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text;
 
 namespace RewardProgram.Domain.Entities.Users;
 
@@ -23,20 +19,8 @@ public class ApplicationUser : IdentityUser
     public RegistrationStatus RegistrationStatus { get; set; }
     public NationalAddress? NationalAddress { get; set; }
 
-    // === SalesMan Fields ===
-    public string? DistrictId { get; set; } // SalesMan belongs to District
-    public District? District { get; set; }
-    public string? ZoneManagerId { get; set; } // SalesMan reports to ZoneManager
-    public ApplicationUser? ZoneManager { get; set; }
-
-    // ZoneManager assignment (for SalesMan only)
-    public string? ManagedCityId { get; set; } // ZoneManager's City
-    public City? ManagedCity { get; set; }
-    public Zone? ManagedZone { get; set; } // ZoneManager's Zone
-
-
-    // ShopOwner/Technician Fields 
-    public string? AssignedSalesManId { get; set; }     
+    // === ShopOwner/Seller/Technician → assigned SalesMan ===
+    public string? AssignedSalesManId { get; set; }
     public ApplicationUser? AssignedSalesMan { get; set; }
 
     // Profiles (one-to-one, based on UserType)
@@ -44,11 +28,11 @@ public class ApplicationUser : IdentityUser
     public SellerProfile? SellerProfile { get; set; }
     public TechnicianProfile? TechnicianProfile { get; set; }
 
-    // Navigation properties for assignments 
+    // Navigation properties
     public List<ApplicationUser> AssignedUsers { get; set; } = [];  // Users assigned to this SalesMan
-    public List<ApplicationUser> ManagedSalesMen { get; set; } = [];  // SalesMen under this DM
     public List<ApprovalRecord> ApprovalRecords { get; set; } = [];
-    public List<District> ApprovalDistricts { get; set; } = [];
+    public List<City> ApprovalCities { get; set; } = [];  // Cities where this user is ApprovalSalesMan
+    public Region? ManagedRegion { get; set; }  // Region where this user is ZoneManager (inverse nav, no FK)
     public List<RefreshToken> RefreshTokens { get; set; } = [];
 }
 
@@ -56,7 +40,7 @@ public class ApplicationUser : IdentityUser
 public class NationalAddress
 {
     public string CityId { get; set; } = string.Empty;
-    public string DistrictId { get; set; } = string.Empty;
+    public string? DistrictId { get; set; }
     public string Street { get; set; } = string.Empty;
     public int BuildingNumber { get; set; }
     public string PostalCode { get; set; } = string.Empty;

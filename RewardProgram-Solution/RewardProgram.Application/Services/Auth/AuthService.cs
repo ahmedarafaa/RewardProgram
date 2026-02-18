@@ -49,25 +49,36 @@ public class AuthService : IAuthService
         if (uniqueValidation.IsFailure)
             return Result.Failure<SendOtpResponse>(uniqueValidation.Error);
 
-        // 2. Validate district (includes city validation in one query)
-        var district = await _context.Districts
-            .FirstOrDefaultAsync(d =>
-                d.Id == request.DistrictId &&
-                d.CityId == request.CityId &&
-                d.IsActive, ct);
+        // 2. Validate city belongs to region and has an ApprovalSalesMan
+        var city = await _context.Cities
+            .FirstOrDefaultAsync(c =>
+                c.Id == request.CityId &&
+                c.RegionId == request.RegionId &&
+                c.IsActive, ct);
 
-        if (district == null)
-            return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
+        if (city == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.CityNotFound);
 
-        if (string.IsNullOrEmpty(district.ApprovalSalesManId))
+        if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<SendOtpResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 3. Upload shop image
-        var imageResult = await _fileStorageService.UploadAsync(request.ShopImage, "shops", ct);
+        // 3. Validate district if provided
+        if (!string.IsNullOrEmpty(request.DistrictId))
+        {
+            var districtExists = await _context.Districts
+                .AnyAsync(d => d.Id == request.DistrictId && d.CityId == request.CityId && d.IsActive, ct);
+
+            if (!districtExists)
+                return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
+        }
+
+        // 4. Upload shop image
+        using var imageStream = request.ShopImage.OpenReadStream();
+        var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
         if (imageResult.IsFailure)
             return Result.Failure<SendOtpResponse>(AuthErrors.ImageUploadFailed);
 
-        // 4. Prepare registration data
+        // 5. Prepare registration data
         var registrationData = new ShopOwnerRegistrationData(
             UserType: UserType.ShopOwner,
             StoreName: request.StoreName,
@@ -78,17 +89,16 @@ public class AuthService : IAuthService
             ShopImageUrl: imageResult.Value,
             CityId: request.CityId,
             DistrictId: request.DistrictId,
-            Zone: district.Zone,
             Street: request.NationalAddress.Street,
             BuildingNumber: request.NationalAddress.BuildingNumber,
             PostalCode: request.NationalAddress.PostalCode,
             SubNumber: request.NationalAddress.SubNumber,
-            AssignedSalesManId: district.ApprovalSalesManId
+            AssignedSalesManId: city.ApprovalSalesManId
         );
 
         var registrationJson = JsonSerializer.Serialize(registrationData);
 
-        // 5. Send OTP
+        // 6. Send OTP
         var otpResult = await _otpService.SendAsync(request.MobileNumber, registrationJson, ct);
         if (otpResult.IsFailure)
         {
@@ -98,9 +108,9 @@ public class AuthService : IAuthService
         }
 
         _logger.LogInformation(
-            "OTP sent for ShopOwner registration. Mobile: {Mobile}, District: {District}",
+            "OTP sent for ShopOwner registration. Mobile: {Mobile}, City: {CityId}",
             MobileNumberHelper.Mask(request.MobileNumber),
-            district.NameAr);
+            request.CityId);
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
@@ -142,7 +152,7 @@ public class AuthService : IAuthService
             ShopOwnerId: shopOwnerProfile.UserId,
             AssignedSalesManId: shopOwnerUser.AssignedSalesManId,
             CityId: address?.CityId ?? string.Empty,
-            DistrictId: address?.DistrictId ?? string.Empty,
+            DistrictId: address?.DistrictId,
             Street: address?.Street ?? string.Empty,
             BuildingNumber: address?.BuildingNumber ?? 0,
             PostalCode: address?.PostalCode ?? string.Empty,
@@ -174,20 +184,30 @@ public class AuthService : IAuthService
         if (mobileExists)
             return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 2. Validate district (exists, active, belongs to CityId, has ApprovalSalesManId)
-        var district = await _context.Districts
-            .FirstOrDefaultAsync(d =>
-                d.Id == request.DistrictId &&
-                d.CityId == request.CityId &&
-                d.IsActive, ct);
+        // 2. Validate city belongs to region and has ApprovalSalesManId
+        var city = await _context.Cities
+            .FirstOrDefaultAsync(c =>
+                c.Id == request.CityId &&
+                c.RegionId == request.RegionId &&
+                c.IsActive, ct);
 
-        if (district == null)
-            return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
+        if (city == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.CityNotFound);
 
-        if (string.IsNullOrEmpty(district.ApprovalSalesManId))
+        if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<SendOtpResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 3. Serialize registration data
+        // 3. Validate district if provided
+        if (!string.IsNullOrEmpty(request.DistrictId))
+        {
+            var districtExists = await _context.Districts
+                .AnyAsync(d => d.Id == request.DistrictId && d.CityId == request.CityId && d.IsActive, ct);
+
+            if (!districtExists)
+                return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
+        }
+
+        // 4. Serialize registration data
         var registrationData = new TechnicianRegistrationData(
             UserType: UserType.Technician,
             Name: request.Name,
@@ -195,20 +215,20 @@ public class AuthService : IAuthService
             CityId: request.CityId,
             DistrictId: request.DistrictId,
             PostalCode: request.PostalCode,
-            AssignedSalesManId: district.ApprovalSalesManId
+            AssignedSalesManId: city.ApprovalSalesManId
         );
 
         var registrationJson = JsonSerializer.Serialize(registrationData);
 
-        // 4. Send OTP
+        // 5. Send OTP
         var otpResult = await _otpService.SendAsync(request.MobileNumber, registrationJson, ct);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
 
         _logger.LogInformation(
-            "OTP sent for Technician registration. Mobile: {Mobile}, District: {District}",
+            "OTP sent for Technician registration. Mobile: {Mobile}, City: {CityId}",
             MobileNumberHelper.Mask(request.MobileNumber),
-            district.NameAr);
+            request.CityId);
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
@@ -255,6 +275,12 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserDisabled);
 
+        if (user.RegistrationStatus == RegistrationStatus.Rejected)
+            return Result.Failure<SendOtpResponse>(AuthErrors.UserRejected);
+
+        if (user.RegistrationStatus != RegistrationStatus.Approved)
+            return Result.Failure<SendOtpResponse>(AuthErrors.UserNotApproved);
+
         var otpResult = await _otpService.SendAsync(request.MobileNumber, ct: ct);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
@@ -285,6 +311,9 @@ public class AuthService : IAuthService
 
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
+
+        if (user.RegistrationStatus != RegistrationStatus.Approved)
+            return Result.Failure<AuthResponse>(AuthErrors.UserNotApproved);
 
         // 3. Generate auth response (tokens + user info)
         var authResponse = await _tokenService.GenerateAuthResponseAsync(user);
@@ -559,16 +588,15 @@ public class AuthService : IAuthService
         if (await _userRepository.MobileExistsAsync(data.MobileNumber, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // Re-validate district still valid
-        var district = await _context.Districts
-            .FirstOrDefaultAsync(d =>
-                d.Id == data.DistrictId &&
-                d.CityId == data.CityId &&
-                d.IsActive &&
-                !string.IsNullOrEmpty(d.ApprovalSalesManId), ct);
+        // Re-validate city still valid and has a SalesMan
+        var city = await _context.Cities
+            .FirstOrDefaultAsync(c =>
+                c.Id == data.CityId &&
+                c.IsActive &&
+                !string.IsNullOrEmpty(c.ApprovalSalesManId), ct);
 
-        if (district == null)
-            return Result.Failure<RegisterResponse>(AuthErrors.DistrictNotFound);
+        if (city == null)
+            return Result.Failure<RegisterResponse>(AuthErrors.CityNotFound);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 

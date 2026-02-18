@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Lookups;
 using RewardProgram.Application.Interfaces;
 
@@ -16,12 +15,24 @@ public class LookupController : ControllerBase
         _lookupService = lookupService;
     }
 
-    [HttpGet("cities")]
-    [ProducesResponseType(typeof(List<CityResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCities(CancellationToken ct)
+    [HttpGet("regions")]
+    [ProducesResponseType(typeof(List<RegionResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRegions(CancellationToken ct)
     {
-        var cities = await _lookupService.GetCitiesAsync(ct);
-        return Ok(cities);
+        var regions = await _lookupService.GetRegionsAsync(ct);
+        return Ok(regions);
+    }
+
+    [HttpGet("regions/{regionId}/cities")]
+    [ProducesResponseType(typeof(List<CityResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCitiesByRegion(string regionId, CancellationToken ct)
+    {
+        var result = await _lookupService.GetCitiesByRegionAsync(regionId, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
     }
 
     [HttpGet("cities/{cityId}/districts")]

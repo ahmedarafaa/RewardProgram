@@ -7,5 +7,6 @@ namespace RewardProgram.Application.Contracts.Lookups;
 public record CityResponse(
     string Id,
     string NameAr,
-    string NameEn
+    string NameEn,
+    string RegionId
 );

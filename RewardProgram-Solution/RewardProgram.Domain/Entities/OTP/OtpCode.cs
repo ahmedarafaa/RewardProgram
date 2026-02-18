@@ -39,6 +39,11 @@ public class OtpCode
     /// </summary>
     public const int MaxVerificationAttempts = 5;
 
+    /// <summary>
+    /// Minimum seconds between OTP resend requests.
+    /// </summary>
+    public const int ResendCooldownSeconds = 30;
+
     // For registration: store form data until OTP verified
     public string? RegistrationData { get; set; }  // JSON
 

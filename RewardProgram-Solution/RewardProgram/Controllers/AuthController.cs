@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 using RewardProgram.Application.Interfaces.Auth;
@@ -12,11 +11,30 @@ namespace RewardProgram.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IOtpService _otpService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IOtpService otpService)
     {
         _authService = authService;
+        _otpService = otpService;
     }
+
+    #region OTP
+
+    [HttpPost("resend-otp")]
+    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken ct)
+    {
+        var result = await _otpService.ResendAsync(request.MobileNumber, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
+    #endregion
 
     #region Registration
 

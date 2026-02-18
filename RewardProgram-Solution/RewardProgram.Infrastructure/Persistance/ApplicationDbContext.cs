@@ -17,6 +17,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
     // DbSets
+    public DbSet<Region> Regions { get; set; }
     public DbSet<City> Cities { get; set; }
     public DbSet<District> Districts { get; set; }
     public DbSet<ShopOwnerProfile> ShopOwnerProfiles { get; set; }

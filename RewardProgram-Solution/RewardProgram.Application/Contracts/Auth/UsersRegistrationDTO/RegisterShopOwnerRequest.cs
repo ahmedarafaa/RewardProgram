@@ -9,8 +9,9 @@ public record RegisterShopOwnerRequest
     string MobileNumber,
     string VAT,
     string CRN,
+    string RegionId,
     string CityId,
-    string DistrictId,
+    string? DistrictId,
     IFormFile ShopImage,
     // National Address
     NationalAddressResponse NationalAddress

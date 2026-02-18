@@ -58,6 +58,64 @@ public class OtpService : IOtpService
         return Result.Success(pinId);
     }
 
+    public async Task<Result<SendOtpResponse>> ResendAsync(string mobileNumber, CancellationToken ct = default)
+    {
+        // 1. Find the most recent OTP for this mobile
+        var lastOtp = await _context.OtpCodes
+            .Where(o => o.MobileNumber == mobileNumber)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (lastOtp == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.OtpNotFound);
+
+        // 2. Check 30-second cooldown
+        var secondsSinceLast = (DateTime.UtcNow - lastOtp.CreatedAt).TotalSeconds;
+        if (secondsSinceLast < OtpCode.ResendCooldownSeconds)
+            return Result.Failure<SendOtpResponse>(AuthErrors.OtpResendTooSoon);
+
+        // 3. Check global rate limit
+        var rateLimitResult = await CheckRateLimitAsync(mobileNumber, ct);
+        if (rateLimitResult.IsFailure)
+            return Result.Failure<SendOtpResponse>(rateLimitResult.Error);
+
+        // 4. Mark old OTP as used (invalidate it)
+        if (!lastOtp.IsUsed)
+        {
+            lastOtp.IsUsed = true;
+            await _context.SaveChangesAsync(ct);
+        }
+
+        // 5. Send new OTP, carry forward registration data
+        var result = await _twilioService.SendOtpAsync(mobileNumber, ct);
+        if (result.IsFailure)
+            return Result.Failure<SendOtpResponse>(result.Error);
+
+        var newPinId = result.Value;
+
+        var newOtp = new OtpCode
+        {
+            PinId = newPinId,
+            MobileNumber = mobileNumber,
+            RegistrationData = lastOtp.RegistrationData,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(OtpCode.DefaultExpirationMinutes),
+            IsUsed = false,
+            VerificationAttempts = 0
+        };
+
+        await _context.OtpCodes.AddAsync(newOtp, ct);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("OTP resent for Mobile: {Mobile}, NewPinId: {NewPinId}",
+            MobileNumberHelper.Mask(mobileNumber), newPinId);
+
+        return Result.Success(new SendOtpResponse(
+            PinId: newPinId,
+            MaskedMobileNumber: MobileNumberHelper.Mask(mobileNumber)
+        ));
+    }
+
     public async Task<Result<OtpVerificationResult>> VerifyAsync(string pinId, string otp, CancellationToken ct = default)
     {
         var otpCode = await _context.OtpCodes

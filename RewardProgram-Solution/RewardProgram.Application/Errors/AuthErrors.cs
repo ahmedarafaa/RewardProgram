@@ -51,7 +51,7 @@ public static class AuthErrors
         new("Auth.DistrictNotInCity", "الحي لا يتبع المدينة المحددة", 400);
 
     public static readonly Error NoApprovalSalesMan =
-        new("Auth.NoApprovalSalesMan", "لا يوجد مندوب مبيعات معتمد لهذا الحي", 400);
+        new("Auth.NoApprovalSalesMan", "لا يوجد مندوب مبيعات معتمد لهذه المدينة", 400);
 
     public static readonly Error NoSalesManForCity =
         new("Auth.NoSalesManForCity", "لا يوجد مندوب مبيعات لهذه المدينة", 400);
@@ -90,6 +90,9 @@ public static class AuthErrors
 
     public static readonly Error TooManyOtpRequests =
         new("Auth.TooManyOtpRequests", "محاولات كثيرة، يرجى المحاولة لاحقاً", 429);
+
+    public static readonly Error OtpResendTooSoon =
+        new("Auth.OtpResendTooSoon", "يرجى الانتظار 30 ثانية قبل إعادة إرسال رمز التحقق", 429);
 
     public static readonly Error MaxVerificationAttemptsExceeded =
         new("Auth.MaxVerificationAttempts", "تم تجاوز الحد الأقصى لمحاولات التحقق", 400);

@@ -7,9 +7,8 @@ public class VerifyOtpRequestValidator : AbstractValidator<VerifyOtpRequest>
 {
     public VerifyOtpRequestValidator()
     {
-        //RuleFor(x => x.MobileNumber)
-        //    .NotEmpty().WithMessage("رقم الجوال مطلوب")
-        //    .Matches(@"^05\d{8}$").WithMessage("رقم الجوال غير صحيح");
+        RuleFor(x => x.PinId)
+            .NotEmpty().WithMessage("معرف الطلب مطلوب");
 
         RuleFor(x => x.Otp)
             .NotEmpty().WithMessage("رمز التحقق مطلوب")

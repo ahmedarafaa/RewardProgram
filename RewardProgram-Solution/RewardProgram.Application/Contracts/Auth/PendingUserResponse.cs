@@ -18,10 +18,10 @@ public record PendingUserResponse(
     string? ShopImageUrl,
     string? ShopCode,
 
-    // National Address (resolved names)
+    // Location (resolved names)
+    string? RegionName,
     string? CityName,
     string? DistrictName,
-    Zone? Zone,
     string? Street,
     int? BuildingNumber,
     string? PostalCode,

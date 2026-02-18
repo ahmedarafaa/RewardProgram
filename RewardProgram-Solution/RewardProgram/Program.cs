@@ -1,4 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using RewardProgram.API;
+using RewardProgram.Infrastructure.Persistance;
+using RewardProgram.Infrastructure.Persistance.Data;
 using Serilog;
 
 namespace RewardProgram
@@ -14,20 +17,27 @@ namespace RewardProgram
             builder.Host.UseSerilog((context, configuration) =>
                 configuration.ReadFrom.Configuration(context.Configuration)
             );
-            
-            builder.Services.AddOpenApi();
-            
+                       
             var app = builder.Build();
 
+            // Auto-migrate in Development
+            if (app.Environment.IsDevelopment())
+            {
+                using var migrationScope = app.Services.CreateScope();
+                var db = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                await db.Database.MigrateAsync();
+            }
 
-            // Seed data
-            //await DataSeeder.SeedAsync(app.Services);
+            // Seed data (roles, users, regions, cities)
+            await DataSeeder.SeedAsync(app.Services);
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-                app.MapOpenApi();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
+
             app.UseExceptionHandler();
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();

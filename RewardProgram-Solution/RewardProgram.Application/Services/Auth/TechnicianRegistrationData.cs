@@ -7,7 +7,7 @@ internal record TechnicianRegistrationData(
     string Name,
     string MobileNumber,
     string CityId,
-    string DistrictId,
+    string? DistrictId,
     string PostalCode,
     string AssignedSalesManId
 );

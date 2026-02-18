@@ -1,8 +1,7 @@
 namespace RewardProgram.Application.Contracts.Lookups;
 
-public record DistrictResponse(
+public record RegionResponse(
     string Id,
     string NameAr,
-    string NameEn,
-    string CityId
+    string NameEn
 );

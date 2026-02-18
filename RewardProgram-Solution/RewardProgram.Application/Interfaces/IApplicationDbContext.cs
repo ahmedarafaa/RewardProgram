@@ -13,8 +13,9 @@ public interface IApplicationDbContext
     DbSet<TechnicianProfile> TechnicianProfiles { get; }
     DbSet<ApprovalRecord> ApprovalRecords { get; }
     DbSet<OtpCode> OtpCodes { get; }
-    DbSet<City> Cities { get; set; }
-    DbSet<District> Districts { get; set; }
+    DbSet<Region> Regions { get; }
+    DbSet<City> Cities { get; }
+    DbSet<District> Districts { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

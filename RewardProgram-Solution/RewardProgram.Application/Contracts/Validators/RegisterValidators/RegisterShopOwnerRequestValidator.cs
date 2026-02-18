@@ -35,11 +35,13 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
             .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
             .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
 
+        RuleFor(x => x.RegionId)
+            .NotEmpty().WithMessage("المنطقة مطلوبة");
+
         RuleFor(x => x.CityId)
             .NotEmpty().WithMessage("المدينة مطلوبة");
 
-        RuleFor(x => x.DistrictId)
-            .NotEmpty().WithMessage("الحي مطلوب");
+        // DistrictId is optional — no validation rule
 
         RuleFor(x => x.ShopImage)
             .NotNull().WithMessage("صورة المحل مطلوبة")

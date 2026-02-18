@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Interfaces.Files;
@@ -11,7 +10,7 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
     private readonly IWebHostEnvironment _environment = environment;
     private readonly ILogger<FileStorageService> _logger = logger;
 
-    public async Task<Result<string>> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
+    public async Task<Result<string>> UploadAsync(Stream fileStream, string fileName, string folder, CancellationToken ct = default)
     {
         try
         {
@@ -22,12 +21,12 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(fileName)}";
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            using (var output = new FileStream(filePath, FileMode.Create))
             {
-                await file.CopyToAsync(stream, ct);
+                await fileStream.CopyToAsync(output, ct);
             }
 
             var fileUrl = $"/uploads/{folder}/{uniqueFileName}";

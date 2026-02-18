@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RewardProgram.Application.Abstractions;
 
-namespace RewardProgram.Application.Abstractions;
+namespace RewardProgram.API;
 
 public static class ResultExtension
 {

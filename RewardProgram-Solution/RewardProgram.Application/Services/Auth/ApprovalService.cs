@@ -36,30 +36,55 @@ public class ApprovalService : IApprovalService
 
     public async Task<Result<PaginatedResult<PendingUserResponse>>> GetPendingRequestsAsync(string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
         var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)
             return Result.Failure<PaginatedResult<PendingUserResponse>>(AuthErrors.UserNotFound);
 
         var roles = await _userRepository.GetRolesAsync(approver);
 
+        var isSalesMan = roles.Contains(UserRoles.SalesMan);
+        var isZoneManager = roles.Contains(UserRoles.ZoneManager);
+
+        if (!isSalesMan && !isZoneManager)
+            return Result.Failure<PaginatedResult<PendingUserResponse>>(ApprovalErrors.NotAuthorizedToApprove);
+
         IQueryable<ApplicationUser> query;
 
-        if (roles.Contains(UserRoles.SalesMan))
+        if (isSalesMan && isZoneManager)
+        {
+            // Dual-role: show both SalesMan pending + ZoneManager pending
+            var managedCityIds = _context.Cities
+                .Where(c => c.Region!.ZoneManagerId == approverId)
+                .Select(c => c.Id);
+
+            query = _userRepository.Query()
+                .Where(u =>
+                    (u.AssignedSalesManId == approverId && u.RegistrationStatus == RegistrationStatus.PendingSalesman)
+                    ||
+                    (u.RegistrationStatus == RegistrationStatus.PendingZoneManager
+                     && u.NationalAddress != null
+                     && managedCityIds.Contains(u.NationalAddress.CityId)));
+        }
+        else if (isSalesMan)
         {
             query = _userRepository.Query()
                 .Where(u => u.AssignedSalesManId == approverId
                          && u.RegistrationStatus == RegistrationStatus.PendingSalesman);
         }
-        else if (roles.Contains(UserRoles.ZoneManager))
-        {
-            query = _userRepository.Query()
-                .Where(u => u.RegistrationStatus == RegistrationStatus.PendingZoneManager
-                         && u.AssignedSalesMan != null
-                         && u.AssignedSalesMan.ZoneManagerId == approverId);
-        }
         else
         {
-            return Result.Failure<PaginatedResult<PendingUserResponse>>(ApprovalErrors.NotAuthorizedToApprove);
+            // Pure ZoneManager
+            var managedCityIds = _context.Cities
+                .Where(c => c.Region!.ZoneManagerId == approverId)
+                .Select(c => c.Id);
+
+            query = _userRepository.Query()
+                .Where(u => u.RegistrationStatus == RegistrationStatus.PendingZoneManager
+                         && u.NationalAddress != null
+                         && managedCityIds.Contains(u.NationalAddress.CityId));
         }
 
         var totalCount = await query.CountAsync(ct);
@@ -75,7 +100,7 @@ public class ApprovalService : IApprovalService
             .Include(u => u.AssignedSalesMan)
             .ToListAsync(ct);
 
-        // Resolve city/district names in bulk
+        // Resolve city/district/region names in bulk
         var cityIds = users
             .Where(u => u.NationalAddress != null)
             .Select(u => u.NationalAddress!.CityId)
@@ -83,32 +108,38 @@ public class ApprovalService : IApprovalService
             .ToList();
 
         var districtIds = users
-            .Where(u => u.NationalAddress != null)
-            .Select(u => u.NationalAddress!.DistrictId)
+            .Where(u => u.NationalAddress?.DistrictId != null)
+            .Select(u => u.NationalAddress!.DistrictId!)
             .Distinct()
             .ToList();
 
         var cities = await _context.Cities
             .Where(c => cityIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.NameAr, ct);
+            .Include(c => c.Region)
+            .ToDictionaryAsync(c => c.Id, c => new { c.NameAr, RegionName = c.Region.NameAr }, ct);
 
-        var districts = await _context.Districts
-            .Where(d => districtIds.Contains(d.Id))
-            .ToDictionaryAsync(d => d.Id, d => new { d.NameAr, d.Zone }, ct);
+        var districts = districtIds.Count > 0
+            ? await _context.Districts
+                .Where(d => districtIds.Contains(d.Id))
+                .ToDictionaryAsync(d => d.Id, d => d.NameAr, ct)
+            : new Dictionary<string, string>();
 
         var items = users.Select(u =>
         {
             string? cityName = null;
             string? districtName = null;
-            Zone? zone = null;
+            string? regionName = null;
 
             if (u.NationalAddress != null)
             {
-                cities.TryGetValue(u.NationalAddress.CityId, out cityName);
-                if (districts.TryGetValue(u.NationalAddress.DistrictId, out var districtInfo))
+                if (cities.TryGetValue(u.NationalAddress.CityId, out var cityInfo))
                 {
-                    districtName = districtInfo.NameAr;
-                    zone = districtInfo.Zone;
+                    cityName = cityInfo.NameAr;
+                    regionName = cityInfo.RegionName;
+                }
+                if (u.NationalAddress.DistrictId != null)
+                {
+                    districts.TryGetValue(u.NationalAddress.DistrictId, out districtName);
                 }
             }
 
@@ -124,9 +155,9 @@ public class ApprovalService : IApprovalService
                 CRN: u.ShopOwnerProfile?.CRN,
                 ShopImageUrl: u.ShopOwnerProfile?.ShopImageUrl,
                 ShopCode: u.ShopOwnerProfile?.ShopCode,
+                RegionName: regionName,
                 CityName: cityName,
                 DistrictName: districtName,
-                Zone: zone,
                 Street: u.NationalAddress?.Street,
                 BuildingNumber: u.NationalAddress?.BuildingNumber,
                 PostalCode: u.NationalAddress?.PostalCode,
@@ -144,7 +175,6 @@ public class ApprovalService : IApprovalService
     {
         var user = await _userRepository.Query()
             .Include(u => u.ShopOwnerProfile)
-            .Include(u => u.AssignedSalesMan)
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
@@ -163,8 +193,15 @@ public class ApprovalService : IApprovalService
             if (user.AssignedSalesManId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
-            if (string.IsNullOrEmpty(approver.ZoneManagerId))
-                return Result.Failure(ApprovalErrors.SalesManHasNoZoneManager);
+            // Verify region has a ZoneManager (derived from user's city → region)
+            var regionHasZoneManager = user.NationalAddress != null
+                && await _context.Cities
+                    .Where(c => c.Id == user.NationalAddress.CityId)
+                    .Select(c => c.Region!.ZoneManagerId)
+                    .FirstOrDefaultAsync(ct) != null;
+
+            if (!regionHasZoneManager)
+                return Result.Failure(ApprovalErrors.NoZoneManagerForRegion);
 
             var fromStatus = user.RegistrationStatus;
             user.RegistrationStatus = RegistrationStatus.PendingZoneManager;
@@ -183,7 +220,13 @@ public class ApprovalService : IApprovalService
         if (user.RegistrationStatus == RegistrationStatus.PendingZoneManager
             && roles.Contains(UserRoles.ZoneManager))
         {
-            if (user.AssignedSalesMan?.ZoneManagerId != approverId)
+            // Verify this ZoneManager manages the region of the user's city
+            var isAuthorized = user.NationalAddress != null
+                && await _context.Cities
+                    .Where(c => c.Id == user.NationalAddress.CityId)
+                    .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
+
+            if (!isAuthorized)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
             var fromStatus = user.RegistrationStatus;
@@ -227,7 +270,6 @@ public class ApprovalService : IApprovalService
     public async Task<Result> RejectAsync(string userId, string reason, string approverId, CancellationToken ct = default)
     {
         var user = await _userRepository.Query()
-            .Include(u => u.AssignedSalesMan)
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
@@ -249,7 +291,13 @@ public class ApprovalService : IApprovalService
         else if (user.RegistrationStatus == RegistrationStatus.PendingZoneManager
                  && roles.Contains(UserRoles.ZoneManager))
         {
-            if (user.AssignedSalesMan?.ZoneManagerId != approverId)
+            // Verify this ZoneManager manages the region of the user's city
+            var isAuthorized = user.NationalAddress != null
+                && await _context.Cities
+                    .Where(c => c.Id == user.NationalAddress.CityId)
+                    .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
+
+            if (!isAuthorized)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
         }
         else if (user.RegistrationStatus != RegistrationStatus.PendingSalesman
