@@ -10,11 +10,22 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
     private readonly IWebHostEnvironment _environment = environment;
     private readonly ILogger<FileStorageService> _logger = logger;
 
+    private string GetWebRootPath()
+    {
+        var webRoot = _environment.WebRootPath
+            ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+
+        if (!Directory.Exists(webRoot))
+            Directory.CreateDirectory(webRoot);
+
+        return webRoot;
+    }
+
     public async Task<Result<string>> UploadAsync(Stream fileStream, string fileName, string folder, CancellationToken ct = default)
     {
         try
         {
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", folder);
+            var uploadsFolder = Path.Combine(GetWebRootPath(), "uploads", folder);
 
             if (!Directory.Exists(uploadsFolder))
             {
@@ -43,7 +54,7 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
     {
         try
         {
-            var filePath = Path.Combine(_environment.WebRootPath, fileUrl.TrimStart('/'));
+            var filePath = Path.Combine(GetWebRootPath(), fileUrl.TrimStart('/'));
 
             if (File.Exists(filePath))
             {
