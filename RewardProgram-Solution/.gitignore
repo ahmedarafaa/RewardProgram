@@ -53,8 +53,9 @@ nunit-*.xml
 # Publish Profiles (contain server credentials)
 **/Properties/PublishProfiles/
 
-# Production settings (contain secrets)
+# Environment settings (contain secrets)
 appsettings.Production.json
+appsettings.Staging.json
 
 # Temp files
 *~

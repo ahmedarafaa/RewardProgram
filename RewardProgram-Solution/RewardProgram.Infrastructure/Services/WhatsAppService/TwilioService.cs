@@ -26,14 +26,15 @@ public class TwilioService : ITwilioService
         _options = options.Value;
         _logger = logger;
 
-        // SECURITY: Mock mode is ONLY allowed in Development environment
-        _useMockMode = _options.UseMockMode && environment.IsDevelopment();
+        // SECURITY: Mock mode is only allowed in Development and Staging
+        _useMockMode = _options.UseMockMode &&
+            (environment.IsDevelopment() || environment.IsStaging());
 
-        if (_options.UseMockMode && !environment.IsDevelopment())
+        if (_options.UseMockMode && !_useMockMode)
         {
             _logger.LogWarning(
                 "Twilio UseMockMode is enabled in configuration but IGNORED because environment is {Environment}. " +
-                "Mock mode is only allowed in Development.",
+                "Mock mode is only allowed in Development and Staging.",
                 environment.EnvironmentName);
         }
 
