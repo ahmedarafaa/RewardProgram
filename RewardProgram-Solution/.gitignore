@@ -50,6 +50,12 @@ Desktop.ini
 TestResult.xml
 nunit-*.xml
 
+# Publish Profiles (contain server credentials)
+**/Properties/PublishProfiles/
+
+# Production settings (contain secrets)
+appsettings.Production.json
+
 # Temp files
 *~
 *.tmp

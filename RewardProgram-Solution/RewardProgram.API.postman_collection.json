@@ -1,0 +1,448 @@
+{
+  "info": {
+    "name": "RewardProgram API",
+    "description": "RewardProgram API - Auth, Approvals, Lookups",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://staging.raedrewardapp.com",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pinId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Registration",
+          "item": [
+            {
+              "name": "Register Shop Owner",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "StoreName", "value": "متجر تجريبي", "type": "text" },
+                    { "key": "OwnerName", "value": "أحمد محمد", "type": "text" },
+                    { "key": "MobileNumber", "value": "0500000099", "type": "text" },
+                    { "key": "VAT", "value": "300000000000003", "type": "text" },
+                    { "key": "CRN", "value": "1000000001", "type": "text" },
+                    { "key": "RegionId", "value": "REGION_ID_HERE", "type": "text" },
+                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text" },
+                    { "key": "DistrictId", "value": "", "type": "text" },
+                    { "key": "ShopImage", "value": "", "type": "file" },
+                    { "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text" },
+                    { "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
+                    { "key": "NationalAddress.PostalCode", "value": "12345", "type": "text" },
+                    { "key": "NationalAddress.SubNumber", "value": "1", "type": "text" }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/shop-owner",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "shop-owner"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register Seller",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"بائع تجريبي\",\n  \"mobileNumber\": \"0500000098\",\n  \"shopCode\": \"SHOP_CODE_HERE\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/seller",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "seller"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register Technician",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0500000097\",\n  \"regionId\": \"REGION_ID_HERE\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"districtId\": null,\n  \"postalCode\": \"12345\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/technician",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "technician"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify Registration OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"000000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/verify",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "verify"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "item": [
+            {
+              "name": "Login (Send OTP)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify Login OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"000000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login/verify",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "login", "verify"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('token', json.token);",
+                      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Token",
+          "item": [
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/refresh-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "refresh-token"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    pm.collectionVariables.set('token', json.token);",
+                      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Revoke Token (Logout)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/revoke-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "revoke-token"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-otp"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('pinId', json.pinId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Approvals",
+      "item": [
+        {
+          "name": "Get Pending Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/pending?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "pending"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"USER_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "approve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"reason\": \"بيانات غير مكتملة\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "reject"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Lookups",
+      "item": [
+        {
+          "name": "Get Regions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookup/regions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lookup", "regions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cities by Region",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookup/regions/REGION_ID_HERE/cities",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lookup", "regions", "REGION_ID_HERE", "cities"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Districts by City",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookup/cities/CITY_ID_HERE/districts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lookup", "cities", "CITY_ID_HERE", "districts"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

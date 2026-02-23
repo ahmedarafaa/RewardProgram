@@ -6,20 +6,15 @@ using System.Text;
 namespace RewardProgram.Domain.Entities.OTP;
 
 public class OtpCode
-{
-    /// <summary>
-    /// Default OTP validity period in minutes.
-    /// </summary>
+{ 
+    // Default OTP validity period in minutes.   
     public const int DefaultExpirationMinutes = 5;
 
-    /// <summary>
-    /// Rate limit window in minutes for OTP requests per mobile number.
-    /// </summary>
+    // Rate limit window in minutes for OTP requests per mobile number.
+    
     public const int RateLimitWindowMinutes = 15;
 
-    /// <summary>
-    /// Maximum OTP requests allowed per mobile number within the rate limit window.
-    /// </summary>
+    /// Maximum OTP requests allowed per mobile number within the rate limit window.    
     public const int MaxRequestsPerWindow = 3;
 
     public int Id { get; set; }
@@ -29,31 +24,21 @@ public class OtpCode
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(DefaultExpirationMinutes);
 
-    /// <summary>
-    /// Number of verification attempts made for this OTP.
-    /// </summary>
+    // Number of verification attempts made for this OTP.
     public int VerificationAttempts { get; set; }
 
-    /// <summary>
-    /// Maximum allowed verification attempts before OTP is invalidated.
-    /// </summary>
+    // Maximum allowed verification attempts before OTP is invalidated.
     public const int MaxVerificationAttempts = 5;
 
-    /// <summary>
-    /// Minimum seconds between OTP resend requests.
-    /// </summary>
+    // Minimum seconds between OTP resend requests.
     public const int ResendCooldownSeconds = 30;
 
     // For registration: store form data until OTP verified
     public string? RegistrationData { get; set; }  // JSON
 
-    /// <summary>
-    /// Check if OTP has expired.
-    /// </summary>
+    // Check if OTP has expired.
     public bool IsExpired => DateTime.UtcNow > ExpiresAt;
 
-    /// <summary>
-    /// Check if OTP is still valid (not used, not expired, attempts not exceeded).
-    /// </summary>
+    // Check if OTP is still valid (not used, not expired, attempts not exceeded).
     public bool IsValid => !IsUsed && !IsExpired && VerificationAttempts < MaxVerificationAttempts;
 }

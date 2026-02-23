@@ -20,19 +20,19 @@ namespace RewardProgram
                        
             var app = builder.Build();
 
-            // Auto-migrate in Development
-            if (app.Environment.IsDevelopment())
+            // Auto-migrate in Development & Staging
+            if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
             {
                 using var migrationScope = app.Services.CreateScope();
                 var db = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 await db.Database.MigrateAsync();
+
+                // Seed data (roles, users, regions, cities)
+                await DataSeeder.SeedAsync(app.Services);
             }
 
-            // Seed data (roles, users, regions, cities)
-            await DataSeeder.SeedAsync(app.Services);
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            // Swagger in Development & Staging
+            if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
