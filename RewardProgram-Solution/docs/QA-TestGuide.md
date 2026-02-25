@@ -310,6 +310,33 @@ Returns all 140 active cities.
 ]
 ```
 
+#### GET /api/lookup/customer/{customerCode}/shop-data-status
+
+Checks whether a CustomerCode exists in the ERP system and whether ShopData has already been created for it. Used by the frontend to decide whether to show or hide shop data fields on the registration form.
+
+**Response (200):**
+```json
+{
+  "customerCodeExists": true,
+  "customerName": "اسم العميل",
+  "shopDataExists": false
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `customerCodeExists` | Always `true` on 200 (code found in ErpCustomers) |
+| `customerName` | The customer name from the ERP system |
+| `shopDataExists` | `true` if ShopData already created (hide shop fields), `false` if not (show shop fields) |
+
+**Error:** 404 if CustomerCode not found in ErpCustomers ("كود العميل غير موجود").
+
+**Frontend usage:**
+1. Seller/ShopOwner enters CustomerCode
+2. Frontend calls this endpoint
+3. If `shopDataExists: true` → hide shop data fields (StoreName, VAT, CRN, image, address)
+4. If `shopDataExists: false` → show all shop data fields
+
 ---
 
 ### 4.2 Registration Endpoints (Public — No Auth Required)
@@ -838,7 +865,13 @@ Verify OTP.
 
 ### Flow 2: Seller Registration (with CustomerCode)
 
-**Step 1 — Register Seller with a CustomerCode**
+**Step 1 — Check if ShopData exists for the CustomerCode**
+```
+GET /api/lookup/customer/{customerCode}/shop-data-status
+```
+If `shopDataExists: true` → proceed with Case A. If `shopDataExists: false` → proceed with Case B.
+
+**Step 2 — Register Seller with a CustomerCode**
 
 **Case A: ShopData already exists** (ShopOwner or another Seller already registered with this CustomerCode and verified)
 ```
@@ -870,7 +903,7 @@ NationalAddress.PostalCode: 54321
 NationalAddress.SubNumber: 2
 ```
 
-**Step 2 — Verify OTP and Approve** (same as Flow 1, Steps 3-8)
+**Step 3 — Verify OTP and Approve** (same as Flow 1, Steps 3-8)
 
 ---
 
@@ -1141,6 +1174,7 @@ All errors follow the ProblemDetails format:
 | Code | HTTP Status | Arabic Description |
 |------|------------|-------------------|
 | Lookup.RegionNotFound | 404 | المنطقة غير موجودة |
+| Lookup.CustomerCodeNotFound | 404 | كود العميل غير موجود |
 
 ---
 
@@ -1253,6 +1287,9 @@ All errors follow the ProblemDetails format:
 - [ ] Get cities by region → correct cities with regionId
 - [ ] Get all cities → 140 cities returned
 - [ ] Get cities for invalid region → 404
+- [ ] Get shop-data-status for valid CustomerCode (no ShopData) → 200, `shopDataExists: false`
+- [ ] Get shop-data-status for valid CustomerCode (ShopData exists) → 200, `shopDataExists: true`
+- [ ] Get shop-data-status for invalid CustomerCode → 404
 
 ### 9.7 ShopData Sharing Tests
 
