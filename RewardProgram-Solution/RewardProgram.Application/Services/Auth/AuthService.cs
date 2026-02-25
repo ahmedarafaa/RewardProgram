@@ -492,51 +492,58 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
             }
 
-            // Create ShopData if it doesn't already exist (race condition check)
-            if (!data.ShopDataAlreadyExists)
-            {
-                var shopDataStillMissing = !await _context.ShopData
-                    .AnyAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
+            // ShopOwner always owns ShopData — create if missing, overwrite if exists
+            var existingShopData = await _context.ShopData
+                .FirstOrDefaultAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
 
-                if (shopDataStillMissing)
+            if (existingShopData == null && !data.ShopDataAlreadyExists)
+            {
+                // No ShopData exists — create it
+                var shopData = new ShopData
                 {
-                    var shopData = new ShopData
-                    {
-                        CustomerCode = data.CustomerCode,
-                        StoreName = data.StoreName!,
-                        VAT = data.VAT!,
-                        CRN = data.CRN!,
-                        ShopImageUrl = data.ShopImageUrl!,
-                        CityId = data.CityId,
-                        Street = data.Street ?? string.Empty,
-                        BuildingNumber = data.BuildingNumber ?? 0,
-                        PostalCode = data.PostalCode ?? string.Empty,
-                        SubNumber = data.SubNumber ?? 0,
-                        EnteredByUserId = user.Id,
-                        CreatedBy = user.Id
-                    };
-                    await _context.ShopData.AddAsync(shopData, ct);
-                }
+                    CustomerCode = data.CustomerCode,
+                    StoreName = data.StoreName!,
+                    VAT = data.VAT!,
+                    CRN = data.CRN!,
+                    ShopImageUrl = data.ShopImageUrl!,
+                    CityId = data.CityId,
+                    Street = data.Street ?? string.Empty,
+                    BuildingNumber = data.BuildingNumber ?? 0,
+                    PostalCode = data.PostalCode ?? string.Empty,
+                    SubNumber = data.SubNumber ?? 0,
+                    EnteredByUserId = user.Id,
+                    CreatedBy = user.Id
+                };
+                await _context.ShopData.AddAsync(shopData, ct);
             }
-
-            // If ShopData exists, update user's NationalAddress from ShopData
-            if (data.ShopDataAlreadyExists)
+            else if (existingShopData != null && !data.ShopDataAlreadyExists)
             {
-                var existingShopData = await _context.ShopData
-                    .FirstOrDefaultAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
-
-                if (existingShopData != null)
+                // ShopData was created by a Seller — ShopOwner overwrites it
+                existingShopData.StoreName = data.StoreName!;
+                existingShopData.VAT = data.VAT!;
+                existingShopData.CRN = data.CRN!;
+                existingShopData.ShopImageUrl = data.ShopImageUrl!;
+                existingShopData.CityId = data.CityId;
+                existingShopData.Street = data.Street ?? string.Empty;
+                existingShopData.BuildingNumber = data.BuildingNumber ?? 0;
+                existingShopData.PostalCode = data.PostalCode ?? string.Empty;
+                existingShopData.SubNumber = data.SubNumber ?? 0;
+                existingShopData.EnteredByUserId = user.Id;
+                existingShopData.UpdatedBy = user.Id;
+                existingShopData.UpdatedAt = DateTime.UtcNow;
+            }
+            else if (existingShopData != null && data.ShopDataAlreadyExists)
+            {
+                // ShopData existed at registration time — use its address for user
+                user.NationalAddress = new NationalAddress
                 {
-                    user.NationalAddress = new NationalAddress
-                    {
-                        CityId = existingShopData.CityId,
-                        Street = existingShopData.Street,
-                        BuildingNumber = existingShopData.BuildingNumber,
-                        PostalCode = existingShopData.PostalCode,
-                        SubNumber = existingShopData.SubNumber
-                    };
-                    await _userRepository.UpdateAsync(user);
-                }
+                    CityId = existingShopData.CityId,
+                    Street = existingShopData.Street,
+                    BuildingNumber = existingShopData.BuildingNumber,
+                    PostalCode = existingShopData.PostalCode,
+                    SubNumber = existingShopData.SubNumber
+                };
+                await _userRepository.UpdateAsync(user);
             }
 
             var profile = new ShopOwnerProfile
