@@ -88,4 +88,18 @@ public class LookupService : ILookupService
                 .ToListAsync(ct);
         }) ?? [];
     }
+
+    public async Task<Result<CustomerShopDataStatusResponse>> GetCustomerShopDataStatusAsync(string customerCode, CancellationToken ct = default)
+    {
+        var erpCustomer = await _context.ErpCustomers
+            .FirstOrDefaultAsync(e => e.CustomerCode == customerCode, ct);
+
+        if (erpCustomer is null)
+            return Result.Failure<CustomerShopDataStatusResponse>(LookupErrors.CustomerCodeNotFound);
+
+        var shopDataExists = await _context.ShopData
+            .AnyAsync(s => s.CustomerCode == customerCode, ct);
+
+        return Result.Success(new CustomerShopDataStatusResponse(true, erpCustomer.CustomerName, shopDataExists));
+    }
 }

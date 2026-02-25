@@ -42,4 +42,16 @@ public class LookupController : ControllerBase
         var cities = await _lookupService.GetAllCitiesAsync(ct);
         return Ok(cities);
     }
+
+    [HttpGet("customer/{customerCode}/shop-data-status")]
+    [ProducesResponseType(typeof(CustomerShopDataStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCustomerShopDataStatus(string customerCode, CancellationToken ct)
+    {
+        var result = await _lookupService.GetCustomerShopDataStatusAsync(customerCode, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
 }
