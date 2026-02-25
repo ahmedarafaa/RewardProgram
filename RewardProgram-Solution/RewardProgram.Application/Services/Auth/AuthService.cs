@@ -44,17 +44,20 @@ public class AuthService : IAuthService
 
     public async Task<Result<SendOtpResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
     {
-        // 1. Validate unique constraints (sequential — DbContext is not thread-safe)
-        var uniqueValidation = await ValidateShopOwnerUniqueFieldsAsync(request, ct);
-        if (uniqueValidation.IsFailure)
-            return Result.Failure<SendOtpResponse>(uniqueValidation.Error);
+        // 1. Validate mobile uniqueness
+        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+            return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 2. Validate city belongs to region and has an ApprovalSalesMan
+        // 2. Validate CustomerCode exists in ErpCustomers
+        var erpCustomer = await _context.ErpCustomers
+            .FirstOrDefaultAsync(e => e.CustomerCode == request.CustomerCode, ct);
+
+        if (erpCustomer == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.CustomerCodeNotFound);
+
+        // 3. Validate city (no RegionId filter — derive region from city)
         var city = await _context.Cities
-            .FirstOrDefaultAsync(c =>
-                c.Id == request.CityId &&
-                c.RegionId == request.RegionId &&
-                c.IsActive, ct);
+            .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive, ct);
 
         if (city == null)
             return Result.Failure<SendOtpResponse>(AuthErrors.CityNotFound);
@@ -62,38 +65,51 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<SendOtpResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 3. Validate district if provided
-        if (!string.IsNullOrEmpty(request.DistrictId))
+        // 4. Check if ShopData already exists for this CustomerCode
+        var shopDataExists = await _context.ShopData
+            .AnyAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
+
+        string? shopImageUrl = null;
+
+        if (!shopDataExists)
         {
-            var districtExists = await _context.Districts
-                .AnyAsync(d => d.Id == request.DistrictId && d.CityId == request.CityId && d.IsActive, ct);
+            // Shop data required
+            if (string.IsNullOrEmpty(request.StoreName) || string.IsNullOrEmpty(request.VAT)
+                || string.IsNullOrEmpty(request.CRN) || request.ShopImage == null
+                || request.NationalAddress == null)
+                return Result.Failure<SendOtpResponse>(AuthErrors.ShopDataRequired);
 
-            if (!districtExists)
-                return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
+            // Validate VAT/CRN uniqueness against ShopData table
+            var uniqueValidation = await ValidateUniqueFieldsAsync(request.VAT, request.CRN, ct);
+            if (uniqueValidation.IsFailure)
+                return Result.Failure<SendOtpResponse>(uniqueValidation.Error);
+
+            // Upload shop image
+            using var imageStream = request.ShopImage.OpenReadStream();
+            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
+            if (imageResult.IsFailure)
+                return Result.Failure<SendOtpResponse>(AuthErrors.ImageUploadFailed);
+
+            shopImageUrl = imageResult.Value;
         }
-
-        // 4. Upload shop image
-        using var imageStream = request.ShopImage.OpenReadStream();
-        var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-        if (imageResult.IsFailure)
-            return Result.Failure<SendOtpResponse>(AuthErrors.ImageUploadFailed);
 
         // 5. Prepare registration data
         var registrationData = new ShopOwnerRegistrationData(
             UserType: UserType.ShopOwner,
-            StoreName: request.StoreName,
+            CustomerCode: request.CustomerCode,
             OwnerName: request.OwnerName,
             MobileNumber: request.MobileNumber,
+            CityId: request.CityId,
+            AssignedSalesManId: city.ApprovalSalesManId,
+            ShopDataAlreadyExists: shopDataExists,
+            StoreName: request.StoreName,
             VAT: request.VAT,
             CRN: request.CRN,
-            ShopImageUrl: imageResult.Value,
-            CityId: request.CityId,
-            DistrictId: request.DistrictId,
-            Street: request.NationalAddress.Street,
-            BuildingNumber: request.NationalAddress.BuildingNumber,
-            PostalCode: request.NationalAddress.PostalCode,
-            SubNumber: request.NationalAddress.SubNumber,
-            AssignedSalesManId: city.ApprovalSalesManId
+            ShopImageUrl: shopImageUrl,
+            Street: request.NationalAddress?.Street,
+            BuildingNumber: request.NationalAddress?.BuildingNumber,
+            PostalCode: request.NationalAddress?.PostalCode,
+            SubNumber: request.NationalAddress?.SubNumber
         );
 
         var registrationJson = JsonSerializer.Serialize(registrationData);
@@ -103,14 +119,15 @@ public class AuthService : IAuthService
         if (otpResult.IsFailure)
         {
             // Cleanup uploaded image if OTP fails
-            await _fileStorageService.DeleteAsync(imageResult.Value);
+            if (shopImageUrl != null)
+                await _fileStorageService.DeleteAsync(shopImageUrl);
             return Result.Failure<SendOtpResponse>(otpResult.Error);
         }
 
         _logger.LogInformation(
-            "OTP sent for ShopOwner registration. Mobile: {Mobile}, City: {CityId}",
+            "OTP sent for ShopOwner registration. Mobile: {Mobile}, CustomerCode: {CustomerCode}",
             MobileNumberHelper.Mask(request.MobileNumber),
-            request.CityId);
+            request.CustomerCode);
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
@@ -125,51 +142,93 @@ public class AuthService : IAuthService
         if (mobileExists)
             return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 2. Find ShopOwner by ShopCode — must be Approved
-        var shopOwnerProfile = await _context.ShopOwnerProfiles
-            .Include(p => p.User)
-                .ThenInclude(u => u.NationalAddress)
-            .FirstOrDefaultAsync(p => p.ShopCode == request.ShopCode, ct);
+        // 2. Validate CustomerCode exists in ErpCustomers
+        var erpCustomer = await _context.ErpCustomers
+            .FirstOrDefaultAsync(e => e.CustomerCode == request.CustomerCode, ct);
 
-        if (shopOwnerProfile == null)
-            return Result.Failure<SendOtpResponse>(AuthErrors.InvalidShopCode);
+        if (erpCustomer == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.CustomerCodeNotFound);
 
-        if (shopOwnerProfile.User.RegistrationStatus != RegistrationStatus.Approved)
-            return Result.Failure<SendOtpResponse>(AuthErrors.ShopOwnerNotApproved);
+        // 3. Check if ShopData already exists for this CustomerCode
+        var existingShopData = await _context.ShopData
+            .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 
-        var shopOwnerUser = shopOwnerProfile.User;
-        var address = shopOwnerUser.NationalAddress;
+        var shopDataExists = existingShopData != null;
+        string? shopImageUrl = null;
+        string cityId;
 
-        if (string.IsNullOrEmpty(shopOwnerUser.AssignedSalesManId))
+        if (!shopDataExists)
+        {
+            // Shop data required
+            if (string.IsNullOrEmpty(request.StoreName) || string.IsNullOrEmpty(request.VAT)
+                || string.IsNullOrEmpty(request.CRN) || request.ShopImage == null
+                || string.IsNullOrEmpty(request.CityId) || request.NationalAddress == null)
+                return Result.Failure<SendOtpResponse>(AuthErrors.ShopDataRequired);
+
+            // Validate VAT/CRN uniqueness against ShopData table
+            var uniqueValidation = await ValidateUniqueFieldsAsync(request.VAT, request.CRN, ct);
+            if (uniqueValidation.IsFailure)
+                return Result.Failure<SendOtpResponse>(uniqueValidation.Error);
+
+            // Upload shop image
+            using var imageStream = request.ShopImage.OpenReadStream();
+            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
+            if (imageResult.IsFailure)
+                return Result.Failure<SendOtpResponse>(AuthErrors.ImageUploadFailed);
+
+            shopImageUrl = imageResult.Value;
+            cityId = request.CityId;
+        }
+        else
+        {
+            // Use ShopData's city
+            cityId = existingShopData!.CityId;
+        }
+
+        // 4. Validate city and get SalesMan
+        var city = await _context.Cities
+            .FirstOrDefaultAsync(c => c.Id == cityId && c.IsActive, ct);
+
+        if (city == null)
+            return Result.Failure<SendOtpResponse>(AuthErrors.CityNotFound);
+
+        if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<SendOtpResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 3. Serialize registration data
+        // 5. Serialize registration data
         var registrationData = new SellerRegistrationData(
             UserType: UserType.Seller,
             Name: request.Name,
             MobileNumber: request.MobileNumber,
-            ShopCode: request.ShopCode,
-            ShopOwnerId: shopOwnerProfile.UserId,
-            AssignedSalesManId: shopOwnerUser.AssignedSalesManId,
-            CityId: address?.CityId ?? string.Empty,
-            DistrictId: address?.DistrictId,
-            Street: address?.Street ?? string.Empty,
-            BuildingNumber: address?.BuildingNumber ?? 0,
-            PostalCode: address?.PostalCode ?? string.Empty,
-            SubNumber: address?.SubNumber ?? 0
+            CustomerCode: request.CustomerCode,
+            AssignedSalesManId: city.ApprovalSalesManId,
+            CityId: cityId,
+            ShopDataAlreadyExists: shopDataExists,
+            StoreName: request.StoreName,
+            VAT: request.VAT,
+            CRN: request.CRN,
+            ShopImageUrl: shopImageUrl,
+            Street: request.NationalAddress?.Street,
+            BuildingNumber: request.NationalAddress?.BuildingNumber,
+            PostalCode: request.NationalAddress?.PostalCode,
+            SubNumber: request.NationalAddress?.SubNumber
         );
 
         var registrationJson = JsonSerializer.Serialize(registrationData);
 
-        // 4. Send OTP
+        // 6. Send OTP
         var otpResult = await _otpService.SendAsync(request.MobileNumber, registrationJson, ct);
         if (otpResult.IsFailure)
+        {
+            if (shopImageUrl != null)
+                await _fileStorageService.DeleteAsync(shopImageUrl);
             return Result.Failure<SendOtpResponse>(otpResult.Error);
+        }
 
         _logger.LogInformation(
-            "OTP sent for Seller registration. Mobile: {Mobile}, ShopCode: {ShopCode}",
+            "OTP sent for Seller registration. Mobile: {Mobile}, CustomerCode: {CustomerCode}",
             MobileNumberHelper.Mask(request.MobileNumber),
-            request.ShopCode);
+            request.CustomerCode);
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
@@ -184,12 +243,9 @@ public class AuthService : IAuthService
         if (mobileExists)
             return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 2. Validate city belongs to region and has ApprovalSalesManId
+        // 2. Validate city (no RegionId filter) and has ApprovalSalesManId
         var city = await _context.Cities
-            .FirstOrDefaultAsync(c =>
-                c.Id == request.CityId &&
-                c.RegionId == request.RegionId &&
-                c.IsActive, ct);
+            .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive, ct);
 
         if (city == null)
             return Result.Failure<SendOtpResponse>(AuthErrors.CityNotFound);
@@ -197,30 +253,19 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<SendOtpResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 3. Validate district if provided
-        if (!string.IsNullOrEmpty(request.DistrictId))
-        {
-            var districtExists = await _context.Districts
-                .AnyAsync(d => d.Id == request.DistrictId && d.CityId == request.CityId && d.IsActive, ct);
-
-            if (!districtExists)
-                return Result.Failure<SendOtpResponse>(AuthErrors.DistrictNotFound);
-        }
-
-        // 4. Serialize registration data
+        // 3. Serialize registration data
         var registrationData = new TechnicianRegistrationData(
             UserType: UserType.Technician,
             Name: request.Name,
             MobileNumber: request.MobileNumber,
             CityId: request.CityId,
-            DistrictId: request.DistrictId,
             PostalCode: request.PostalCode,
             AssignedSalesManId: city.ApprovalSalesManId
         );
 
         var registrationJson = JsonSerializer.Serialize(registrationData);
 
-        // 5. Send OTP
+        // 4. Send OTP
         var otpResult = await _otpService.SendAsync(request.MobileNumber, registrationJson, ct);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
@@ -397,15 +442,14 @@ public class AuthService : IAuthService
         if (data == null)
             return Result.Failure<RegisterResponse>(AuthErrors.RegistrationDataNotFound);
 
-        // Re-validate unique constraints (race condition protection — sequential for DbContext safety)
+        // Re-validate unique constraints (race condition protection)
         if (await _userRepository.MobileExistsAsync(data.MobileNumber, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        if (await _context.ShopOwnerProfiles.AnyAsync(p => p.VAT == data.VAT, ct))
-            return Result.Failure<RegisterResponse>(AuthErrors.VatAlreadyExists);
-
-        if (await _context.ShopOwnerProfiles.AnyAsync(p => p.CRN == data.CRN, ct))
-            return Result.Failure<RegisterResponse>(AuthErrors.CrnAlreadyExists);
+        // Re-validate CustomerCode
+        var erpExists = await _context.ErpCustomers.AnyAsync(e => e.CustomerCode == data.CustomerCode, ct);
+        if (!erpExists)
+            return Result.Failure<RegisterResponse>(AuthErrors.CustomerCodeNotFound);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
@@ -423,11 +467,10 @@ public class AuthService : IAuthService
                 NationalAddress = new NationalAddress
                 {
                     CityId = data.CityId,
-                    DistrictId = data.DistrictId,
-                    Street = data.Street,
-                    BuildingNumber = data.BuildingNumber,
-                    PostalCode = data.PostalCode,
-                    SubNumber = data.SubNumber
+                    Street = data.Street ?? string.Empty,
+                    BuildingNumber = data.BuildingNumber ?? 0,
+                    PostalCode = data.PostalCode ?? string.Empty,
+                    SubNumber = data.SubNumber ?? 0
                 }
             };
 
@@ -449,13 +492,57 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
             }
 
+            // Create ShopData if it doesn't already exist (race condition check)
+            if (!data.ShopDataAlreadyExists)
+            {
+                var shopDataStillMissing = !await _context.ShopData
+                    .AnyAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
+
+                if (shopDataStillMissing)
+                {
+                    var shopData = new ShopData
+                    {
+                        CustomerCode = data.CustomerCode,
+                        StoreName = data.StoreName!,
+                        VAT = data.VAT!,
+                        CRN = data.CRN!,
+                        ShopImageUrl = data.ShopImageUrl!,
+                        CityId = data.CityId,
+                        Street = data.Street ?? string.Empty,
+                        BuildingNumber = data.BuildingNumber ?? 0,
+                        PostalCode = data.PostalCode ?? string.Empty,
+                        SubNumber = data.SubNumber ?? 0,
+                        EnteredByUserId = user.Id,
+                        CreatedBy = user.Id
+                    };
+                    await _context.ShopData.AddAsync(shopData, ct);
+                }
+            }
+
+            // If ShopData exists, update user's NationalAddress from ShopData
+            if (data.ShopDataAlreadyExists)
+            {
+                var existingShopData = await _context.ShopData
+                    .FirstOrDefaultAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
+
+                if (existingShopData != null)
+                {
+                    user.NationalAddress = new NationalAddress
+                    {
+                        CityId = existingShopData.CityId,
+                        Street = existingShopData.Street,
+                        BuildingNumber = existingShopData.BuildingNumber,
+                        PostalCode = existingShopData.PostalCode,
+                        SubNumber = existingShopData.SubNumber
+                    };
+                    await _userRepository.UpdateAsync(user);
+                }
+            }
+
             var profile = new ShopOwnerProfile
             {
                 UserId = user.Id,
-                StoreName = data.StoreName,
-                VAT = data.VAT,
-                CRN = data.CRN,
-                ShopImageUrl = data.ShopImageUrl,
+                CustomerCode = data.CustomerCode,
                 CreatedBy = user.Id
             };
 
@@ -493,21 +580,37 @@ public class AuthService : IAuthService
         if (await _userRepository.MobileExistsAsync(data.MobileNumber, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // Re-validate ShopOwner still approved
-        var shopOwnerProfile = await _context.ShopOwnerProfiles
-            .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.UserId == data.ShopOwnerId, ct);
-
-        if (shopOwnerProfile == null)
-            return Result.Failure<RegisterResponse>(AuthErrors.ShopOwnerNotFound);
-
-        if (shopOwnerProfile.User.RegistrationStatus != RegistrationStatus.Approved)
-            return Result.Failure<RegisterResponse>(AuthErrors.ShopOwnerNotApproved);
+        // Re-validate CustomerCode
+        var erpExists = await _context.ErpCustomers.AnyAsync(e => e.CustomerCode == data.CustomerCode, ct);
+        if (!erpExists)
+            return Result.Failure<RegisterResponse>(AuthErrors.CustomerCodeNotFound);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
         {
+            // Determine address from ShopData or from registration data
+            string cityId = data.CityId;
+            string street = data.Street ?? string.Empty;
+            int buildingNumber = data.BuildingNumber ?? 0;
+            string postalCode = data.PostalCode ?? string.Empty;
+            int subNumber = data.SubNumber ?? 0;
+
+            if (data.ShopDataAlreadyExists)
+            {
+                var existingShopData = await _context.ShopData
+                    .FirstOrDefaultAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
+
+                if (existingShopData != null)
+                {
+                    cityId = existingShopData.CityId;
+                    street = existingShopData.Street;
+                    buildingNumber = existingShopData.BuildingNumber;
+                    postalCode = existingShopData.PostalCode;
+                    subNumber = existingShopData.SubNumber;
+                }
+            }
+
             var user = new ApplicationUser
             {
                 UserName = data.MobileNumber,
@@ -519,12 +622,11 @@ public class AuthService : IAuthService
                 AssignedSalesManId = data.AssignedSalesManId,
                 NationalAddress = new NationalAddress
                 {
-                    CityId = data.CityId,
-                    DistrictId = data.DistrictId,
-                    Street = data.Street,
-                    BuildingNumber = data.BuildingNumber,
-                    PostalCode = data.PostalCode,
-                    SubNumber = data.SubNumber
+                    CityId = cityId,
+                    Street = street,
+                    BuildingNumber = buildingNumber,
+                    PostalCode = postalCode,
+                    SubNumber = subNumber
                 }
             };
 
@@ -546,10 +648,37 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
             }
 
+            // Create ShopData if needed
+            if (!data.ShopDataAlreadyExists)
+            {
+                var shopDataStillMissing = !await _context.ShopData
+                    .AnyAsync(sd => sd.CustomerCode == data.CustomerCode, ct);
+
+                if (shopDataStillMissing)
+                {
+                    var shopData = new ShopData
+                    {
+                        CustomerCode = data.CustomerCode,
+                        StoreName = data.StoreName!,
+                        VAT = data.VAT!,
+                        CRN = data.CRN!,
+                        ShopImageUrl = data.ShopImageUrl!,
+                        CityId = data.CityId,
+                        Street = data.Street ?? string.Empty,
+                        BuildingNumber = data.BuildingNumber ?? 0,
+                        PostalCode = data.PostalCode ?? string.Empty,
+                        SubNumber = data.SubNumber ?? 0,
+                        EnteredByUserId = user.Id,
+                        CreatedBy = user.Id
+                    };
+                    await _context.ShopData.AddAsync(shopData, ct);
+                }
+            }
+
             var profile = new SellerProfile
             {
                 UserId = user.Id,
-                ShopOwnerId = data.ShopOwnerId,
+                CustomerCode = data.CustomerCode,
                 CreatedBy = user.Id
             };
 
@@ -559,10 +688,10 @@ public class AuthService : IAuthService
             await transaction.CommitAsync(ct);
 
             _logger.LogInformation(
-                "Seller registered successfully. UserId: {UserId}, Mobile: {Mobile}, ShopCode: {ShopCode}",
+                "Seller registered successfully. UserId: {UserId}, Mobile: {Mobile}, CustomerCode: {CustomerCode}",
                 user.Id,
                 MobileNumberHelper.Mask(data.MobileNumber),
-                data.ShopCode);
+                data.CustomerCode);
 
             return Result.Success(new RegisterResponse(
                 UserId: user.Id,
@@ -614,7 +743,6 @@ public class AuthService : IAuthService
                 NationalAddress = new NationalAddress
                 {
                     CityId = data.CityId,
-                    DistrictId = data.DistrictId,
                     PostalCode = data.PostalCode
                 }
             };
@@ -671,16 +799,13 @@ public class AuthService : IAuthService
 
     #region Private Helper Methods
 
-    private async Task<Result> ValidateShopOwnerUniqueFieldsAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
+    private async Task<Result> ValidateUniqueFieldsAsync(string vat, string crn, CancellationToken ct = default)
     {
-        // Sequential — DbContext is NOT thread-safe (P5 fix)
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
-            return Result.Failure(AuthErrors.MobileAlreadyRegistered);
-
-        if (await _context.ShopOwnerProfiles.AnyAsync(p => p.VAT == request.VAT, ct))
+        // Check VAT/CRN uniqueness against ShopData table
+        if (await _context.ShopData.AnyAsync(sd => sd.VAT == vat, ct))
             return Result.Failure(AuthErrors.VatAlreadyExists);
 
-        if (await _context.ShopOwnerProfiles.AnyAsync(p => p.CRN == request.CRN, ct))
+        if (await _context.ShopData.AnyAsync(sd => sd.CRN == crn, ct))
             return Result.Failure(AuthErrors.CrnAlreadyExists);
 
         return Result.Success();

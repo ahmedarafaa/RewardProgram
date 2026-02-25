@@ -14,8 +14,7 @@ public class LookupService : ILookupService
 
     private const string RegionsCacheKey = "Lookup_Regions";
     private const string CitiesByRegionCacheKeyPrefix = "Lookup_Cities_Region_";
-    private const string DistrictsByCityCacheKeyPrefix = "Lookup_Districts_City_";
-    private const string DistrictByIdCacheKeyPrefix = "Lookup_District_";
+    private const string AllCitiesCacheKey = "Lookup_AllCities";
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
 
@@ -71,51 +70,22 @@ public class LookupService : ILookupService
         return Result.Success(cities);
     }
 
-    public async Task<Result<List<DistrictResponse>>> GetDistrictsByCityAsync(string cityId, CancellationToken ct = default)
+    public async Task<List<CityResponse>> GetAllCitiesAsync(CancellationToken ct = default)
     {
-        // Validate city exists
-        var cityExists = await _context.Cities.AnyAsync(c => c.Id == cityId && c.IsActive, ct);
-        if (!cityExists)
-            return Result.Failure<List<DistrictResponse>>(LookupErrors.CityNotFound);
-
-        var cacheKey = $"{DistrictsByCityCacheKeyPrefix}{cityId}";
-
-        var districts = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        return await _cache.GetOrCreateAsync(AllCitiesCacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheDuration;
 
-            return await _context.Districts
-                .Where(d => d.CityId == cityId && d.IsActive)
-                .OrderBy(d => d.NameAr)
-                .Select(d => new DistrictResponse(
-                    d.Id,
-                    d.NameAr,
-                    d.NameEn,
-                    d.CityId
+            return await _context.Cities
+                .Where(c => c.IsActive)
+                .OrderBy(c => c.NameAr)
+                .Select(c => new CityResponse(
+                    c.Id,
+                    c.NameAr,
+                    c.NameEn,
+                    c.RegionId
                 ))
                 .ToListAsync(ct);
         }) ?? [];
-
-        return Result.Success(districts);
-    }
-
-    public async Task<DistrictResponse?> GetDistrictByIdAsync(string districtId, CancellationToken ct = default)
-    {
-        var cacheKey = $"{DistrictByIdCacheKeyPrefix}{districtId}";
-
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-
-            return await _context.Districts
-                .Where(d => d.Id == districtId && d.IsActive)
-                .Select(d => new DistrictResponse(
-                    d.Id,
-                    d.NameAr,
-                    d.NameEn,
-                    d.CityId
-                ))
-                .FirstOrDefaultAsync(ct);
-        });
     }
 }

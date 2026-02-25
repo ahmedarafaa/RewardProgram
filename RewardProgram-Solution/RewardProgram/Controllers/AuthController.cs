@@ -55,7 +55,7 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> RegisterSeller([FromBody] RegisterSellerRequest request, CancellationToken ct)
+    public async Task<IActionResult> RegisterSeller([FromForm] RegisterSellerRequest request, CancellationToken ct)
     {
         var result = await _authService.RegisterSellerAsync(request, ct);
 

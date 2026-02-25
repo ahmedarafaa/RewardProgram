@@ -44,30 +44,18 @@ public static class AuthErrors
     public static readonly Error CityNotFound =
         new("Auth.CityNotFound", "المدينة غير موجودة", 400);
 
-    public static readonly Error DistrictNotFound =
-        new("Auth.DistrictNotFound", "الحي غير موجود", 400);
-
-    public static readonly Error DistrictNotInCity =
-        new("Auth.DistrictNotInCity", "الحي لا يتبع المدينة المحددة", 400);
-
     public static readonly Error NoApprovalSalesMan =
         new("Auth.NoApprovalSalesMan", "لا يوجد مندوب مبيعات معتمد لهذه المدينة", 400);
 
-    public static readonly Error NoSalesManForCity =
-        new("Auth.NoSalesManForCity", "لا يوجد مندوب مبيعات لهذه المدينة", 400);
-
     #endregion
 
-    #region ShopOwner/Seller Errors
+    #region ERP/ShopData Errors
 
-    public static readonly Error InvalidShopCode =
-        new("Auth.InvalidShopCode", "كود المحل غير صحيح", 400);
+    public static readonly Error CustomerCodeNotFound =
+        new("Auth.CustomerCodeNotFound", "كود العميل غير موجود في النظام", 400);
 
-    public static readonly Error ShopOwnerNotApproved =
-        new("Auth.ShopOwnerNotApproved", "صاحب المحل غير معتمد بعد", 400);
-
-    public static readonly Error ShopOwnerNotFound =
-        new("Auth.ShopOwnerNotFound", "صاحب المحل غير موجود", 404);
+    public static readonly Error ShopDataRequired =
+        new("Auth.ShopDataRequired", "بيانات المحل مطلوبة (اسم المتجر، الرقم الضريبي، السجل التجاري، صورة المحل، العنوان)", 400);
 
     #endregion
 

@@ -40,7 +40,6 @@ public class ApplicationUser : IdentityUser
 public class NationalAddress
 {
     public string CityId { get; set; } = string.Empty;
-    public string? DistrictId { get; set; }
     public string Street { get; set; } = string.Empty;
     public int BuildingNumber { get; set; }
     public string PostalCode { get; set; } = string.Empty;

@@ -11,7 +11,6 @@ using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Domain.Enums.UserEnums;
-using System.Security.Cryptography;
 
 namespace RewardProgram.Application.Services.Auth;
 
@@ -95,21 +94,13 @@ public class ApprovalService : IApprovalService
             .Take(pageSize)
             .Include(u => u.ShopOwnerProfile)
             .Include(u => u.SellerProfile)
-                .ThenInclude(sp => sp!.ShopOwner)
-                    .ThenInclude(so => so.User)
             .Include(u => u.AssignedSalesMan)
             .ToListAsync(ct);
 
-        // Resolve city/district/region names in bulk
+        // Resolve city/region names in bulk
         var cityIds = users
             .Where(u => u.NationalAddress != null)
             .Select(u => u.NationalAddress!.CityId)
-            .Distinct()
-            .ToList();
-
-        var districtIds = users
-            .Where(u => u.NationalAddress?.DistrictId != null)
-            .Select(u => u.NationalAddress!.DistrictId!)
             .Distinct()
             .ToList();
 
@@ -118,16 +109,30 @@ public class ApprovalService : IApprovalService
             .Include(c => c.Region)
             .ToDictionaryAsync(c => c.Id, c => new { c.NameAr, RegionName = c.Region.NameAr }, ct);
 
-        var districts = districtIds.Count > 0
-            ? await _context.Districts
-                .Where(d => districtIds.Contains(d.Id))
-                .ToDictionaryAsync(d => d.Id, d => d.NameAr, ct)
+        // Collect CustomerCodes from profiles
+        var customerCodes = users
+            .Select(u => u.ShopOwnerProfile?.CustomerCode ?? u.SellerProfile?.CustomerCode)
+            .Where(cc => cc != null)
+            .Distinct()
+            .ToList();
+
+        // Bulk lookup ShopData by CustomerCode
+        var shopDataMap = customerCodes.Count > 0
+            ? await _context.ShopData
+                .Where(sd => customerCodes.Contains(sd.CustomerCode))
+                .ToDictionaryAsync(sd => sd.CustomerCode, sd => sd, ct)
+            : new Dictionary<string, ShopData>();
+
+        // Bulk lookup ErpCustomer by CustomerCode
+        var erpCustomerMap = customerCodes.Count > 0
+            ? await _context.ErpCustomers
+                .Where(e => customerCodes.Contains(e.CustomerCode))
+                .ToDictionaryAsync(e => e.CustomerCode, e => e.CustomerName, ct)
             : new Dictionary<string, string>();
 
         var items = users.Select(u =>
         {
             string? cityName = null;
-            string? districtName = null;
             string? regionName = null;
 
             if (u.NationalAddress != null)
@@ -137,9 +142,25 @@ public class ApprovalService : IApprovalService
                     cityName = cityInfo.NameAr;
                     regionName = cityInfo.RegionName;
                 }
-                if (u.NationalAddress.DistrictId != null)
+            }
+
+            var customerCode = u.ShopOwnerProfile?.CustomerCode ?? u.SellerProfile?.CustomerCode;
+            string? customerName = null;
+            string? storeName = null;
+            string? vat = null;
+            string? crn = null;
+            string? shopImageUrl = null;
+
+            if (customerCode != null)
+            {
+                erpCustomerMap.TryGetValue(customerCode, out customerName);
+
+                if (shopDataMap.TryGetValue(customerCode, out var sd))
                 {
-                    districts.TryGetValue(u.NationalAddress.DistrictId, out districtName);
+                    storeName = sd.StoreName;
+                    vat = sd.VAT;
+                    crn = sd.CRN;
+                    shopImageUrl = sd.ShopImageUrl;
                 }
             }
 
@@ -150,19 +171,18 @@ public class ApprovalService : IApprovalService
                 UserType: u.UserType,
                 RegistrationStatus: u.RegistrationStatus,
                 RegisteredAt: u.CreatedAt,
-                StoreName: u.ShopOwnerProfile?.StoreName,
-                VAT: u.ShopOwnerProfile?.VAT,
-                CRN: u.ShopOwnerProfile?.CRN,
-                ShopImageUrl: u.ShopOwnerProfile?.ShopImageUrl,
-                ShopCode: u.ShopOwnerProfile?.ShopCode,
+                CustomerCode: customerCode,
+                CustomerName: customerName,
+                StoreName: storeName,
+                VAT: vat,
+                CRN: crn,
+                ShopImageUrl: shopImageUrl,
                 RegionName: regionName,
                 CityName: cityName,
-                DistrictName: districtName,
                 Street: u.NationalAddress?.Street,
                 BuildingNumber: u.NationalAddress?.BuildingNumber,
                 PostalCode: u.NationalAddress?.PostalCode,
                 SubNumber: u.NationalAddress?.SubNumber,
-                ShopOwnerName: u.SellerProfile?.ShopOwner?.User?.Name,
                 AssignedSalesManName: u.AssignedSalesMan?.Name
             );
         }).ToList();
@@ -174,7 +194,6 @@ public class ApprovalService : IApprovalService
     public async Task<Result> ApproveAsync(string userId, string approverId, CancellationToken ct = default)
     {
         var user = await _userRepository.Query()
-            .Include(u => u.ShopOwnerProfile)
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user is null)
@@ -232,28 +251,17 @@ public class ApprovalService : IApprovalService
             var fromStatus = user.RegistrationStatus;
             user.RegistrationStatus = RegistrationStatus.Approved;
 
-            if (user.ShopOwnerProfile != null)
-            {
-                var shopCode = await GenerateShopCodeAsync(ct: ct);
-                if (shopCode is null)
-                    return Result.Failure(ApprovalErrors.ShopCodeGenerationFailed);
-
-                user.ShopOwnerProfile.ShopCode = shopCode;
-            }
-
             await _userRepository.UpdateAsync(user);
             await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
 
             _logger.LogInformation(
-                "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved. ShopCode: {ShopCode}",
-                approverId, userId, user.ShopOwnerProfile?.ShopCode);
+                "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
+                approverId, userId);
 
-            // Send WhatsApp welcome (fire-and-forget with captured data to avoid disposed-context issues)
+            // Send WhatsApp welcome (fire-and-forget with captured data)
             var welcomeMobile = user.MobileNumber;
             var welcomeName = user.Name;
-            var welcomeUserType = user.UserType;
-            var welcomeShopCode = user.ShopOwnerProfile?.ShopCode;
-            _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName, welcomeUserType, welcomeShopCode);
+            _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
 
             return Result.Success();
         }
@@ -325,26 +333,6 @@ public class ApprovalService : IApprovalService
 
     #region Private Helpers
 
-    private async Task<string?> GenerateShopCodeAsync(int maxAttempts = 10, CancellationToken ct = default)
-    {
-        for (int i = 0; i < maxAttempts; i++)
-        {
-            var code = GenerateRandomCode(6);
-            var exists = await _context.ShopOwnerProfiles.AnyAsync(p => p.ShopCode == code, ct);
-            if (!exists)
-                return code;
-        }
-
-        _logger.LogError("Failed to generate unique ShopCode after {MaxAttempts} attempts", maxAttempts);
-        return null;
-    }
-
-    private static string GenerateRandomCode(int length)
-    {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        return RandomNumberGenerator.GetString(chars, length);
-    }
-
     private async Task LogApprovalRecordAsync(
         string userId,
         string approverId,
@@ -369,14 +357,11 @@ public class ApprovalService : IApprovalService
         await _context.SaveChangesAsync(ct);
     }
 
-    private async Task SendWelcomeMessageAsync(string mobileNumber, string userName, UserType userType, string? shopCode)
+    private async Task SendWelcomeMessageAsync(string mobileNumber, string userName)
     {
         try
         {
-            var message = userType == UserType.ShopOwner
-                ? $"مرحباً {userName}! تمت الموافقة على تسجيلك في برنامج المكافآت. كود المحل الخاص بك: {shopCode}"
-                : $"مرحباً {userName}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
-
+            var message = $"مرحباً {userName}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
             await _twilioService.SendWhatsAppMessageAsync(mobileNumber, message);
         }
         catch (Exception ex)

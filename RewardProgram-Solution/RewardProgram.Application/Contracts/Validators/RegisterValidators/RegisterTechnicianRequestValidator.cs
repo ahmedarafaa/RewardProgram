@@ -16,13 +16,8 @@ public class RegisterTechnicianRequestValidator : AbstractValidator<RegisterTech
             .NotEmpty().WithMessage("رقم الجوال مطلوب")
             .Matches(@"^05\d{8}$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام");
 
-        RuleFor(x => x.RegionId)
-            .NotEmpty().WithMessage("المنطقة مطلوبة");
-
         RuleFor(x => x.CityId)
             .NotEmpty().WithMessage("المدينة مطلوبة");
-
-        // DistrictId is optional — no validation rule
 
         RuleFor(x => x.PostalCode)
             .NotEmpty().WithMessage("الرمز البريدي مطلوب")

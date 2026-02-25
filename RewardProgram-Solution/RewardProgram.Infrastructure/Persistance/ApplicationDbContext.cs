@@ -20,6 +20,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Region> Regions { get; set; }
     public DbSet<City> Cities { get; set; }
     public DbSet<District> Districts { get; set; }
+    public DbSet<ErpCustomer> ErpCustomers { get; set; }
+    public DbSet<ShopData> ShopData { get; set; }
     public DbSet<ShopOwnerProfile> ShopOwnerProfiles { get; set; }
     public DbSet<SellerProfile> SellerProfiles { get; set; }
     public DbSet<TechnicianProfile> TechnicianProfiles { get; set; }

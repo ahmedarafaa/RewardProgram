@@ -11,24 +11,23 @@ public record PendingUserResponse(
     RegistrationStatus RegistrationStatus,
     DateTime RegisteredAt,
 
-    // ShopOwner profile
+    // ERP Customer
+    string? CustomerCode,
+    string? CustomerName,
+
+    // Shop data (from ShopData entity)
     string? StoreName,
     string? VAT,
     string? CRN,
     string? ShopImageUrl,
-    string? ShopCode,
 
     // Location (resolved names)
     string? RegionName,
     string? CityName,
-    string? DistrictName,
     string? Street,
     int? BuildingNumber,
     string? PostalCode,
     int? SubNumber,
-
-    // Seller info
-    string? ShopOwnerName,
 
     // Assignment info
     string? AssignedSalesManName

@@ -4,19 +4,20 @@ using RewardProgram.Domain.Entities.Users;
 
 namespace RewardProgram.Infrastructure.Persistance.EntitiesConfigurations;
 
-public class SellerProfileConfiguration : IEntityTypeConfiguration<SellerProfile>
+public class ErpCustomerConfiguration : IEntityTypeConfiguration<ErpCustomer>
 {
-    public void Configure(EntityTypeBuilder<SellerProfile> builder)
+    public void Configure(EntityTypeBuilder<ErpCustomer> builder)
     {
-        builder.ToTable("SellerProfiles");
+        builder.ToTable("ErpCustomers");
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.UserId)
-            .IsRequired();
-
         builder.Property(x => x.CustomerCode)
             .HasMaxLength(50)
+            .IsRequired();
+
+        builder.Property(x => x.CustomerName)
+            .HasMaxLength(200)
             .IsRequired();
 
         // Audit fields from TrackableEntity
@@ -25,16 +26,8 @@ public class SellerProfileConfiguration : IEntityTypeConfiguration<SellerProfile
         builder.Property(x => x.UpdatedBy).HasMaxLength(450);
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
-        // Relationships
-        builder.HasOne(x => x.ErpCustomer)
-            .WithMany(x => x.Sellers)
-            .HasForeignKey(x => x.CustomerCode)
-            .HasPrincipalKey(x => x.CustomerCode)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // Indexes
-        builder.HasIndex(x => x.UserId).IsUnique();
-        builder.HasIndex(x => x.CustomerCode);
+        builder.HasIndex(x => x.CustomerCode).IsUnique();
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

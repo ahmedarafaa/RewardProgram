@@ -11,10 +11,9 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
 
     public RegisterShopOwnerRequestValidator()
     {
-        RuleFor(x => x.StoreName)
-           .NotEmpty().WithMessage("اسم المتجر مطلوب")
-           .MinimumLength(2).WithMessage("اسم المتجر يجب أن يكون حرفين على الأقل")
-           .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
+        RuleFor(x => x.CustomerCode)
+            .NotEmpty().WithMessage("كود العميل مطلوب")
+            .MaximumLength(50).WithMessage("كود العميل يجب ألا يتجاوز 50 حرف");
 
         RuleFor(x => x.OwnerName)
             .NotEmpty().WithMessage("الاسم مطلوب")
@@ -25,32 +24,36 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
             .NotEmpty().WithMessage("رقم الجوال مطلوب")
             .Matches(@"^05\d{8}$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام");
 
-        RuleFor(x => x.VAT)
-            .NotEmpty().WithMessage("الرقم الضريبي مطلوب")
-            .Length(15).WithMessage("الرقم الضريبي يجب أن يتكون من 15 رقم")
-            .Matches(@"^3\d{13}3$").WithMessage("الرقم الضريبي يجب أن يبدأ وينتهي بالرقم 3");
-
-        RuleFor(x => x.CRN)
-            .NotEmpty().WithMessage("رقم السجل التجاري مطلوب")
-            .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
-            .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
-
-        RuleFor(x => x.RegionId)
-            .NotEmpty().WithMessage("المنطقة مطلوبة");
-
         RuleFor(x => x.CityId)
             .NotEmpty().WithMessage("المدينة مطلوبة");
 
-        // DistrictId is optional — no validation rule
+        // Conditional shop data rules — only required when ShopData doesn't exist (validated in service)
+        When(x => x.StoreName != null || x.VAT != null || x.CRN != null || x.ShopImage != null, () =>
+        {
+            RuleFor(x => x.StoreName)
+                .NotEmpty().WithMessage("اسم المتجر مطلوب")
+                .MinimumLength(2).WithMessage("اسم المتجر يجب أن يكون حرفين على الأقل")
+                .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
 
-        RuleFor(x => x.ShopImage)
-            .NotNull().WithMessage("صورة المحل مطلوبة")
-            .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")
-            .Must(BeValidImageSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت");
+            RuleFor(x => x.VAT)
+                .NotEmpty().WithMessage("الرقم الضريبي مطلوب")
+                .Length(15).WithMessage("الرقم الضريبي يجب أن يتكون من 15 رقم")
+                .Matches(@"^3\d{13}3$").WithMessage("الرقم الضريبي يجب أن يبدأ وينتهي بالرقم 3");
 
-        RuleFor(x => x.NationalAddress)
-            .NotNull().WithMessage("العنوان الوطني مطلوب")
-            .SetValidator(new NationalAddressDtoValidator(), "Default");
+            RuleFor(x => x.CRN)
+                .NotEmpty().WithMessage("رقم السجل التجاري مطلوب")
+                .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
+                .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
+
+            RuleFor(x => x.ShopImage)
+                .NotNull().WithMessage("صورة المحل مطلوبة")
+                .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")
+                .Must(BeValidImageSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت");
+
+            RuleFor(x => x.NationalAddress!)
+                .NotNull().WithMessage("العنوان الوطني مطلوب")
+                .SetValidator(new NationalAddressDtoValidator(), "Default");
+        });
     }
 
     #region Helpers

@@ -1,9 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RewardProgram.Domain.Entities.Users;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RewardProgram.Infrastructure.Persistance.EntitiesConfigurations;
 
@@ -18,23 +15,8 @@ public class ShopOwnerProfileConfiguration : IEntityTypeConfiguration<ShopOwnerP
         builder.Property(x => x.UserId)
             .IsRequired();
 
-        builder.Property(x => x.StoreName)
-            .HasMaxLength(150)
-            .IsRequired();
-
-        builder.Property(x => x.VAT)
-            .HasMaxLength(15)
-            .IsRequired();
-
-        builder.Property(x => x.CRN)
-            .HasMaxLength(10)
-            .IsRequired();
-
-        builder.Property(x => x.ShopCode)
-            .HasMaxLength(6);
-
-        builder.Property(x => x.ShopImageUrl)
-            .HasMaxLength(500)
+        builder.Property(x => x.CustomerCode)
+            .HasMaxLength(50)
             .IsRequired();
 
         // Audit fields from TrackableEntity
@@ -44,19 +26,15 @@ public class ShopOwnerProfileConfiguration : IEntityTypeConfiguration<ShopOwnerP
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
         // Relationships
-        builder.HasMany(x => x.Sellers)
-            .WithOne(x => x.ShopOwner)
-            .HasForeignKey(x => x.ShopOwnerId)
+        builder.HasOne(x => x.ErpCustomer)
+            .WithMany(x => x.ShopOwners)
+            .HasForeignKey(x => x.CustomerCode)
+            .HasPrincipalKey(x => x.CustomerCode)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes
-        builder.HasIndex(x => x.StoreName);
         builder.HasIndex(x => x.UserId).IsUnique();
-        builder.HasIndex(x => x.CRN).IsUnique();
-        builder.HasIndex(x => x.VAT).IsUnique();
-        builder.HasIndex(x => x.ShopCode)
-           .IsUnique()
-           .HasFilter("[ShopCode] IS NOT NULL");
+        builder.HasIndex(x => x.CustomerCode);
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

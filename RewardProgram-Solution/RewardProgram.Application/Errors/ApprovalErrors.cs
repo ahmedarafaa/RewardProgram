@@ -12,7 +12,4 @@ public static class ApprovalErrors
 
     public static readonly Error NoZoneManagerForRegion =
         new("Approval.NoZoneManagerForRegion", "لا يوجد مدير منطقة للمنطقة المحددة", 400);
-
-    public static readonly Error ShopCodeGenerationFailed =
-        new("Approval.ShopCodeGenerationFailed", "فشل إنشاء كود المحل", 500);
 }

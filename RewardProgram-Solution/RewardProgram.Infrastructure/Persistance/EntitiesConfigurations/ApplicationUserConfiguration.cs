@@ -91,7 +91,6 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             na.Property(a => a.BuildingNumber).HasColumnName("BuildingNumber");
             na.Property(a => a.CityId).HasColumnName("NationalAddress_CityId");
             na.Property(a => a.Street).HasColumnName("Street").HasMaxLength(100);
-            na.Property(a => a.DistrictId).HasColumnName("NationalAddress_DistrictId").HasMaxLength(100);
             na.Property(a => a.PostalCode).HasColumnName("PostalCode").HasMaxLength(5);
             na.Property(a => a.SubNumber).HasColumnName("SubNumber");
 

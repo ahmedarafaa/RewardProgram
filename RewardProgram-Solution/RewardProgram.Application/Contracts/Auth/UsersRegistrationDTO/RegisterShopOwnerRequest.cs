@@ -4,15 +4,14 @@ namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterShopOwnerRequest
 (
-    string StoreName,
+    string CustomerCode,
     string OwnerName,
     string MobileNumber,
-    string VAT,
-    string CRN,
-    string RegionId,
     string CityId,
-    string? DistrictId,
-    IFormFile ShopImage,
-    // National Address
-    NationalAddressResponse NationalAddress
+    // Shop data fields — nullable (only required if ShopData doesn't exist for CustomerCode)
+    string? StoreName,
+    string? VAT,
+    string? CRN,
+    IFormFile? ShopImage,
+    NationalAddressResponse? NationalAddress
 );

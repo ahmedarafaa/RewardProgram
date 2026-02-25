@@ -6,13 +6,17 @@ internal record SellerRegistrationData(
     UserType UserType,
     string Name,
     string MobileNumber,
-    string ShopCode,
-    string ShopOwnerId,
+    string CustomerCode,
     string AssignedSalesManId,
     string CityId,
-    string? DistrictId,
-    string Street,
-    int BuildingNumber,
-    string PostalCode,
-    int SubNumber
+    bool ShopDataAlreadyExists,
+    // Shop data fields — only used when ShopDataAlreadyExists == false
+    string? StoreName,
+    string? VAT,
+    string? CRN,
+    string? ShopImageUrl,
+    string? Street,
+    int? BuildingNumber,
+    string? PostalCode,
+    int? SubNumber
 );

@@ -35,15 +35,11 @@ public class LookupController : ControllerBase
             : result.ToProblem();
     }
 
-    [HttpGet("cities/{cityId}/districts")]
-    [ProducesResponseType(typeof(List<DistrictResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetDistrictsByCity(string cityId, CancellationToken ct)
+    [HttpGet("cities")]
+    [ProducesResponseType(typeof(List<CityResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllCities(CancellationToken ct)
     {
-        var result = await _lookupService.GetDistrictsByCityAsync(cityId, ct);
-
-        return result.IsSuccess
-            ? Ok(result.Value)
-            : result.ToProblem();
+        var cities = await _lookupService.GetAllCitiesAsync(ct);
+        return Ok(cities);
     }
 }
