@@ -5,8 +5,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RewardProgram.Application.Contracts.Validators;
 using RewardProgram.Application.Interfaces;
+using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Interfaces.Files;
+using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Services.Auth;
 using RewardProgram.Application.Services.Lookups;
 using RewardProgram.Domain.Entities.Users;
@@ -70,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<ILookupService, LookupService>();
+        services.AddScoped<IAdminUserService, AdminUserService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
