@@ -18,4 +18,8 @@
     <ProjectReference Include="..\RewardProgram.Domain\RewardProgram.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Admin\Services\" />
+  </ItemGroup>
+
 </Project>

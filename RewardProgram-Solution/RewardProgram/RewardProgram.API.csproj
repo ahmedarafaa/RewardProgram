@@ -23,4 +23,8 @@
     <ProjectReference Include="..\RewardProgram.Infrastructure\RewardProgram.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\Admin\" />
+  </ItemGroup>
+
 </Project>

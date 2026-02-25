@@ -33,7 +33,8 @@
       "Bash(dotnet ef database drop:*)",
       "Bash(sqlcmd:*)",
       "Bash(taskkill:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(cd M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution:*)"
     ]
   }
 }
