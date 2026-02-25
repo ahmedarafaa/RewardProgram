@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public static class DataSeeder
         await SeedRolesAsync(roleManager, logger);
         var users = await SeedUsersAsync(userManager, logger);
         await SeedRegionsAndCitiesAsync(context, users, logger);
+        await SeedErpCustomersAsync(context, logger);
     }
 
     #region Roles
@@ -532,6 +534,64 @@ public static class DataSeeder
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded {RegionCount} regions and {CityCount} cities",
             regionData.Length, cityData.Length);
+    }
+
+    #endregion
+
+    #region ErpCustomers
+
+    private static async Task SeedErpCustomersAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.ErpCustomers.AnyAsync())
+        {
+            logger.LogInformation("ErpCustomers already seeded, skipping");
+            return;
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("ErpCustomers.csv", StringComparison.OrdinalIgnoreCase));
+
+        if (resourceName is null)
+        {
+            logger.LogWarning("ErpCustomers.csv embedded resource not found, skipping ERP customer seeding");
+            return;
+        }
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+
+        var content = await reader.ReadToEndAsync();
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        var customers = new List<ErpCustomer>();
+
+        // Skip header line (index 0)
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (string.IsNullOrEmpty(line))
+                continue;
+
+            var parts = line.Split(';', 2);
+            if (parts.Length < 2)
+            {
+                logger.LogWarning("Skipping malformed CSV line {LineNumber}: {Line}", i + 1, line);
+                continue;
+            }
+
+            customers.Add(new ErpCustomer
+            {
+                CustomerCode = parts[0].Trim(),
+                CustomerName = parts[1].Trim(),
+                CreatedBy = "DataSeeder"
+            });
+        }
+
+        context.ErpCustomers.AddRange(customers);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Seeded {Count} ErpCustomers", customers.Count);
     }
 
     #endregion

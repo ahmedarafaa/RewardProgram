@@ -21,4 +21,8 @@
     <ProjectReference Include="..\RewardProgram.Application\RewardProgram.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Persistance\Data\SeedData\ErpCustomers.csv" />
+  </ItemGroup>
+
 </Project>
