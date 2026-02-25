@@ -1,7 +1,8 @@
 # AL-Raed Reward Program - QA Test Guide
 
-**Version:** 1.0
-**Last Updated:** 2026-02-24
+**Version:** 2.0
+**Author:** Mahmoud Ibrahim Zahran — Backend Engineer
+**Last Updated:** 2026-02-25
 **API Status:** Ready for QA Testing
 **Build Status:** 0 errors, 0 warnings
 
@@ -36,7 +37,7 @@ AL-Raed Reward Program is an onboarding platform for AL-Raed (a Saudi FMCG/retai
 | **ZoneManager** | Regional manager overseeing a geographic zone | Pre-seeded in database |
 | **SalesMan** | AL-Raed distribution rep assigned to cities | Pre-seeded in database |
 | **ShopOwner** | Retail store owner (has VAT, CRN, physical shop) | Self-registers via API |
-| **Seller** | Employee working inside a shop | Self-registers with ShopCode |
+| **Seller** | Employee working inside a shop | Self-registers with CustomerCode |
 | **Technician** | Field service technician | Self-registers via API |
 
 ### Geographic Hierarchy
@@ -44,8 +45,28 @@ AL-Raed Reward Program is an onboarding platform for AL-Raed (a Saudi FMCG/retai
 ```
 Region (top level, managed by 1 ZoneManager)
   └── City (has 1 ApprovalSalesMan)
-        └── District (optional)
 ```
+
+> **Note:** District table exists but is dormant. Registration uses City only — Region is auto-derived from City.
+
+### ERP / ShopData Model
+
+```
+ErpCustomer (external source — 3,235 seeded)
+  └── CustomerCode (unique) + CustomerName
+
+ShopData (one-to-one with ErpCustomer via CustomerCode)
+  └── StoreName, VAT, CRN, ShopImageUrl, CityId, address fields, EnteredByUserId
+
+ShopOwnerProfile ──► CustomerCode ──► ErpCustomer
+SellerProfile ──────► CustomerCode ──► ErpCustomer
+```
+
+**Key rules:**
+- Both ShopOwner and Seller register with a **CustomerCode** (must exist in ErpCustomers)
+- **Whoever registers first** for a CustomerCode provides the shop data (StoreName, VAT, CRN, image, address)
+- The second registrant for the same CustomerCode **skips shop data** — it's reused from the first
+- **ShopOwner always wins**: if a Seller created ShopData first and then a ShopOwner registers with the same CustomerCode, the ShopOwner's data **overwrites** the Seller's ShopData
 
 ### Two-Tier Approval Workflow
 
@@ -69,8 +90,6 @@ Status: PendingSalesman ──► SalesMan Reviews
     │               ▼           ▼
     │           Approved      Rejected (final)
     │           (can login)   (cannot login)
-    │
-    └── ShopOwner gets 6-char ShopCode on final approval
 ```
 
 ### Authentication Method
@@ -87,29 +106,44 @@ Status: PendingSalesman ──► SalesMan Reviews
 
 | Environment | Base URL | Swagger |
 |-------------|----------|---------|
-| Development (local) | `http://localhost:5000` | `/swagger` |
-| Staging | `http://staging.raedrewardapp.com` | `/swagger` |
-| Production | `http://raedrewards-001-site1.atempurl.com` | Disabled |
+| Development — IIS Express | `https://localhost:44315` or `http://localhost:50361` | `/swagger` |
+| Development — Kestrel (http) | `http://localhost:5243` | `/swagger` |
+| Development — Kestrel (https) | `https://localhost:7100` | `/swagger` |
 
-### 2.2 Twilio Mock Mode
+### 2.2 Postman Collection
 
-In **Development** and **Staging**, Twilio runs in mock mode:
+A pre-built Postman collection is available at the solution root:
 
-- OTPs are **not actually sent** via WhatsApp
-- The mock OTP code is logged and stored in the database
-- Check the `OtpCodes` table in the database for the actual PinId and verification status
-- Check application logs (Serilog) for OTP details
+```
+RewardProgram.postman_collection.json
+```
 
-> **Important:** To get the OTP in mock mode, you need database access or log access.
+**Features:**
+- Auto-captures `pinId`, `token`, and `refreshToken` from responses
+- Bearer auth pre-configured on protected endpoints
+- Pre-filled with seeded SalesMan mobile `0500000010`
+- Sample Arabic data for registration
 
-### 2.3 First-Time Setup
+**Import:** Open Postman → Import → select the JSON file.
+
+> **Important:** Disable SSL certificate verification in Postman: Settings → General → SSL certificate verification → OFF.
+
+### 2.3 Twilio Mock Mode
+
+In **Development**, Twilio runs in mock mode:
+
+- OTPs are **not actually sent** via WhatsApp/SMS
+- **Any 6-digit OTP code works** (e.g., `123456`)
+- No need for database or log access to retrieve OTPs
+
+### 2.4 First-Time Setup
 
 On first run in Development:
 1. Database auto-migrates (tables created automatically)
-2. DataSeeder runs (creates roles, 31 users, 8 regions, 140 cities)
+2. DataSeeder runs (creates roles, 31 users, 8 regions, 140 cities, 3,235 ErpCustomers)
 3. Swagger available at `/swagger`
 
-### 2.4 Authentication in Swagger
+### 2.5 Authentication in Swagger
 
 1. Open Swagger UI
 2. Click the **Authorize** button (lock icon, top right)
@@ -203,6 +237,7 @@ On first run in Development:
 ### 3.4 Cities (140 total)
 
 Use `GET /api/lookup/regions` then `GET /api/lookup/regions/{regionId}/cities` to get actual IDs.
+Or use `GET /api/lookup/cities` to get all 140 cities at once.
 
 **Sample (Riyadh region — 12 cities):**
 
@@ -214,6 +249,12 @@ Use `GET /api/lookup/regions` then `GET /api/lookup/regions/{regionId}/cities` t
 | القويعية | احمد جمال |
 | ... | ... |
 
+### 3.5 ErpCustomers (3,235)
+
+Seeded from embedded CSV. Each has a unique `CustomerCode` and `CustomerName`.
+
+Use any `CustomerCode` from the database when registering ShopOwner or Seller.
+
 ---
 
 ## 4. API Endpoints Reference
@@ -222,7 +263,7 @@ Use `GET /api/lookup/regions` then `GET /api/lookup/regions/{regionId}/cities` t
 
 #### GET /api/lookup/regions
 
-Returns all regions. Cached for 1 hour.
+Returns all active regions.
 
 **Response (200):**
 ```json
@@ -237,7 +278,7 @@ Returns all regions. Cached for 1 hour.
 
 #### GET /api/lookup/regions/{regionId}/cities
 
-Returns cities in a region. Cached for 1 hour.
+Returns cities in a region.
 
 **Response (200):**
 ```json
@@ -253,23 +294,21 @@ Returns cities in a region. Cached for 1 hour.
 
 **Error:** 404 if regionId not found.
 
-#### GET /api/lookup/cities/{cityId}/districts
+#### GET /api/lookup/cities
 
-Returns districts in a city. Cached for 1 hour.
+Returns all 140 active cities.
 
 **Response (200):**
 ```json
 [
   {
     "id": "guid-string",
-    "nameAr": "حي الصفا",
-    "nameEn": "As Safa",
-    "cityId": "city-guid"
+    "nameAr": "الرياض",
+    "nameEn": "Riyadh",
+    "regionId": "region-guid"
   }
 ]
 ```
-
-**Error:** 404 if cityId not found.
 
 ---
 
@@ -281,64 +320,67 @@ Returns districts in a city. Cached for 1 hour.
 
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| StoreName | string | Yes | 2-150 characters |
+| CustomerCode | string | Yes | Must exist in ErpCustomers, max 50 chars |
 | OwnerName | string | Yes | 2-100 characters |
 | MobileNumber | string | Yes | Format: `05XXXXXXXX` (10 digits) |
-| VAT | string | Yes | Exactly 15 digits, starts and ends with 3 |
-| CRN | string | Yes | Exactly 10 digits |
-| RegionId | string | Yes | Must exist |
-| CityId | string | Yes | Must belong to region, must have SalesMan |
-| DistrictId | string | No | If provided, must belong to city |
-| ShopImage | file | Yes | JPG or PNG only, max 5 MB |
-| NationalAddress.BuildingNumber | int | Yes | Greater than 0 |
-| NationalAddress.Street | string | Yes | 1-100 characters |
-| NationalAddress.PostalCode | string | Yes | Exactly 5 digits |
-| NationalAddress.SubNumber | int | Yes | Greater than 0 |
+| CityId | string | Yes | Must exist and be active, must have ApprovalSalesMan |
+| StoreName | string | Conditional | Required if no ShopData exists for this CustomerCode; 2-150 chars |
+| VAT | string | Conditional | Required if no ShopData; 15 digits, starts and ends with 3 |
+| CRN | string | Conditional | Required if no ShopData; exactly 10 digits |
+| ShopImage | file | Conditional | Required if no ShopData; JPG or PNG only, max 5 MB |
+| NationalAddress.Street | string | Conditional | Required if no ShopData; 1-100 chars |
+| NationalAddress.BuildingNumber | int | Conditional | Required if no ShopData; > 0 |
+| NationalAddress.PostalCode | string | Conditional | Required if no ShopData; 5 digits |
+| NationalAddress.SubNumber | int | Conditional | Required if no ShopData; > 0 |
+
+> **ShopData override:** If a Seller previously created ShopData for this CustomerCode, the ShopOwner's data will **overwrite** it.
 
 **Success Response (200):**
 ```json
 {
   "pinId": "twilio-pin-id-string",
-  "maskedMobileNumber": "0500****56"
+  "maskedMobileNumber": "0555****01"
 }
 ```
 
 **Possible Errors:**
-- 400: Validation failed, city not found, no salesman for city, invalid district
+- 400: Validation failed, CustomerCode not found, city not found, no salesman for city, ShopData required
 - 409: Mobile/VAT/CRN already registered
 
 ---
 
 #### POST /api/auth/register/seller
 
-**Content-Type:** `application/json`
-
-```json
-{
-  "name": "اسم البائع",
-  "mobileNumber": "0512345678",
-  "shopCode": "ABC123"
-}
-```
+**Content-Type:** `multipart/form-data`
 
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
 | Name | string | Yes | 2-100 characters |
 | MobileNumber | string | Yes | Format: `05XXXXXXXX` |
-| ShopCode | string | Yes | Exactly 6 chars, uppercase alphanumeric `^[A-Z0-9]{6}$` |
+| CustomerCode | string | Yes | Must exist in ErpCustomers |
+| StoreName | string | Conditional | Required if no ShopData exists for this CustomerCode |
+| VAT | string | Conditional | Required if no ShopData |
+| CRN | string | Conditional | Required if no ShopData |
+| ShopImage | file | Conditional | Required if no ShopData |
+| CityId | string | Conditional | Required if no ShopData |
+| NationalAddress.Street | string | Conditional | Required if no ShopData |
+| NationalAddress.BuildingNumber | int | Conditional | Required if no ShopData |
+| NationalAddress.PostalCode | string | Conditional | Required if no ShopData |
+| NationalAddress.SubNumber | int | Conditional | Required if no ShopData |
+
+> **If ShopData exists** for the CustomerCode, the Seller skips all shop data fields. CityId and address are inherited from the existing ShopData.
 
 **Success Response (200):**
 ```json
 {
   "pinId": "twilio-pin-id-string",
-  "maskedMobileNumber": "0512****78"
+  "maskedMobileNumber": "0555****02"
 }
 ```
 
 **Possible Errors:**
-- 400: Invalid shop code, shop owner not approved
-- 404: Shop owner not found
-- 409: Mobile already registered
+- 400: Validation failed, CustomerCode not found, city not found, no salesman, ShopData required
+- 409: Mobile/VAT/CRN already registered
 
 ---
 
@@ -349,10 +391,8 @@ Returns districts in a city. Cached for 1 hour.
 ```json
 {
   "name": "اسم الفني",
-  "mobileNumber": "0512345679",
-  "regionId": "region-guid",
+  "mobileNumber": "0555000003",
   "cityId": "city-guid",
-  "districtId": "district-guid-or-null",
   "postalCode": "12345"
 }
 ```
@@ -361,21 +401,19 @@ Returns districts in a city. Cached for 1 hour.
 |-------|------|----------|-------|
 | Name | string | Yes | 2-100 characters |
 | MobileNumber | string | Yes | Format: `05XXXXXXXX` |
-| RegionId | string | Yes | Must exist |
-| CityId | string | Yes | Must belong to region, must have SalesMan |
-| DistrictId | string | No | If provided, must belong to city |
+| CityId | string | Yes | Must exist and be active, must have SalesMan |
 | PostalCode | string | Yes | Exactly 5 digits `^\d{5}$` |
 
 **Success Response (200):**
 ```json
 {
   "pinId": "twilio-pin-id-string",
-  "maskedMobileNumber": "0512****79"
+  "maskedMobileNumber": "0555****03"
 }
 ```
 
 **Possible Errors:**
-- 400: City not found, no salesman, invalid district
+- 400: City not found, no salesman
 - 409: Mobile already registered
 
 ---
@@ -401,16 +439,10 @@ Verifies OTP for **all 3 registration types** (shared endpoint).
 **Success Response (200):**
 ```json
 {
-  "id": "new-user-id",
-  "name": "user name",
-  "mobileNumber": "05XXXXXXXX",
-  "userType": 1,
-  "registrationStatus": 1
+  "userId": "new-user-guid",
+  "message": "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق"
 }
 ```
-
-**UserType values:** 1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager, 6=SystemAdmin
-**RegistrationStatus values:** 1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected
 
 **Possible Errors:**
 - 400: Invalid/expired/used OTP, max attempts exceeded (5), registration data not found
@@ -425,7 +457,7 @@ Resends OTP for a pending registration or login.
 
 ```json
 {
-  "mobileNumber": "0512345678"
+  "mobileNumber": "0555000001"
 }
 ```
 
@@ -433,7 +465,7 @@ Resends OTP for a pending registration or login.
 ```json
 {
   "pinId": "new-pin-id",
-  "maskedMobileNumber": "0512****78"
+  "maskedMobileNumber": "0555****01"
 }
 ```
 
@@ -499,8 +531,8 @@ Verifies login OTP and returns JWT tokens.
     "id": "user-id",
     "name": "محمود حجازي",
     "mobileNumber": "0500000010",
-    "userType": 4,
-    "registrationStatus": 3
+    "userType": "SalesMan",
+    "registrationStatus": "Approved"
   }
 }
 ```
@@ -593,27 +625,26 @@ Returns paginated list of users pending approval.
       "id": "user-id",
       "name": "محمد أحمد",
       "mobileNumber": "0512345678",
-      "userType": 1,
-      "registrationStatus": 1,
-      "registeredAt": "2026-02-24T10:30:00Z",
+      "userType": "ShopOwner",
+      "registrationStatus": "PendingSalesman",
+      "registeredAt": "2026-02-25T10:30:00Z",
+      "customerCode": "10001",
+      "customerName": "اسم العميل في ERP",
       "storeName": "متجر الجودة",
       "vat": "300000000000003",
       "crn": "1234567890",
       "shopImageUrl": "/uploads/shops/image.jpg",
-      "shopCode": null,
       "regionName": "الرياض",
       "cityName": "الرياض",
-      "districtName": null,
       "street": "شارع الملك فهد",
       "buildingNumber": 1234,
       "postalCode": "12345",
       "subNumber": 1,
-      "shopOwnerName": null,
       "assignedSalesManName": "محمود حجازي"
     }
   ],
   "totalCount": 5,
-  "page": 1,
+  "pageNumber": 1,
   "pageSize": 20,
   "totalPages": 1,
   "hasNextPage": false,
@@ -644,10 +675,6 @@ Returns paginated list of users pending approval.
 |---------------|------------------|--------|
 | PendingSalesman | The assigned SalesMan | Status changes to PendingZoneManager |
 | PendingZoneManager | The region's ZoneManager | Status changes to Approved |
-
-**On Final Approval (ZoneManager):**
-- ShopOwner receives a generated 6-character ShopCode (e.g., "A3X9K2")
-- Welcome WhatsApp message sent (fire-and-forget)
 
 **Success Response (200):**
 ```json
@@ -714,16 +741,16 @@ Pick a city ID. Note it.
 POST /api/auth/register/shop-owner
 Content-Type: multipart/form-data
 
-StoreName: متجر اختبار
+CustomerCode: {any valid code from ErpCustomers table}
 OwnerName: صاحب المتجر
 MobileNumber: 0555111222
+CityId: {cityId from step 1}
+StoreName: متجر اختبار
 VAT: 300000000100003
 CRN: 1234500001
-RegionId: {regionId from step 1}
-CityId: {cityId from step 1}
 ShopImage: {upload a .jpg or .png file, under 5MB}
-NationalAddress.BuildingNumber: 100
 NationalAddress.Street: شارع التحلية
+NationalAddress.BuildingNumber: 100
 NationalAddress.PostalCode: 12345
 NationalAddress.SubNumber: 1
 ```
@@ -736,12 +763,12 @@ NationalAddress.SubNumber: 1
 POST /api/auth/register/verify
 {
   "pinId": "{pinId from step 2}",
-  "otp": "{get from database or logs in mock mode}"
+  "otp": "123456"
 }
 ```
 
-**Expected:** 200 with user details, `registrationStatus: 1` (PendingSalesman).
-**Save:** the `id` (userId).
+**Expected:** 200 with `userId` and success message.
+**Save:** the `userId`.
 
 **Step 4 — Login as the SalesMan who covers that city**
 
@@ -755,7 +782,7 @@ POST /api/auth/login
 Get pinId, then:
 ```
 POST /api/auth/login/verify
-{ "pinId": "{pinId}", "otp": "{from DB/logs}" }
+{ "pinId": "{pinId}", "otp": "123456" }
 ```
 
 **Save:** the `token` (JWT).
@@ -795,7 +822,7 @@ Authorization: Bearer {zm-token}
 { "userId": "{userId from step 3}" }
 ```
 
-**Expected:** 200, user is now Approved. ShopCode generated.
+**Expected:** 200, user is now Approved.
 
 **Step 9 — Login as the newly approved ShopOwner**
 ```
@@ -805,37 +832,51 @@ POST /api/auth/login
 
 Verify OTP.
 
-**Expected:** 200 with JWT tokens, `registrationStatus: 3` (Approved).
+**Expected:** 200 with JWT tokens, `registrationStatus: "Approved"`.
 
 ---
 
-### Flow 2: Seller Registration (Requires Approved ShopOwner)
+### Flow 2: Seller Registration (with CustomerCode)
 
-**Prerequisite:** Complete Flow 1 first. Note the ShopCode from the approval response or database.
+**Step 1 — Register Seller with a CustomerCode**
 
-**Step 1 — Register Seller**
+**Case A: ShopData already exists** (ShopOwner or another Seller already registered with this CustomerCode and verified)
 ```
 POST /api/auth/register/seller
-{
-  "name": "بائع اختبار",
-  "mobileNumber": "0555111333",
-  "shopCode": "{ShopCode from Flow 1}"
-}
+Content-Type: multipart/form-data
+
+Name: بائع اختبار
+MobileNumber: 0555111333
+CustomerCode: {same CustomerCode used in Flow 1}
+```
+> Only 3 fields needed — shop data is inherited.
+
+**Case B: ShopData does NOT exist** (first registration for this CustomerCode)
+```
+POST /api/auth/register/seller
+Content-Type: multipart/form-data
+
+Name: بائع اختبار
+MobileNumber: 0555111333
+CustomerCode: {a CustomerCode with no existing ShopData}
+CityId: {cityId}
+StoreName: متجر البائع
+VAT: 300000000200003
+CRN: 1234500002
+ShopImage: {image file}
+NationalAddress.Street: شارع العليا
+NationalAddress.BuildingNumber: 200
+NationalAddress.PostalCode: 54321
+NationalAddress.SubNumber: 2
 ```
 
-**Step 2 — Verify OTP**
-```
-POST /api/auth/register/verify
-{ "pinId": "{pinId}", "otp": "{from DB/logs}" }
-```
-
-**Step 3 — Approve via SalesMan then ZoneManager** (same as Flow 1, Steps 4-8)
+**Step 2 — Verify OTP and Approve** (same as Flow 1, Steps 3-8)
 
 ---
 
 ### Flow 3: Technician Registration
 
-**Step 1 — Get location IDs** (same as Flow 1, Step 1)
+**Step 1 — Get a city ID** (from Lookups)
 
 **Step 2 — Register Technician**
 ```
@@ -843,9 +884,7 @@ POST /api/auth/register/technician
 {
   "name": "فني اختبار",
   "mobileNumber": "0555111444",
-  "regionId": "{regionId}",
   "cityId": "{cityId}",
-  "districtId": null,
   "postalCode": "54321"
 }
 ```
@@ -923,6 +962,56 @@ Authorization: Bearer {dual-role-token}
 
 ---
 
+### Flow 7: ShopOwner Overwrites Seller's ShopData
+
+Tests that ShopOwner's shop data takes precedence over Seller's.
+
+**Step 1 — Register Seller first** (with a new CustomerCode that has no ShopData)
+```
+POST /api/auth/register/seller
+Content-Type: multipart/form-data
+
+Name: بائع أول
+MobileNumber: 0555222001
+CustomerCode: {new CustomerCode}
+CityId: {cityId}
+StoreName: متجر البائع الأصلي
+VAT: 300000000300003
+CRN: 1234500003
+ShopImage: {image}
+NationalAddress.Street: شارع البائع
+NationalAddress.BuildingNumber: 100
+NationalAddress.PostalCode: 11111
+NationalAddress.SubNumber: 1
+```
+
+Verify OTP → Seller created with ShopData.
+
+**Step 2 — Register ShopOwner with same CustomerCode** (ShopData exists, but ShopOwner provides new data)
+```
+POST /api/auth/register/shop-owner
+Content-Type: multipart/form-data
+
+CustomerCode: {same CustomerCode}
+OwnerName: صاحب المتجر الحقيقي
+MobileNumber: 0555222002
+CityId: {cityId}
+StoreName: متجر المالك الجديد
+VAT: 300000000400003
+CRN: 1234500004
+ShopImage: {different image}
+NationalAddress.Street: شارع المالك
+NationalAddress.BuildingNumber: 200
+NationalAddress.PostalCode: 22222
+NationalAddress.SubNumber: 2
+```
+
+> **Note:** Since ShopData exists, the ShopOwner registration will NOT require shop data fields. To test the overwrite behavior, the ShopOwner must register when ShopData does NOT exist yet (race condition: both register before either verifies) OR register providing shop data when ShopData doesn't exist.
+
+**Expected:** After both verify, the ShopData record reflects the ShopOwner's data (StoreName, VAT, etc.), not the Seller's.
+
+---
+
 ## 6. Validation Rules
 
 ### 6.1 Mobile Number
@@ -930,21 +1019,21 @@ Authorization: Bearer {dual-role-token}
 - Regex: `^05\d{8}$`
 - Must be unique per user
 
-### 6.2 VAT Number
+### 6.2 CustomerCode
+- Must exist in ErpCustomers table
+- Max 50 characters
+- Multiple users (ShopOwner + Seller) can share the same CustomerCode
+
+### 6.3 VAT Number
 - Exactly 15 digits
 - Must start with 3 and end with 3
 - Regex: `^3\d{13}3$`
-- Must be unique
+- Must be unique in ShopData table
 
-### 6.3 CRN (Commercial Registration Number)
+### 6.4 CRN (Commercial Registration Number)
 - Exactly 10 digits
 - Regex: `^\d{10}$`
-- Must be unique
-
-### 6.4 Shop Code
-- Exactly 6 characters
-- Uppercase alphanumeric only
-- Regex: `^[A-Z0-9]{6}$`
+- Must be unique in ShopData table
 
 ### 6.5 Postal Code
 - Exactly 5 digits
@@ -1009,14 +1098,15 @@ All errors follow the ProblemDetails format:
 | Auth.MobileAlreadyRegistered | 409 | رقم الجوال مسجل مسبقاً |
 | Auth.VatAlreadyExists | 409 | رقم الضريبة مسجل مسبقاً |
 | Auth.CrnAlreadyExists | 409 | السجل التجاري مسجل مسبقاً |
+| Auth.CustomerCodeNotFound | 400 | كود العميل غير موجود |
+| Auth.ShopDataRequired | 400 | بيانات المتجر مطلوبة |
+| Auth.ImageUploadFailed | 400 | فشل رفع الصورة |
 | Auth.UserNotFound | 404 | المستخدم غير موجود |
 | Auth.UserNotApproved | 403 | المستخدم غير معتمد |
 | Auth.UserRejected | 403 | تم رفض طلب التسجيل |
 | Auth.UserDisabled | 403 | تم تعطيل حساب المستخدم |
 | Auth.CityNotFound | 400 | المدينة غير موجودة |
-| Auth.DistrictNotFound | 400 | الحي غير موجود |
-| Auth.InvalidShopCode | 400 | رمز المتجر غير صالح |
-| Auth.ShopOwnerNotApproved | 400 | صاحب المتجر غير معتمد |
+| Auth.NoApprovalSalesMan | 400 | لا يوجد مندوب معتمد للمدينة |
 
 #### OTP Errors
 
@@ -1051,8 +1141,6 @@ All errors follow the ProblemDetails format:
 | Code | HTTP Status | Arabic Description |
 |------|------------|-------------------|
 | Lookup.RegionNotFound | 404 | المنطقة غير موجودة |
-| Lookup.CityNotFound | 404 | المدينة غير موجودة |
-| Lookup.DistrictNotFound | 404 | الحي غير موجود |
 
 ---
 
@@ -1079,8 +1167,11 @@ All errors follow the ProblemDetails format:
 ### 9.1 Registration Tests
 
 #### ShopOwner Registration
-- [ ] Valid registration with all required fields
-- [ ] Missing StoreName → 400
+- [ ] Valid registration with all required fields (new CustomerCode, no ShopData) → 200
+- [ ] Registration when ShopData already exists (skip shop fields) → 200
+- [ ] ShopOwner overwrites Seller's ShopData (same CustomerCode, both provide data) → ShopData reflects ShopOwner's values
+- [ ] Missing CustomerCode → 400
+- [ ] Invalid CustomerCode (not in ErpCustomers) → 400
 - [ ] Missing OwnerName → 400
 - [ ] Invalid mobile format (e.g., "0612345678") → 400
 - [ ] Duplicate mobile number → 409
@@ -1088,45 +1179,38 @@ All errors follow the ProblemDetails format:
 - [ ] Duplicate CRN → 409
 - [ ] Invalid VAT format (not starting/ending with 3) → 400
 - [ ] Invalid CRN format (not 10 digits) → 400
-- [ ] Non-existent RegionId → 400
 - [ ] Non-existent CityId → 400
-- [ ] CityId not belonging to RegionId → 400
 - [ ] City without assigned SalesMan → 400
-- [ ] Invalid DistrictId (not in city) → 400
 - [ ] Non-JPG/PNG image → 400
 - [ ] Image > 5 MB → 400
-- [ ] Missing image → 400
+- [ ] Missing shop data when no ShopData exists for CustomerCode → 400
 - [ ] BuildingNumber = 0 or negative → 400
 - [ ] PostalCode not 5 digits → 400
 - [ ] Empty Street → 400
 - [ ] SubNumber = 0 or negative → 400
-- [ ] Registration with DistrictId = null (valid) → 200
 
 #### Seller Registration
-- [ ] Valid registration with approved ShopOwner code → 200
-- [ ] Non-existent ShopCode → 400
-- [ ] ShopCode from non-approved ShopOwner → 400
-- [ ] Invalid ShopCode format (lowercase, wrong length) → 400
+- [ ] Valid registration — ShopData exists (only Name, Mobile, CustomerCode needed) → 200
+- [ ] Valid registration — ShopData does NOT exist (full form with shop fields) → 200
+- [ ] Invalid CustomerCode → 400
+- [ ] Missing shop data when ShopData doesn't exist → 400
 - [ ] Duplicate mobile → 409
+- [ ] Duplicate VAT (when providing new ShopData) → 409
 
 #### Technician Registration
 - [ ] Valid registration → 200
 - [ ] Non-existent CityId → 400
 - [ ] City without SalesMan → 400
 - [ ] Invalid PostalCode (not 5 digits) → 400
-- [ ] DistrictId = null (valid) → 200
 
 ### 9.2 OTP Tests
 
 - [ ] Valid OTP verification → 200
-- [ ] Expired OTP (> 5 minutes) → 400
-- [ ] Wrong OTP code → 400
+- [ ] Wrong OTP code (dev mode: any 6-digit works) → test with non-6-digit value
 - [ ] Already used OTP → 400
-- [ ] 6th attempt (max 5) → 400
 - [ ] Empty PinId → 400
 - [ ] Resend OTP within 30 seconds → 429
 - [ ] Resend OTP after 30 seconds → 200
-- [ ] 4th OTP request in 15 minutes → 429
 
 ### 9.3 Login Tests
 
@@ -1135,14 +1219,12 @@ All errors follow the ProblemDetails format:
 - [ ] Login with PendingSalesman user → 403
 - [ ] Login with PendingZoneManager user → 403
 - [ ] Login with Rejected user → 403
-- [ ] Login with disabled user → 403
 - [ ] Verify login OTP → 200 with JWT tokens
 
 ### 9.4 Token Tests
 
 - [ ] Refresh with valid token → 200 (new tokens)
 - [ ] Refresh with revoked token → 401
-- [ ] Refresh with expired token → 401
 - [ ] Refresh with invalid string → 401
 - [ ] Old refresh token rejected after refresh → 401
 - [ ] Revoke token → 200
@@ -1157,8 +1239,6 @@ All errors follow the ProblemDetails format:
 - [ ] Wrong SalesMan cannot approve → 403
 - [ ] ZoneManager approves → status moves to Approved
 - [ ] Wrong ZoneManager cannot approve → 403
-- [ ] ShopOwner gets ShopCode on final approval
-- [ ] Seller/Technician do NOT get ShopCode
 - [ ] Rejection with reason → 200
 - [ ] Rejection without reason → 400
 - [ ] Rejected user cannot login → 403
@@ -1171,11 +1251,19 @@ All errors follow the ProblemDetails format:
 
 - [ ] Get all regions → 8 regions returned
 - [ ] Get cities by region → correct cities with regionId
+- [ ] Get all cities → 140 cities returned
 - [ ] Get cities for invalid region → 404
-- [ ] Get districts by city → districts or empty array
-- [ ] Get districts for invalid city → 404
 
-### 9.7 Edge Cases
+### 9.7 ShopData Sharing Tests
+
+- [ ] ShopOwner registers first → ShopData created with ShopOwner's data
+- [ ] Seller registers same CustomerCode after → skips shop data, uses existing
+- [ ] Seller registers first → ShopData created with Seller's data
+- [ ] ShopOwner registers same CustomerCode after (ShopData exists) → skips shop data
+- [ ] Both register before either verifies → first to verify creates ShopData, second skips
+- [ ] ShopOwner provides shop data, Seller already created ShopData → ShopOwner's data overwrites
+
+### 9.8 Edge Cases
 
 - [ ] Arabic characters in names → accepted
 - [ ] Very long StoreName (> 150 chars) → 400
@@ -1190,10 +1278,10 @@ All errors follow the ProblemDetails format:
 | ID | Description | Impact |
 |----|-------------|--------|
 | **C6** | JWT key and Twilio credentials are placeholders in appsettings.json | Must be set properly for staging/production |
-| **H5** | AuthService is 690+ lines (god service) | Code complexity, not a testing issue |
+| **H5** | AuthService is 700+ lines (god service) | Code complexity, not a testing issue |
 | **P3** | OTP records are never cleaned up from database | Table grows indefinitely |
 | **M6** | Rejected users cannot re-register | Mobile number is permanently blocked; no re-apply path |
-| **Mock OTP** | In dev/staging, OTPs must be read from DB or logs | Tester needs DB access or log viewer |
+| **Mock OTP** | In dev, any 6-digit OTP code works | Not a limitation — simplifies testing |
 
 ---
 
@@ -1202,20 +1290,20 @@ All errors follow the ProblemDetails format:
 ### Mobile Format
 `05XXXXXXXX` (10 digits, starts with 05)
 
+### CustomerCode
+Any valid code from ErpCustomers table (3,235 seeded)
+
 ### VAT Format
 `3XXXXXXXXXXXXX3` (15 digits, starts and ends with 3)
 
 ### CRN Format
 `XXXXXXXXXX` (10 digits)
 
-### ShopCode Format
-`XXXXXX` (6 uppercase alphanumeric)
-
 ### Postal Code Format
 `XXXXX` (5 digits)
 
 ### OTP Format
-`XXXXXX` (6 digits)
+`XXXXXX` (6 digits) — in dev mode, any 6-digit code works
 
 ### JWT Token
 - Access Token: 60-minute expiration
@@ -1224,12 +1312,12 @@ All errors follow the ProblemDetails format:
 
 ### Registration Status Flow
 ```
-1 (PendingSalesman) → 2 (PendingZoneManager) → 3 (Approved)
-                                                 or
-1 (PendingSalesman) → 4 (Rejected)
-2 (PendingZoneManager) → 4 (Rejected)
+PendingSalesman → PendingZoneManager → Approved
+                                        or
+PendingSalesman → Rejected
+PendingZoneManager → Rejected
 ```
 
 ---
 
-*End of QA Test Guide*
+*End of QA Test Guide — Version 2.0*
