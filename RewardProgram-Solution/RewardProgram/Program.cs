@@ -35,7 +35,11 @@ namespace RewardProgram
             if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/swagger/public/swagger.json", "Public API");
+                    options.SwaggerEndpoint("/swagger/admin/swagger.json", "Admin API");
+                });
             }
 
             app.UseExceptionHandler();

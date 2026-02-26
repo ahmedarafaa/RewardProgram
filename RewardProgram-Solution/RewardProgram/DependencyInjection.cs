@@ -85,6 +85,40 @@ public static class DependencyInjection
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            options.SwaggerDoc("public", new OpenApiInfo
+            {
+                Title = "RewardProgram — Public API",
+                Version = "v1",
+                Description = "Auth, Approvals, Lookups"
+            });
+
+            options.SwaggerDoc("admin", new OpenApiInfo
+            {
+                Title = "RewardProgram — Admin API",
+                Version = "v1",
+                Description = "Admin panel endpoints"
+            });
+
+            // Route each controller to the right document based on namespace
+            options.DocInclusionPredicate((docName, apiDesc) =>
+            {
+                var controllerType = apiDesc.ActionDescriptor
+                    .EndpointMetadata
+                    .OfType<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>()
+                    .FirstOrDefault()?.ControllerTypeInfo;
+
+                if (controllerType == null) return false;
+
+                var isAdmin = controllerType.Namespace?.Contains(".Admin") == true;
+
+                return docName switch
+                {
+                    "admin" => isAdmin,
+                    "public" => !isAdmin,
+                    _ => false
+                };
+            });
+
             options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,

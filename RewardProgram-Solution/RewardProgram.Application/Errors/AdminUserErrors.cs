@@ -39,4 +39,19 @@ public static class AdminUserErrors
 
     public static readonly Error NoApprovalSalesMan =
         new("Admin.NoApprovalSalesMan", "لا يوجد مندوب مبيعات معتمد لهذه المدينة", 400);
+
+    public static readonly Error UserNotFound =
+        new("Admin.UserNotFound", "المستخدم غير موجود", 404);
+
+    public static readonly Error UserIsSystemAdmin =
+        new("Admin.UserIsSystemAdmin", "لا يمكن تعديل حساب مدير النظام", 403);
+
+    public static readonly Error UserTypeMismatch =
+        new("Admin.UserTypeMismatch", "نوع المستخدم غير متطابق", 400);
+
+    public static readonly Error MobileAlreadyInUse =
+        new("Admin.MobileAlreadyInUse", "رقم الجوال مستخدم من قبل مستخدم آخر", 409);
+
+    public static readonly Error UpdateUserFailed =
+        new("Admin.UpdateUserFailed", "فشل تحديث بيانات المستخدم", 500);
 }
