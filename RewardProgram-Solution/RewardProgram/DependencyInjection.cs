@@ -102,10 +102,8 @@ public static class DependencyInjection
             // Route each controller to the right document based on namespace
             options.DocInclusionPredicate((docName, apiDesc) =>
             {
-                var controllerType = apiDesc.ActionDescriptor
-                    .EndpointMetadata
-                    .OfType<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>()
-                    .FirstOrDefault()?.ControllerTypeInfo;
+                var controllerType = (apiDesc.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor)
+                    ?.ControllerTypeInfo;
 
                 if (controllerType == null) return false;
 
