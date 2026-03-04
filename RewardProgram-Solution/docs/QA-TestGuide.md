@@ -26,8 +26,10 @@
 
 ---
 
-<details>
-<summary><h2>1. System Overview</h2></summary>
+<details id="1-system-overview">
+<summary><strong>1. System Overview</strong></summary>
+
+## 1. System Overview
 
 ### What Is This System?
 
@@ -110,8 +112,10 @@ PendingSalesman ──► SalesMan Reviews
 
 ---
 
-<details>
-<summary><h2>2. Environment Setup</h2></summary>
+<details id="2-environment-setup">
+<summary><strong>2. Environment Setup</strong></summary>
+
+## 2. Environment Setup
 
 ### 2.1 URLs
 
@@ -169,8 +173,10 @@ On first run:
 
 ---
 
-<details>
-<summary><h2>3. Seeded Test Data</h2></summary>
+<details id="3-seeded-test-data">
+<summary><strong>3. Seeded Test Data</strong></summary>
+
+## 3. Seeded Test Data
 
 ### 3.1 Users (31 total)
 
@@ -284,8 +290,10 @@ Seeded from embedded CSV. Each has a unique `CustomerCode` + `CustomerName`.
 
 ---
 
-<details>
-<summary><h2>4. API Endpoints — Public</h2></summary>
+<details id="4-api-endpoints--public">
+<summary><strong>4. API Endpoints — Public</strong></summary>
+
+## 4. API Endpoints — Public
 
 ### 4.1 Lookup Endpoints (No Auth)
 
@@ -638,8 +646,10 @@ Reason is required (1–500 chars). Result is always `Rejected` (final).
 
 ---
 
-<details>
-<summary><h2>5. API Endpoints — Admin</h2></summary>
+<details id="5-api-endpoints--admin">
+<summary><strong>5. API Endpoints — Admin</strong></summary>
+
+## 5. API Endpoints — Admin
 
 > All admin endpoints require **SystemAdmin JWT** (`Authorization: Bearer {token}`).
 
@@ -852,8 +862,10 @@ Flips user between active and disabled. No request body.
 
 ---
 
-<details>
-<summary><h2>6. Test Flows (Step-by-Step)</h2></summary>
+<details id="6-test-flows-step-by-step">
+<summary><strong>6. Test Flows (Step-by-Step)</strong></summary>
+
+## 6. Test Flows (Step-by-Step)
 
 ### Flow 1: ShopOwner Registration → Approval → Login (Full E2E)
 
@@ -1061,8 +1073,10 @@ POST /api/auth/login → { "mobileNumber": "..." }        → 200 (works again)
 
 ---
 
-<details>
-<summary><h2>7. Validation Rules</h2></summary>
+<details id="7-validation-rules">
+<summary><strong>7. Validation Rules</strong></summary>
+
+## 7. Validation Rules
 
 | Field | Format | Rule |
 |-------|--------|------|
@@ -1095,8 +1109,10 @@ POST /api/auth/login → { "mobileNumber": "..." }        → 200 (works again)
 
 ---
 
-<details>
-<summary><h2>8. Error Codes Reference</h2></summary>
+<details id="8-error-codes-reference">
+<summary><strong>8. Error Codes Reference</strong></summary>
+
+## 8. Error Codes Reference
 
 There are **two error formats** depending on the source:
 
@@ -1207,8 +1223,10 @@ There are **two error formats** depending on the source:
 
 ---
 
-<details>
-<summary><h2>9. Role-Based Access Matrix</h2></summary>
+<details id="9-role-based-access-matrix">
+<summary><strong>9. Role-Based Access Matrix</strong></summary>
+
+## 9. Role-Based Access Matrix
 
 | Endpoint | No Auth | SystemAdmin | ZoneManager | SalesMan | ShopOwner | Seller | Technician |
 |----------|---------|-------------|-------------|----------|-----------|--------|------------|
@@ -1232,8 +1250,10 @@ There are **two error formats** depending on the source:
 
 ---
 
-<details>
-<summary><h2>10. Test Checklist</h2></summary>
+<details id="10-test-checklist">
+<summary><strong>10. Test Checklist</strong></summary>
+
+## 10. Test Checklist
 
 ### 10.1 Registration
 
@@ -1366,8 +1386,10 @@ There are **two error formats** depending on the source:
 
 ---
 
-<details>
-<summary><h2>11. Frontend Integration Notes</h2></summary>
+<details id="11-frontend-integration-notes">
+<summary><strong>11. Frontend Integration Notes</strong></summary>
+
+## 11. Frontend Integration Notes
 
 ### 11.1 Image Uploads
 
@@ -1411,8 +1433,10 @@ These are used as integers in query params (admin list) and returned as strings 
 
 ---
 
-<details>
-<summary><h2>12. Known Limitations</h2></summary>
+<details id="12-known-limitations">
+<summary><strong>12. Known Limitations</strong></summary>
+
+## 12. Known Limitations
 
 | ID | Description | Impact |
 |----|-------------|--------|
@@ -1425,8 +1449,10 @@ These are used as integers in query params (admin list) and returned as strings 
 
 ---
 
-<details>
-<summary><h2>13. Quick Reference Card</h2></summary>
+<details id="quick-reference-card">
+<summary><strong>13. Quick Reference Card</strong></summary>
+
+## 13. Quick Reference Card
 
 | Item | Format |
 |------|--------|
