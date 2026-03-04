@@ -26,7 +26,8 @@
 
 ---
 
-## 1. System Overview
+<details>
+<summary><h2>1. System Overview</h2></summary>
 
 ### What Is This System?
 
@@ -105,9 +106,12 @@ PendingSalesman ──► SalesMan Reviews
 - **OTP-first registration**: Send OTP → then register with `pinId` + `otp` in the same request
 - JWT access tokens (60 min) + refresh tokens (7 days)
 
+</details>
+
 ---
 
-## 2. Environment Setup
+<details>
+<summary><h2>2. Environment Setup</h2></summary>
 
 ### 2.1 URLs
 
@@ -161,9 +165,12 @@ On first run:
 2. DataSeeder runs (6 roles, 31 users, 8 regions, 140 cities, 3,235 ErpCustomers)
 3. Swagger available at `/swagger`
 
+</details>
+
 ---
 
-## 3. Seeded Test Data
+<details>
+<summary><h2>3. Seeded Test Data</h2></summary>
 
 ### 3.1 Users (31 total)
 
@@ -273,9 +280,12 @@ Seeded from embedded CSV. Each has a unique `CustomerCode` + `CustomerName`.
 
 > Use any of these codes when registering ShopOwner or Seller. The code must exist in the system.
 
+</details>
+
 ---
 
-## 4. API Endpoints — Public
+<details>
+<summary><h2>4. API Endpoints — Public</h2></summary>
 
 ### 4.1 Lookup Endpoints (No Auth)
 
@@ -624,9 +634,12 @@ Logout — revokes the refresh token.
 
 Reason is required (1–500 chars). Result is always `Rejected` (final).
 
+</details>
+
 ---
 
-## 5. API Endpoints — Admin
+<details>
+<summary><h2>5. API Endpoints — Admin</h2></summary>
 
 > All admin endpoints require **SystemAdmin JWT** (`Authorization: Bearer {token}`).
 
@@ -835,9 +848,12 @@ Flips user between active and disabled. No request body.
 }
 ```
 
+</details>
+
 ---
 
-## 6. Test Flows (Step-by-Step)
+<details>
+<summary><h2>6. Test Flows (Step-by-Step)</h2></summary>
 
 ### Flow 1: ShopOwner Registration → Approval → Login (Full E2E)
 
@@ -1041,9 +1057,12 @@ PATCH /api/admin/users/{id}/toggle-status               → re-enable
 POST /api/auth/login → { "mobileNumber": "..." }        → 200 (works again)
 ```
 
+</details>
+
 ---
 
-## 7. Validation Rules
+<details>
+<summary><h2>7. Validation Rules</h2></summary>
 
 | Field | Format | Rule |
 |-------|--------|------|
@@ -1072,9 +1091,12 @@ POST /api/auth/login → { "mobileNumber": "..." }        → 200 (works again)
 | Max OTP requests per mobile | 3 per 15 minutes |
 | Resend cooldown | 30 seconds |
 
+</details>
+
 ---
 
-## 8. Error Codes Reference
+<details>
+<summary><h2>8. Error Codes Reference</h2></summary>
 
 There are **two error formats** depending on the source:
 
@@ -1181,9 +1203,12 @@ There are **two error formats** depending on the source:
 | Lookup.RegionNotFound | 404 | المنطقة غير موجودة |
 | Lookup.CustomerCodeNotFound | 404 | كود العميل غير موجود |
 
+</details>
+
 ---
 
-## 9. Role-Based Access Matrix
+<details>
+<summary><h2>9. Role-Based Access Matrix</h2></summary>
 
 | Endpoint | No Auth | SystemAdmin | ZoneManager | SalesMan | ShopOwner | Seller | Technician |
 |----------|---------|-------------|-------------|----------|-----------|--------|------------|
@@ -1203,9 +1228,12 @@ There are **two error formats** depending on the source:
 | `PATCH /api/admin/users/*/toggle-status` | — | Yes | 403 | 403 | 403 | 403 | 403 |
 | `PUT /api/admin/users/*` | — | Yes | 403 | 403 | 403 | 403 | 403 |
 
+</details>
+
 ---
 
-## 10. Test Checklist
+<details>
+<summary><h2>10. Test Checklist</h2></summary>
 
 ### 10.1 Registration
 
@@ -1334,9 +1362,12 @@ There are **two error formats** depending on the source:
 - [ ] Admin-created user can login immediately (no approval needed)
 - [ ] Expired JWT (after 60 min) → `401` on protected endpoints
 
+</details>
+
 ---
 
-## 11. Frontend Integration Notes
+<details>
+<summary><h2>11. Frontend Integration Notes</h2></summary>
 
 ### 11.1 Image Uploads
 
@@ -1376,9 +1407,12 @@ User selects role:
 
 These are used as integers in query params (admin list) and returned as strings in JSON responses.
 
+</details>
+
 ---
 
-## 12. Known Limitations
+<details>
+<summary><h2>12. Known Limitations</h2></summary>
 
 | ID | Description | Impact |
 |----|-------------|--------|
@@ -1387,9 +1421,12 @@ These are used as integers in query params (admin list) and returned as strings 
 | M6 | Rejected users cannot re-register | Mobile is permanently blocked |
 | Mock OTP | Any 6-digit code works in Dev/Staging | Not a limitation — simplifies testing |
 
+</details>
+
 ---
 
-## 13. Quick Reference Card
+<details>
+<summary><h2>13. Quick Reference Card</h2></summary>
 
 | Item | Format |
 |------|--------|
@@ -1422,6 +1459,8 @@ send-otp → get pinId → register with pinId + otp → user created (PendingSa
 ```
 login → get pinId → login/verify with pinId + otp → JWT + refreshToken
 ```
+
+</details>
 
 ---
 
