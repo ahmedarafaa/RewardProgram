@@ -11,6 +11,7 @@ public record AdminEditSellerRequest(
     string? StoreName,
     string? VAT,
     string? CRN,
+    string? ShortAddress,
     IFormFile? ShopImage,
     NationalAddressResponse? NationalAddress
 );

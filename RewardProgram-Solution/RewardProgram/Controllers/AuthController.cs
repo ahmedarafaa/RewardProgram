@@ -21,6 +21,19 @@ public class AuthController : ControllerBase
 
     #region OTP
 
+    [HttpPost("send-otp")]
+    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request, CancellationToken ct)
+    {
+        var result = await _authService.SendRegistrationOtpAsync(request, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
     [HttpPost("resend-otp")]
     [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -39,7 +52,7 @@ public class AuthController : ControllerBase
     #region Registration
 
     [HttpPost("register/shop-owner")]
-    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RegisterShopOwner([FromForm] RegisterShopOwnerRequest request, CancellationToken ct)
@@ -52,7 +65,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register/seller")]
-    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RegisterSeller([FromForm] RegisterSellerRequest request, CancellationToken ct)
@@ -65,24 +78,12 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register/technician")]
-    [ProducesResponseType(typeof(SendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RegisterTechnician([FromBody] RegisterTechnicianRequest request, CancellationToken ct)
     {
         var result = await _authService.RegisterTechnicianAsync(request, ct);
-
-        return result.IsSuccess
-            ? Ok(result.Value)
-            : result.ToProblem();
-    }
-
-    [HttpPost("register/verify")]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> VerifyRegistration([FromBody] VerifyOtpRequest request, CancellationToken ct)
-    {
-        var result = await _authService.VerifyRegistrationAsync(request, ct);
 
         return result.IsSuccess
             ? Ok(result.Value)

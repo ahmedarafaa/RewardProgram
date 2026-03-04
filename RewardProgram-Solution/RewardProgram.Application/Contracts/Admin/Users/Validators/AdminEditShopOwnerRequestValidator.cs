@@ -18,7 +18,7 @@ public class AdminEditShopOwnerRequestValidator : AbstractValidator<AdminEditSho
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^05\d{8}$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام");
+            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
 
         RuleFor(x => x.CustomerCode)
             .NotEmpty().WithMessage("كود العميل مطلوب")
@@ -43,6 +43,10 @@ public class AdminEditShopOwnerRequestValidator : AbstractValidator<AdminEditSho
                 .NotEmpty().WithMessage("رقم السجل التجاري مطلوب")
                 .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
                 .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
+
+            RuleFor(x => x.ShortAddress)
+                .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage("العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام")
+                .When(x => !string.IsNullOrEmpty(x.ShortAddress));
 
             RuleFor(x => x.ShopImage)
                 .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")

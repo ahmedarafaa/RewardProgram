@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "RewardProgram — Admin API",
-		"description": "Admin User Management endpoints (12 endpoints)\n\nBase URL: http://staging.raedrewardapp.com\n\nRequires SystemAdmin JWT token.",
+		"description": "Admin User Management endpoints (12 endpoints)\n\nBase URL: http://staging.raedrewardapp.com\n\nRequires SystemAdmin JWT token.\n\n**To get a token:**\n1. Use the Public API collection to Login with SystemAdmin mobile `0500000001`\n2. Verify Login with any OTP → copy the JWT token here",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -11,6 +11,10 @@
 		},
 		{
 			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "userId",
 			"value": ""
 		}
 	],
@@ -40,13 +44,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"أحمد المندوب\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-2\"]\n}"
+							"raw": "{\n  \"name\": \"أحمد المندوب\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-2\"]\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/salesman",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users", "salesman"]
-						}
+						},
+						"description": "Create a new SalesMan and assign cities."
 					}
 				},
 				{
@@ -61,13 +67,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"خالد المدير\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-1\"\n}"
+							"raw": "{\n  \"name\": \"خالد المدير\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-1\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/zone-manager",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users", "zone-manager"]
-						}
+						},
+						"description": "Create a new ZoneManager and assign to a region."
 					}
 				},
 				{
@@ -80,23 +88,26 @@
 							"formdata": [
 								{ "key": "ownerName", "value": "محمد صاحب المحل", "type": "text" },
 								{ "key": "mobileNumber", "value": "0512345680", "type": "text" },
-								{ "key": "customerCode", "value": "ERP001", "type": "text" },
+								{ "key": "customerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر الرائد", "type": "text" },
-								{ "key": "vat", "value": "300000000000003", "type": "text" },
-								{ "key": "crn", "value": "1234567890", "type": "text" },
-								{ "key": "shopImage", "type": "file", "src": "" },
+								{ "key": "storeName", "value": "متجر الرائد", "type": "text", "description": "Required — 2-150 chars" },
+								{ "key": "vat", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
+								{ "key": "crn", "value": "1234567890", "type": "text", "description": "Required — 10-digit CRN" },
+								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 8-char alphanumeric short address" },
+								{ "key": "shopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
 								{ "key": "nationalAddress.buildingNumber", "value": "1234", "type": "text" },
 								{ "key": "nationalAddress.street", "value": "شارع الملك فهد", "type": "text" },
 								{ "key": "nationalAddress.postalCode", "value": "12345", "type": "text" },
-								{ "key": "nationalAddress.subNumber", "value": "1", "type": "text" }
+								{ "key": "nationalAddress.subNumber", "value": "1", "type": "text" },
+								{ "key": "nationalAddress.district", "value": "حي النزهة", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/shop-owner",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users", "shop-owner"]
-						}
+						},
+						"description": "Create a new ShopOwner with ShopData. All shop fields are always required.\nIf ShopData exists for this CustomerCode, it will be overwritten.\nUses form-data for file upload."
 					}
 				},
 				{
@@ -109,23 +120,26 @@
 							"formdata": [
 								{ "key": "name", "value": "سعد البائع", "type": "text" },
 								{ "key": "mobileNumber", "value": "0512345681", "type": "text" },
-								{ "key": "customerCode", "value": "ERP002", "type": "text" },
+								{ "key": "customerCode", "value": "10002", "type": "text", "description": "Must exist in ErpCustomer table" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر البائع", "type": "text" },
+								{ "key": "storeName", "value": "متجر البائع", "type": "text", "description": "Required if first for this CustomerCode" },
 								{ "key": "vat", "value": "300000000000013", "type": "text" },
 								{ "key": "crn", "value": "1234567891", "type": "text" },
-								{ "key": "shopImage", "type": "file", "src": "" },
+								{ "key": "shortAddress", "value": "EFGH5678", "type": "text", "description": "8-char alphanumeric short address" },
+								{ "key": "shopImage", "type": "file", "src": "", "description": "Optional shop image" },
 								{ "key": "nationalAddress.buildingNumber", "value": "5678", "type": "text" },
 								{ "key": "nationalAddress.street", "value": "شارع العليا", "type": "text" },
 								{ "key": "nationalAddress.postalCode", "value": "54321", "type": "text" },
-								{ "key": "nationalAddress.subNumber", "value": "2", "type": "text" }
+								{ "key": "nationalAddress.subNumber", "value": "2", "type": "text" },
+								{ "key": "nationalAddress.district", "value": "حي الورود", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/seller",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users", "seller"]
-						}
+						},
+						"description": "Create a new Seller with ShopData. Uses form-data for file upload."
 					}
 				},
 				{
@@ -140,13 +154,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"فهد الفني\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-1\",\n  \"postalCode\": \"12345\"\n}"
+							"raw": "{\n  \"name\": \"فهد الفني\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-1\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/technician",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users", "technician"]
-						}
+						},
+						"description": "Create a new Technician."
 					}
 				}
 			]
@@ -163,7 +179,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "users"],
 							"query": [
-								{ "key": "search", "value": "", "disabled": true },
+								{ "key": "search", "value": "", "disabled": true, "description": "Search by name or mobile" },
 								{ "key": "userType", "value": "1", "description": "1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager", "disabled": true },
 								{ "key": "registrationStatus", "value": "3", "description": "1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected", "disabled": true },
 								{ "key": "regionId", "value": "", "disabled": true },
@@ -171,7 +187,8 @@
 								{ "key": "page", "value": "1" },
 								{ "key": "pageSize", "value": "20" }
 							]
-						}
+						},
+						"description": "List/search/filter users with pagination. Enable disabled query params to filter."
 					}
 				},
 				{
@@ -187,7 +204,8 @@
 								{ "key": "page", "value": "1" },
 								{ "key": "pageSize", "value": "20" }
 							]
-						}
+						},
+						"description": "Example: filter by SalesMan (userType=4)."
 					}
 				},
 				{
@@ -203,7 +221,8 @@
 								{ "key": "page", "value": "1" },
 								{ "key": "pageSize", "value": "20" }
 							]
-						}
+						},
+						"description": "Example: search users by name or mobile."
 					}
 				},
 				{
@@ -211,10 +230,18 @@
 					"request": {
 						"method": "PATCH",
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/{{userId}}/toggle-status",
+							"raw": "{{baseUrl}}/api/admin/users/:userId/toggle-status",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "{{userId}}", "toggle-status"]
-						}
+							"path": ["api", "admin", "users", ":userId", "toggle-status"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "User ID to toggle"
+								}
+							]
+						},
+						"description": "Activate or deactivate a user."
 					}
 				}
 			]
@@ -234,13 +261,22 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}"
+							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/salesman/{{userId}}",
+							"raw": "{{baseUrl}}/api/admin/users/salesman/:userId",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "salesman", "{{userId}}"]
-						}
+							"path": ["api", "admin", "users", "salesman", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "SalesMan user ID"
+								}
+							]
+						},
+						"description": "Edit a SalesMan and reassign cities."
 					}
 				},
 				{
@@ -255,13 +291,22 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-2\"\n}"
+							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-2\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/zone-manager/{{userId}}",
+							"raw": "{{baseUrl}}/api/admin/users/zone-manager/:userId",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "zone-manager", "{{userId}}"]
-						}
+							"path": ["api", "admin", "users", "zone-manager", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "ZoneManager user ID"
+								}
+							]
+						},
+						"description": "Edit a ZoneManager and reassign region."
 					}
 				},
 				{
@@ -274,23 +319,33 @@
 							"formdata": [
 								{ "key": "ownerName", "value": "محمد - معدل", "type": "text" },
 								{ "key": "mobileNumber", "value": "0512345680", "type": "text" },
-								{ "key": "customerCode", "value": "ERP001", "type": "text" },
+								{ "key": "customerCode", "value": "10001", "type": "text" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
 								{ "key": "storeName", "value": "متجر الرائد المعدل", "type": "text" },
 								{ "key": "vat", "value": "300000000000003", "type": "text" },
 								{ "key": "crn", "value": "1234567890", "type": "text" },
-								{ "key": "shopImage", "type": "file", "src": "", "disabled": true },
+								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "8-char alphanumeric short address" },
+								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
 								{ "key": "nationalAddress.buildingNumber", "value": "1234", "type": "text" },
 								{ "key": "nationalAddress.street", "value": "شارع الملك فهد", "type": "text" },
 								{ "key": "nationalAddress.postalCode", "value": "12345", "type": "text" },
-								{ "key": "nationalAddress.subNumber", "value": "1", "type": "text" }
+								{ "key": "nationalAddress.subNumber", "value": "1", "type": "text" },
+								{ "key": "nationalAddress.district", "value": "حي النزهة", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/shop-owner/{{userId}}",
+							"raw": "{{baseUrl}}/api/admin/users/shop-owner/:userId",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "shop-owner", "{{userId}}"]
-						}
+							"path": ["api", "admin", "users", "shop-owner", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "ShopOwner user ID"
+								}
+							]
+						},
+						"description": "Edit a ShopOwner and their ShopData."
 					}
 				},
 				{
@@ -303,23 +358,33 @@
 							"formdata": [
 								{ "key": "name", "value": "سعد البائع - معدل", "type": "text" },
 								{ "key": "mobileNumber", "value": "0512345681", "type": "text" },
-								{ "key": "customerCode", "value": "ERP002", "type": "text" },
+								{ "key": "customerCode", "value": "10002", "type": "text" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
 								{ "key": "storeName", "value": "متجر البائع المعدل", "type": "text" },
 								{ "key": "vat", "value": "300000000000013", "type": "text" },
 								{ "key": "crn", "value": "1234567891", "type": "text" },
-								{ "key": "shopImage", "type": "file", "src": "", "disabled": true },
+								{ "key": "shortAddress", "value": "EFGH5678", "type": "text", "description": "8-char alphanumeric short address" },
+								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
 								{ "key": "nationalAddress.buildingNumber", "value": "5678", "type": "text" },
 								{ "key": "nationalAddress.street", "value": "شارع العليا", "type": "text" },
 								{ "key": "nationalAddress.postalCode", "value": "54321", "type": "text" },
-								{ "key": "nationalAddress.subNumber", "value": "2", "type": "text" }
+								{ "key": "nationalAddress.subNumber", "value": "2", "type": "text" },
+								{ "key": "nationalAddress.district", "value": "حي الورود", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/seller/{{userId}}",
+							"raw": "{{baseUrl}}/api/admin/users/seller/:userId",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "seller", "{{userId}}"]
-						}
+							"path": ["api", "admin", "users", "seller", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Seller user ID"
+								}
+							]
+						},
+						"description": "Edit a Seller and their ShopData."
 					}
 				},
 				{
@@ -334,13 +399,22 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"فهد الفني - معدل\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-2\",\n  \"postalCode\": \"54321\"\n}"
+							"raw": "{\n  \"name\": \"فهد الفني - معدل\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-2\",\n  \"postalCode\": \"54321\",\n  \"district\": \"حي الملك فهد\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/technician/{{userId}}",
+							"raw": "{{baseUrl}}/api/admin/users/technician/:userId",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "technician", "{{userId}}"]
-						}
+							"path": ["api", "admin", "users", "technician", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Technician user ID"
+								}
+							]
+						},
+						"description": "Edit a Technician."
 					}
 				}
 			]

@@ -57,6 +57,12 @@ public static class AuthErrors
     public static readonly Error ShopDataRequired =
         new("Auth.ShopDataRequired", "بيانات المحل مطلوبة (اسم المتجر، الرقم الضريبي، السجل التجاري، صورة المحل، العنوان)", 400);
 
+    public static readonly Error ShortAddressAlreadyExists =
+        new("Auth.ShortAddressAlreadyExists", "العنوان المختصر مسجل مسبقاً", 409);
+
+    public static readonly Error MobileMismatch =
+        new("Auth.MobileMismatch", "رقم الجوال لا يتطابق مع رمز التحقق", 400);
+
     #endregion
 
     #region OTP Errors

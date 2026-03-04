@@ -3,9 +3,9 @@ using RewardProgram.Application.Contracts.Auth;
 
 namespace RewardProgram.Application.Contracts.Validators.AuthValidators;
 
-public class LoginRequestValidator : AbstractValidator<LoginRequest>
+public class SendOtpRequestValidator : AbstractValidator<SendOtpRequest>
 {
-    public LoginRequestValidator()
+    public SendOtpRequestValidator()
     {
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage("رقم الجوال مطلوب")

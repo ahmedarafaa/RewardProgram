@@ -7,6 +7,8 @@ public class ShopData : TrackableEntity
     public string VAT { get; set; } = string.Empty;
     public string CRN { get; set; } = string.Empty;
     public string ShopImageUrl { get; set; } = string.Empty;
+    public string ShortAddress { get; set; } = string.Empty;
+    public string District { get; set; } = string.Empty;
 
     // Flat address (no DistrictId)
     public string CityId { get; set; } = string.Empty;

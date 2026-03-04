@@ -68,7 +68,7 @@ public class TwilioService : ITwilioService
 
             var verification = await VerificationResource.CreateAsync(
                 to: formattedNumber,
-                channel: "whatsapp",
+                channel: "sms",
                 pathServiceSid: _options.VerifyServiceSid
             );
 
@@ -138,6 +138,46 @@ public class TwilioService : ITwilioService
             return Result.Failure<bool>(new Error(
                 "Twilio.Exception",
                 "فشل التحقق من الرمز",
+                500));
+        }
+    }
+
+    public async Task<Result> SendSmsAsync(string mobileNumber, string message, CancellationToken ct = default)
+    {
+        try
+        {
+            var formattedNumber = FormatMobileNumber(mobileNumber);
+
+            if (_useMockMode)
+            {
+                _logger.LogInformation(
+                    "[MOCK] SMS sent to {MobileNumber}: {Message}",
+                    MobileNumberHelper.Mask(mobileNumber),
+                    message);
+
+                return Result.Success();
+            }
+
+            await MessageResource.CreateAsync(
+                to: new PhoneNumber(formattedNumber),
+                from: new PhoneNumber(_options.SmsFromNumber),
+                body: message
+            );
+
+            _logger.LogInformation(
+                "SMS sent to {MobileNumber}",
+                MobileNumberHelper.Mask(mobileNumber));
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while sending SMS to {MobileNumber}",
+                MobileNumberHelper.Mask(mobileNumber));
+
+            return Result.Failure(new Error(
+                "Twilio.SmsException",
+                "فشل إرسال الرسالة النصية",
                 500));
         }
     }

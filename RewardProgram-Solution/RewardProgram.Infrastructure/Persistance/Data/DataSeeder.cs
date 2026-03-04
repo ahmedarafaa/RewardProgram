@@ -71,6 +71,12 @@ public static class DataSeeder
             userType: UserType.SystemAdmin,
             roles: [UserRoles.SystemAdmin]);
 
+        await CreateUser(userManager, users, logger,
+            name: "مدير النظام - تست",
+            userType: UserType.SystemAdmin,
+            roles: [UserRoles.SystemAdmin],
+            mobileOverride: "+201121007505");
+
         // === Pure ZoneManagers (not also salesmen) ===
         await CreateUser(userManager, users, logger,
             name: "فرحان ممدوح",
@@ -233,7 +239,8 @@ public static class DataSeeder
         ILogger logger,
         string name,
         UserType userType,
-        string[] roles)
+        string[] roles,
+        string? mobileOverride = null)
     {
         var trimmedName = name.Trim();
 
@@ -245,8 +252,8 @@ public static class DataSeeder
             return;
         }
 
-        var mobile = $"05{_mobileCounter:D8}";
-        _mobileCounter++;
+        var mobile = mobileOverride ?? $"05{_mobileCounter:D8}";
+        if (mobileOverride is null) _mobileCounter++;
 
         var user = new ApplicationUser
         {

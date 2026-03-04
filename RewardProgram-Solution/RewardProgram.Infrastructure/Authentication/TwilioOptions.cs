@@ -15,5 +15,6 @@ public class TwilioOptions
     /// Enable mock mode for development/testing. MUST be false in production.
     /// When true, accepts any 6-digit OTP code.
     public bool UseMockMode { get; set; } = false;
+    public string SmsFromNumber { get; set; } = string.Empty;
     public string WhatsAppFromNumber { get; set; } = string.Empty;
 }

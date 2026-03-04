@@ -13,7 +13,7 @@ public class AdminEditSalesManRequestValidator : AbstractValidator<AdminEditSale
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^05\d{8}$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام");
+            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
 
         RuleFor(x => x.CityIds)
             .NotEmpty().WithMessage("يجب تحديد مدينة واحدة على الأقل");

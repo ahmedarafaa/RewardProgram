@@ -149,6 +149,7 @@ public class ApprovalService : IApprovalService
             string? storeName = null;
             string? vat = null;
             string? crn = null;
+            string? shortAddress = null;
             string? shopImageUrl = null;
 
             if (customerCode != null)
@@ -160,6 +161,7 @@ public class ApprovalService : IApprovalService
                     storeName = sd.StoreName;
                     vat = sd.VAT;
                     crn = sd.CRN;
+                    shortAddress = sd.ShortAddress;
                     shopImageUrl = sd.ShopImageUrl;
                 }
             }
@@ -176,6 +178,7 @@ public class ApprovalService : IApprovalService
                 StoreName: storeName,
                 VAT: vat,
                 CRN: crn,
+                ShortAddress: shortAddress,
                 ShopImageUrl: shopImageUrl,
                 RegionName: regionName,
                 CityName: cityName,
@@ -183,6 +186,7 @@ public class ApprovalService : IApprovalService
                 BuildingNumber: u.NationalAddress?.BuildingNumber,
                 PostalCode: u.NationalAddress?.PostalCode,
                 SubNumber: u.NationalAddress?.SubNumber,
+                District: u.NationalAddress?.District,
                 AssignedSalesManName: u.AssignedSalesMan?.Name
             );
         }).ToList();
@@ -258,7 +262,8 @@ public class ApprovalService : IApprovalService
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
                 approverId, userId);
 
-            // Send WhatsApp welcome (fire-and-forget with captured data)
+            // Send SMS welcome (fire-and-forget with captured data)
+            // TODO: Switch to SendWhatsAppMessageAsync after Meta business approval
             var welcomeMobile = user.MobileNumber;
             var welcomeName = user.Name;
             _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
@@ -361,12 +366,13 @@ public class ApprovalService : IApprovalService
     {
         try
         {
-            var message = $"مرحباً {userName}! تمت الموافقة على طلبك، يمكنك الآن تسجيل الدخول";
-            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, message);
+            var message = $"مرحباً {userName}! تمت الموافقة على طلب انضمامك لبرنامج مكافآت الرائد، يمكنك الآن تسجيل الدخول عبر التطبيق";
+            // TODO: Switch to SendWhatsAppMessageAsync after Meta business approval
+            await _twilioService.SendSmsAsync(mobileNumber, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send welcome WhatsApp message to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
+            _logger.LogError(ex, "Failed to send welcome SMS to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
         }
     }
 

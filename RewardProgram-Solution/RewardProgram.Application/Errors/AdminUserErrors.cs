@@ -31,6 +31,9 @@ public static class AdminUserErrors
     public static readonly Error CrnAlreadyExists =
         new("Admin.CrnAlreadyExists", "رقم السجل التجاري مسجل مسبقاً", 409);
 
+    public static readonly Error ShortAddressAlreadyExists =
+        new("Admin.ShortAddressAlreadyExists", "العنوان المختصر مسجل مسبقاً", 409);
+
     public static readonly Error CreateUserFailed =
         new("Admin.CreateUserFailed", "فشل إنشاء الحساب", 500);
 

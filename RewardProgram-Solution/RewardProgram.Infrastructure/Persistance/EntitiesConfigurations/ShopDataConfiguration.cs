@@ -32,6 +32,13 @@ public class ShopDataConfiguration : IEntityTypeConfiguration<ShopData>
             .HasMaxLength(500)
             .IsRequired();
 
+        builder.Property(x => x.ShortAddress)
+            .HasMaxLength(8)
+            .IsRequired();
+
+        builder.Property(x => x.District)
+            .HasMaxLength(100);
+
         builder.Property(x => x.CityId)
             .IsRequired();
 
@@ -76,6 +83,7 @@ public class ShopDataConfiguration : IEntityTypeConfiguration<ShopData>
         builder.HasIndex(x => x.CRN).IsUnique();
         builder.HasIndex(x => x.CityId);
         builder.HasIndex(x => x.StoreName);
+        builder.HasIndex(x => x.ShortAddress).IsUnique();
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

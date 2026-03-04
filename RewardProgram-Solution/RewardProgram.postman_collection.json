@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "reward-program-api",
 		"name": "RewardProgram API",
-		"description": "RewardProgram API collection for Development (localhost).\n\n**Setup:**\n1. Import this collection\n2. The base URL is set to `https://localhost:7100`\n3. In Development mode, any 6-digit OTP code works (e.g. `123456`)\n\n**Seeded Users (all pre-approved):**\n- SystemAdmin: `0500000001`\n- ZoneManagers: `0500000002` – `0500000006`\n- SalesMan+ZoneManager (dual): `0500000007` – `0500000009`\n- SalesMan: `0500000010` – `0500000031`\n\n**Flow:**\n1. Call Login with a seeded mobile → get pinId\n2. Call Verify Login with pinId + any OTP → get JWT + refreshToken (auto-saved)\n3. Use Approval endpoints (JWT auto-attached)",
+		"description": "RewardProgram API collection for Development (localhost).\n\n**Setup:**\n1. Import this collection\n2. The base URL is set to `https://localhost:44315`\n3. In Development mode, any 6-digit OTP code works (e.g. `123456`)\n\n**Seeded Users (all pre-approved):**\n- SystemAdmin: `0500000001`\n- ZoneManagers: `0500000002` – `0500000006`\n- SalesMan+ZoneManager (dual): `0500000007` – `0500000009`\n- SalesMan: `0500000010` – `0500000031`\n\n**OTP-first Registration Flow:**\n1. Send OTP → get pinId\n2. Register (shop-owner/seller/technician) with pinId + OTP → user created\n\n**Login Flow:**\n1. Login → get pinId\n2. Verify Login → get JWT token + refresh token (auto-saved)\n3. Use Approval endpoints (JWT auto-attached)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -77,15 +77,35 @@
 						},
 						"description": "Returns all 140 active cities."
 					}
+				},
+				{
+					"name": "Check Shop Data Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/lookup/customer/:customerCode/shop-data-status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "lookup", "customer", ":customerCode", "shop-data-status"],
+							"variable": [
+								{
+									"key": "customerCode",
+									"value": "10001",
+									"description": "ERP Customer Code"
+								}
+							]
+						},
+						"description": "Check if ShopData already exists for a CustomerCode.\n\nFor Seller registration only — determines if shop fields are needed.\nShopOwner always provides all shop fields regardless."
+					}
 				}
 			]
 		},
 		{
 			"name": "Registration",
-			"description": "User registration endpoints — no authentication required.\n\nFlow: Register → get pinId → Verify Registration with OTP.",
+			"description": "User registration endpoints — no authentication required.\n\nOTP-first flow:\n1. Send OTP → get pinId\n2. Register with pinId + OTP → user created (no separate verify step)",
 			"item": [
 				{
-					"name": "Register Shop Owner",
+					"name": "Send OTP",
 					"event": [
 						{
 							"listen": "test",
@@ -105,22 +125,59 @@
 					],
 					"request": {
 						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mobileNumber\": \"0555000001\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/send-otp",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "send-otp"]
+						},
+						"description": "Send registration OTP to a new mobile number. Checks mobile uniqueness.\n\nAuto-saves `pinId` from response."
+					}
+				},
+				{
+					"name": "Register Shop Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('Shop Owner registered successfully');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "formdata",
 							"formdata": [
+								{ "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
+								{ "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP (any works in dev)" },
 								{ "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
 								{ "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text" },
-								{ "key": "MobileNumber", "value": "0555000001", "type": "text", "description": "New mobile not already registered" },
+								{ "key": "MobileNumber", "value": "0555000001", "type": "text", "description": "Same mobile used in Send OTP" },
 								{ "key": "CityId", "value": "", "type": "text", "description": "City GUID — get from Lookups" },
-								{ "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required if first registration for this CustomerCode" },
-								{ "key": "VAT", "value": "300000000000003", "type": "text", "description": "15-digit VAT number" },
-								{ "key": "CRN", "value": "1010000000", "type": "text", "description": "Commercial Registration Number" },
-								{ "key": "ShopImage", "type": "file", "src": "", "description": "Optional shop image" },
-								{ "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
+								{ "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 2-150 chars" },
+								{ "key": "VAT", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
+								{ "key": "CRN", "value": "1010000000", "type": "text", "description": "Required — 10-digit Commercial Registration Number" },
+								{ "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 8-char alphanumeric short address" },
+								{ "key": "ShopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
 								{ "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text" },
+								{ "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
 								{ "key": "NationalAddress.PostalCode", "value": "12345", "type": "text" },
-								{ "key": "NationalAddress.SubNumber", "value": "6789", "type": "text" }
+								{ "key": "NationalAddress.SubNumber", "value": "6789", "type": "text" },
+								{ "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
@@ -128,7 +185,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "shop-owner"]
 						},
-						"description": "Register a new shop owner. Uses form-data for file upload support.\n\nAuto-saves `pinId` from response."
+						"description": "Register a new shop owner. Uses form-data for file upload support.\n\nShopOwner ALWAYS provides all shop data fields (StoreName, VAT, CRN, ShortAddress, ShopImage, NationalAddress).\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\n\nRequires pinId + OTP from Send OTP step. OTP verified inline."
 					}
 				},
 				{
@@ -140,11 +197,7 @@
 								"type": "text/javascript",
 								"exec": [
 									"if (pm.response.code === 200) {",
-									"    var json = pm.response.json();",
-									"    if (json.pinId) {",
-									"        pm.collectionVariables.set('pinId', json.pinId);",
-									"        console.log('pinId saved: ' + json.pinId);",
-									"    }",
+									"    console.log('Seller registered successfully');",
 									"}"
 								]
 							}
@@ -156,18 +209,22 @@
 						"body": {
 							"mode": "formdata",
 							"formdata": [
+								{ "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
+								{ "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP (any works in dev)" },
 								{ "key": "Name", "value": "بائع تجريبي", "type": "text" },
-								{ "key": "MobileNumber", "value": "0555000002", "type": "text", "description": "New mobile not already registered" },
+								{ "key": "MobileNumber", "value": "0555000002", "type": "text", "description": "Same mobile used in Send OTP" },
 								{ "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
 								{ "key": "StoreName", "value": "متجر البائع", "type": "text", "description": "Required if first registration for this CustomerCode" },
 								{ "key": "VAT", "value": "300000000000003", "type": "text" },
 								{ "key": "CRN", "value": "1010000000", "type": "text" },
+								{ "key": "ShortAddress", "value": "EFGH5678", "type": "text", "description": "8-char alphanumeric short address" },
 								{ "key": "ShopImage", "type": "file", "src": "", "description": "Optional shop image" },
 								{ "key": "CityId", "value": "", "type": "text", "description": "City GUID — get from Lookups" },
 								{ "key": "NationalAddress.Street", "value": "شارع العليا", "type": "text" },
 								{ "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text" },
 								{ "key": "NationalAddress.PostalCode", "value": "11111", "type": "text" },
-								{ "key": "NationalAddress.SubNumber", "value": "4321", "type": "text" }
+								{ "key": "NationalAddress.SubNumber", "value": "4321", "type": "text" },
+								{ "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional district name" }
 							]
 						},
 						"url": {
@@ -175,7 +232,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "seller"]
 						},
-						"description": "Register a new seller. Uses form-data for file upload support.\n\nAuto-saves `pinId` from response."
+						"description": "Register a new seller. Uses form-data for file upload support.\n\nRequires pinId + OTP from Send OTP step."
 					}
 				},
 				{
@@ -187,11 +244,7 @@
 								"type": "text/javascript",
 								"exec": [
 									"if (pm.response.code === 200) {",
-									"    var json = pm.response.json();",
-									"    if (json.pinId) {",
-									"        pm.collectionVariables.set('pinId', json.pinId);",
-									"        console.log('pinId saved: ' + json.pinId);",
-									"    }",
+									"    console.log('Technician registered successfully');",
 									"}"
 								]
 							}
@@ -204,7 +257,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"postalCode\": \"12345\"\n}",
+							"raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -212,41 +265,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "technician"]
 						},
-						"description": "Register a new technician. Fill in `cityId` from Lookups.\n\nAuto-saves `pinId` from response."
-					}
-				},
-				{
-					"name": "Verify Registration",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    var json = pm.response.json();",
-									"    console.log('Registration verified. userId: ' + (json.userId || 'N/A'));",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
-							"options": { "raw": { "language": "json" } }
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/register/verify",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "register", "verify"]
-						},
-						"description": "Verify registration with OTP.\n\nUses `pinId` auto-saved from registration.\nIn Development mode, any 6-digit OTP works (e.g. `123456`)."
+						"description": "Register a new technician. Fill in `cityId` from Lookups.\n\nRequires pinId + OTP from Send OTP step."
 					}
 				},
 				{

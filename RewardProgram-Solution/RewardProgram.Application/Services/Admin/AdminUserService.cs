@@ -204,13 +204,15 @@ public class AdminUserService : IAdminUserService
         {
             if (string.IsNullOrEmpty(request.StoreName) || string.IsNullOrEmpty(request.VAT)
                 || string.IsNullOrEmpty(request.CRN) || request.ShopImage == null
-                || request.NationalAddress == null)
+                || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShopDataRequired);
 
             if (await _context.ShopData.AnyAsync(sd => sd.VAT == request.VAT, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
             if (await _context.ShopData.AnyAsync(sd => sd.CRN == request.CRN, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
+            if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
+                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
 
             using var imageStream = request.ShopImage.OpenReadStream();
             var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
@@ -240,7 +242,8 @@ public class AdminUserService : IAdminUserService
                         Street = request.NationalAddress.Street,
                         BuildingNumber = request.NationalAddress.BuildingNumber,
                         PostalCode = request.NationalAddress.PostalCode,
-                        SubNumber = request.NationalAddress.SubNumber
+                        SubNumber = request.NationalAddress.SubNumber,
+                        District = request.NationalAddress.District ?? string.Empty
                     }
                     : new NationalAddress { CityId = request.CityId }
             };
@@ -272,6 +275,8 @@ public class AdminUserService : IAdminUserService
                     VAT = request.VAT!,
                     CRN = request.CRN!,
                     ShopImageUrl = shopImageUrl!,
+                    ShortAddress = request.ShortAddress!,
+                    District = request.NationalAddress?.District ?? string.Empty,
                     CityId = request.CityId,
                     Street = request.NationalAddress!.Street,
                     BuildingNumber = request.NationalAddress.BuildingNumber,
@@ -338,13 +343,15 @@ public class AdminUserService : IAdminUserService
         {
             if (string.IsNullOrEmpty(request.StoreName) || string.IsNullOrEmpty(request.VAT)
                 || string.IsNullOrEmpty(request.CRN) || request.ShopImage == null
-                || request.NationalAddress == null)
+                || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShopDataRequired);
 
             if (await _context.ShopData.AnyAsync(sd => sd.VAT == request.VAT, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
             if (await _context.ShopData.AnyAsync(sd => sd.CRN == request.CRN, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
+            if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
+                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
 
             using var imageStream = request.ShopImage.OpenReadStream();
             var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
@@ -374,7 +381,8 @@ public class AdminUserService : IAdminUserService
                         Street = request.NationalAddress.Street,
                         BuildingNumber = request.NationalAddress.BuildingNumber,
                         PostalCode = request.NationalAddress.PostalCode,
-                        SubNumber = request.NationalAddress.SubNumber
+                        SubNumber = request.NationalAddress.SubNumber,
+                        District = request.NationalAddress.District ?? string.Empty
                     }
                     : new NationalAddress { CityId = request.CityId }
             };
@@ -406,6 +414,8 @@ public class AdminUserService : IAdminUserService
                     VAT = request.VAT!,
                     CRN = request.CRN!,
                     ShopImageUrl = shopImageUrl!,
+                    ShortAddress = request.ShortAddress!,
+                    District = request.NationalAddress?.District ?? string.Empty,
                     CityId = request.CityId,
                     Street = request.NationalAddress!.Street,
                     BuildingNumber = request.NationalAddress.BuildingNumber,
@@ -474,7 +484,8 @@ public class AdminUserService : IAdminUserService
                 NationalAddress = new NationalAddress
                 {
                     CityId = request.CityId,
-                    PostalCode = request.PostalCode
+                    PostalCode = request.PostalCode,
+                    District = request.District
                 }
             };
 
@@ -971,6 +982,14 @@ public class AdminUserService : IAdminUserService
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
         }
 
+        if (!string.IsNullOrEmpty(request.ShortAddress))
+        {
+            var shortAddressInUse = await _context.ShopData
+                .AnyAsync(sd => sd.ShortAddress == request.ShortAddress && sd.CustomerCode != request.CustomerCode, ct);
+            if (shortAddressInUse)
+                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
+        }
+
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -994,6 +1013,7 @@ public class AdminUserService : IAdminUserService
                 user.NationalAddress.BuildingNumber = request.NationalAddress.BuildingNumber;
                 user.NationalAddress.PostalCode = request.NationalAddress.PostalCode;
                 user.NationalAddress.SubNumber = request.NationalAddress.SubNumber;
+                user.NationalAddress.District = request.NationalAddress.District ?? string.Empty;
             }
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1025,6 +1045,8 @@ public class AdminUserService : IAdminUserService
                     shopData.VAT = request.VAT;
                 if (!string.IsNullOrEmpty(request.CRN))
                     shopData.CRN = request.CRN;
+                if (!string.IsNullOrEmpty(request.ShortAddress))
+                    shopData.ShortAddress = request.ShortAddress;
                 if (newImageUrl != null)
                     shopData.ShopImageUrl = newImageUrl;
                 if (request.NationalAddress != null)
@@ -1034,6 +1056,7 @@ public class AdminUserService : IAdminUserService
                     shopData.BuildingNumber = request.NationalAddress.BuildingNumber;
                     shopData.PostalCode = request.NationalAddress.PostalCode;
                     shopData.SubNumber = request.NationalAddress.SubNumber;
+                    shopData.District = request.NationalAddress.District ?? string.Empty;
                 }
                 shopData.UpdatedBy = adminUserId;
                 shopData.UpdatedAt = DateTime.UtcNow;
@@ -1113,6 +1136,14 @@ public class AdminUserService : IAdminUserService
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
         }
 
+        if (!string.IsNullOrEmpty(request.ShortAddress))
+        {
+            var shortAddressInUse = await _context.ShopData
+                .AnyAsync(sd => sd.ShortAddress == request.ShortAddress && sd.CustomerCode != request.CustomerCode, ct);
+            if (shortAddressInUse)
+                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
+        }
+
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -1134,6 +1165,7 @@ public class AdminUserService : IAdminUserService
                 user.NationalAddress.BuildingNumber = request.NationalAddress.BuildingNumber;
                 user.NationalAddress.PostalCode = request.NationalAddress.PostalCode;
                 user.NationalAddress.SubNumber = request.NationalAddress.SubNumber;
+                user.NationalAddress.District = request.NationalAddress.District ?? string.Empty;
             }
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1163,6 +1195,8 @@ public class AdminUserService : IAdminUserService
                     shopData.VAT = request.VAT;
                 if (!string.IsNullOrEmpty(request.CRN))
                     shopData.CRN = request.CRN;
+                if (!string.IsNullOrEmpty(request.ShortAddress))
+                    shopData.ShortAddress = request.ShortAddress;
                 if (newImageUrl != null)
                     shopData.ShopImageUrl = newImageUrl;
                 if (request.NationalAddress != null)
@@ -1172,6 +1206,7 @@ public class AdminUserService : IAdminUserService
                     shopData.BuildingNumber = request.NationalAddress.BuildingNumber;
                     shopData.PostalCode = request.NationalAddress.PostalCode;
                     shopData.SubNumber = request.NationalAddress.SubNumber;
+                    shopData.District = request.NationalAddress.District ?? string.Empty;
                 }
                 shopData.UpdatedBy = adminUserId;
                 shopData.UpdatedAt = DateTime.UtcNow;
@@ -1231,6 +1266,7 @@ public class AdminUserService : IAdminUserService
 
             user.NationalAddress.CityId = request.CityId;
             user.NationalAddress.PostalCode = request.PostalCode;
+            user.NationalAddress.District = request.District;
             user.AssignedSalesManId = city.ApprovalSalesManId;
 
             var updateResult = await _userRepository.UpdateAsync(user);

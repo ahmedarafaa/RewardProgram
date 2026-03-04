@@ -4,5 +4,6 @@ public record AdminEditTechnicianRequest(
     string Name,
     string MobileNumber,
     string CityId,
-    string PostalCode
+    string PostalCode,
+    string District
 );

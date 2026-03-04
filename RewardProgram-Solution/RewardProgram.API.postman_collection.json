@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "RewardProgram API",
-    "description": "RewardProgram API - Auth, Approvals, Lookups",
+    "description": "RewardProgram API - Auth, Approvals, Lookups\n\nBase URL: http://staging.raedrewardapp.com\n\n**OTP-first Registration Flow:**\n1. Send OTP → get pinId\n2. Register (shop-owner/seller/technician) with pinId + OTP → user created\n\n**Login Flow:**\n1. Login → get pinId\n2. Verify Login → get JWT + refreshToken",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -44,52 +44,7 @@
           "name": "Registration",
           "item": [
             {
-              "name": "Register Shop Owner",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    { "key": "StoreName", "value": "متجر تجريبي", "type": "text" },
-                    { "key": "OwnerName", "value": "أحمد محمد", "type": "text" },
-                    { "key": "MobileNumber", "value": "0500000099", "type": "text" },
-                    { "key": "VAT", "value": "300000000000003", "type": "text" },
-                    { "key": "CRN", "value": "1000000001", "type": "text" },
-                    { "key": "RegionId", "value": "REGION_ID_HERE", "type": "text" },
-                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text" },
-                    { "key": "DistrictId", "value": "", "type": "text" },
-                    { "key": "ShopImage", "value": "", "type": "file" },
-                    { "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text" },
-                    { "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
-                    { "key": "NationalAddress.PostalCode", "value": "12345", "type": "text" },
-                    { "key": "NationalAddress.SubNumber", "value": "1", "type": "text" }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/shop-owner",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "shop-owner"]
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('pinId', json.pinId);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Register Seller",
+              "name": "Send OTP",
               "request": {
                 "method": "POST",
                 "header": [
@@ -97,29 +52,104 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"بائع تجريبي\",\n  \"mobileNumber\": \"0500000098\",\n  \"shopCode\": \"SHOP_CODE_HERE\"\n}"
+                  "raw": "{\n  \"mobileNumber\": \"0555000001\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/seller",
+                  "raw": "{{baseUrl}}/api/auth/send-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "seller"]
-                }
+                  "path": ["api", "auth", "send-otp"]
+                },
+                "description": "Send registration OTP. Checks mobile uniqueness.\n\nAuto-saves `pinId` from response."
               },
               "response": [],
               "event": [
                 {
                   "listen": "test",
                   "script": {
+                    "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "    if (json.pinId) {",
+                      "        pm.collectionVariables.set('pinId', json.pinId);",
+                      "        console.log('pinId saved: ' + json.pinId);",
+                      "    }",
                       "}"
-                    ],
-                    "type": "text/javascript"
+                    ]
                   }
                 }
               ]
+            },
+            {
+              "name": "Register Shop Owner",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
+                    { "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP" },
+                    { "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
+                    { "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text" },
+                    { "key": "MobileNumber", "value": "0555000001", "type": "text" },
+                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text", "description": "City GUID from Lookups" },
+                    { "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 2-150 chars" },
+                    { "key": "VAT", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
+                    { "key": "CRN", "value": "1010000000", "type": "text", "description": "Required — 10-digit Commercial Registration Number" },
+                    { "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 8-char alphanumeric short address" },
+                    { "key": "ShopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
+                    { "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text" },
+                    { "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
+                    { "key": "NationalAddress.PostalCode", "value": "12345", "type": "text" },
+                    { "key": "NationalAddress.SubNumber", "value": "6789", "type": "text" },
+                    { "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional district name" }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/shop-owner",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "shop-owner"]
+                },
+                "description": "Register a new shop owner. Uses form-data for file upload.\n\nShopOwner ALWAYS provides all shop data fields (StoreName, VAT, CRN, ShortAddress, ShopImage, NationalAddress).\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\n\nRequires pinId + OTP from Send OTP step. OTP verified inline."
+              },
+              "response": []
+            },
+            {
+              "name": "Register Seller",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
+                    { "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP" },
+                    { "key": "Name", "value": "بائع تجريبي", "type": "text" },
+                    { "key": "MobileNumber", "value": "0555000002", "type": "text" },
+                    { "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
+                    { "key": "StoreName", "value": "متجر البائع", "type": "text", "description": "Required if first registration for this CustomerCode" },
+                    { "key": "VAT", "value": "300000000000003", "type": "text" },
+                    { "key": "CRN", "value": "1010000000", "type": "text" },
+                    { "key": "ShortAddress", "value": "EFGH5678", "type": "text", "description": "8-char alphanumeric short address" },
+                    { "key": "ShopImage", "type": "file", "src": "", "description": "Optional shop image" },
+                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text", "description": "City GUID from Lookups" },
+                    { "key": "NationalAddress.Street", "value": "شارع العليا", "type": "text" },
+                    { "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text" },
+                    { "key": "NationalAddress.PostalCode", "value": "11111", "type": "text" },
+                    { "key": "NationalAddress.SubNumber", "value": "4321", "type": "text" },
+                    { "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional district name" }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/seller",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register", "seller"]
+                },
+                "description": "Register a new seller. Uses form-data for file upload.\n\nRequires pinId + OTP from Send OTP step."
+              },
+              "response": []
             },
             {
               "name": "Register Technician",
@@ -130,32 +160,20 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0500000097\",\n  \"regionId\": \"REGION_ID_HERE\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"districtId\": null,\n  \"postalCode\": \"12345\"\n}"
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/register/technician",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "auth", "register", "technician"]
-                }
+                },
+                "description": "Register a new technician.\n\nRequires pinId + OTP from Send OTP step."
               },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('pinId', json.pinId);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ]
+              "response": []
             },
             {
-              "name": "Verify Registration OTP",
+              "name": "Resend OTP",
               "request": {
                 "method": "POST",
                 "header": [
@@ -163,15 +181,33 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"000000\"\n}"
+                  "raw": "{\n  \"mobileNumber\": \"0555000001\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/verify",
+                  "raw": "{{baseUrl}}/api/auth/resend-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "verify"]
-                }
+                  "path": ["api", "auth", "resend-otp"]
+                },
+                "description": "Resend OTP to a mobile number. Auto-saves new pinId."
               },
-              "response": []
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    if (json.pinId) {",
+                      "        pm.collectionVariables.set('pinId', json.pinId);",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
             }
           ]
         },
@@ -187,26 +223,30 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}"
+                  "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/login",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "auth", "login"]
-                }
+                },
+                "description": "Initiate login by sending OTP to mobile.\n\nSeeded users: SystemAdmin 0500000001, ZoneManager 0500000002, SalesMan 0500000010."
               },
               "response": [],
               "event": [
                 {
                   "listen": "test",
                   "script": {
+                    "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('pinId', json.pinId);",
+                      "    if (json.pinId) {",
+                      "        pm.collectionVariables.set('pinId', json.pinId);",
+                      "    }",
                       "}"
-                    ],
-                    "type": "text/javascript"
+                    ]
                   }
                 }
               ]
@@ -220,27 +260,33 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"000000\"\n}"
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/login/verify",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "auth", "login", "verify"]
-                }
+                },
+                "description": "Verify login with OTP. Auto-saves token and refreshToken."
               },
               "response": [],
               "event": [
                 {
                   "listen": "test",
                   "script": {
+                    "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('token', json.token);",
-                      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "    if (json.token) {",
+                      "        pm.collectionVariables.set('token', json.token);",
+                      "    }",
+                      "    if (json.refreshToken) {",
+                      "        pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "    }",
                       "}"
-                    ],
-                    "type": "text/javascript"
+                    ]
                   }
                 }
               ]
@@ -259,27 +305,33 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/refresh-token",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "auth", "refresh-token"]
-                }
+                },
+                "description": "Refresh an expired JWT token. Requires authentication."
               },
               "response": [],
               "event": [
                 {
                   "listen": "test",
                   "script": {
+                    "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    pm.collectionVariables.set('token', json.token);",
-                      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "    if (json.token) {",
+                      "        pm.collectionVariables.set('token', json.token);",
+                      "    }",
+                      "    if (json.refreshToken) {",
+                      "        pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                      "    }",
                       "}"
-                    ],
-                    "type": "text/javascript"
+                    ]
                   }
                 }
               ]
@@ -293,48 +345,17 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/revoke-token",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "auth", "revoke-token"]
-                }
+                },
+                "description": "Revoke refresh token (logout). Requires authentication."
               },
               "response": []
-            }
-          ]
-        },
-        {
-          "name": "Resend OTP",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/resend-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "resend-otp"]
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var json = pm.response.json();",
-                  "    pm.collectionVariables.set('pinId', json.pinId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
             }
           ]
         }
@@ -356,7 +377,8 @@
                 { "key": "page", "value": "1" },
                 { "key": "pageSize", "value": "20" }
               ]
-            }
+            },
+            "description": "Get pending registration requests. Requires SalesMan/ZoneManager JWT."
           },
           "response": []
         },
@@ -369,7 +391,8 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"USER_ID_HERE\"\n}"
+              "raw": "{\n  \"userId\": \"USER_ID_HERE\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/approvals/approve",
@@ -388,7 +411,8 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"reason\": \"بيانات غير مكتملة\"\n}"
+              "raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"reason\": \"بيانات غير مكتملة\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/approvals/reject",
@@ -412,7 +436,8 @@
               "raw": "{{baseUrl}}/api/lookup/regions",
               "host": ["{{baseUrl}}"],
               "path": ["api", "lookup", "regions"]
-            }
+            },
+            "description": "Returns all active regions."
           },
           "response": []
         },
@@ -422,23 +447,53 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/lookup/regions/REGION_ID_HERE/cities",
+              "raw": "{{baseUrl}}/api/lookup/regions/:regionId/cities",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "regions", "REGION_ID_HERE", "cities"]
-            }
+              "path": ["api", "lookup", "regions", ":regionId", "cities"],
+              "variable": [
+                {
+                  "key": "regionId",
+                  "value": "",
+                  "description": "Region GUID from Get Regions"
+                }
+              ]
+            },
+            "description": "Returns cities for a specific region."
           },
           "response": []
         },
         {
-          "name": "Get Districts by City",
+          "name": "Get All Cities",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/lookup/cities/CITY_ID_HERE/districts",
+              "raw": "{{baseUrl}}/api/lookup/cities",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "cities", "CITY_ID_HERE", "districts"]
-            }
+              "path": ["api", "lookup", "cities"]
+            },
+            "description": "Returns all 140 active cities."
+          },
+          "response": []
+        },
+        {
+          "name": "Check Shop Data Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookup/customer/:customerCode/shop-data-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lookup", "customer", ":customerCode", "shop-data-status"],
+              "variable": [
+                {
+                  "key": "customerCode",
+                  "value": "10001",
+                  "description": "ERP Customer Code"
+                }
+              ]
+            },
+            "description": "Check if ShopData already exists for a CustomerCode.\n\nFor Seller registration only — determines if shop fields are needed.\nShopOwner always provides all shop fields regardless."
           },
           "response": []
         }

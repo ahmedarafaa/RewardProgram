@@ -24,6 +24,10 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
             RuleFor(x => x.SubNumber)
             .GreaterThan(0)
             .WithMessage("الرقم الفرعي مطلوب");
+
+            RuleFor(x => x.District)
+            .MaximumLength(100).WithMessage("الحي يجب ألا يتجاوز 100 حرف")
+            .When(x => x.District != null);
         });
     }
 }

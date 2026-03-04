@@ -19,6 +19,7 @@ public record PendingUserResponse(
     string? StoreName,
     string? VAT,
     string? CRN,
+    string? ShortAddress,
     string? ShopImageUrl,
 
     // Location (resolved names)
@@ -28,6 +29,7 @@ public record PendingUserResponse(
     int? BuildingNumber,
     string? PostalCode,
     int? SubNumber,
+    string? District,
 
     // Assignment info
     string? AssignedSalesManName

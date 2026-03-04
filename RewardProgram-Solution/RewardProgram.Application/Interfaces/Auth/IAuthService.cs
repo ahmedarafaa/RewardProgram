@@ -6,11 +6,11 @@ namespace RewardProgram.Application.Interfaces.Auth;
 
 public interface IAuthService
 {
-    // Registration
-    Task<Result<SendOtpResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default);
-    Task<Result<SendOtpResponse>> RegisterSellerAsync(RegisterSellerRequest request, CancellationToken ct = default);
-    Task<Result<SendOtpResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request, CancellationToken ct = default);
-    Task<Result<RegisterResponse>> VerifyRegistrationAsync(VerifyOtpRequest request, CancellationToken ct = default);
+    // Registration — OTP-first flow
+    Task<Result<SendOtpResponse>> SendRegistrationOtpAsync(SendOtpRequest request, CancellationToken ct = default);
+    Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default);
+    Task<Result<RegisterResponse>> RegisterSellerAsync(RegisterSellerRequest request, CancellationToken ct = default);
+    Task<Result<RegisterResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request, CancellationToken ct = default);
 
     // Login
     Task<Result<SendOtpResponse>> LoginAsync(LoginRequest request, CancellationToken ct = default);
