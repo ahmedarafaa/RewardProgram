@@ -262,8 +262,7 @@ public class ApprovalService : IApprovalService
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
                 approverId, userId);
 
-            // Send SMS welcome (fire-and-forget with captured data)
-            // TODO: Switch to SendWhatsAppMessageAsync after Meta business approval
+            // Send WhatsApp welcome (fire-and-forget with captured data)
             var welcomeMobile = user.MobileNumber;
             var welcomeName = user.Name;
             _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
@@ -367,12 +366,11 @@ public class ApprovalService : IApprovalService
         try
         {
             var message = $"مرحباً {userName}! تمت الموافقة على طلب انضمامك لبرنامج مكافآت الرائد، يمكنك الآن تسجيل الدخول عبر التطبيق";
-            // TODO: Switch to SendWhatsAppMessageAsync after Meta business approval
-            await _twilioService.SendSmsAsync(mobileNumber, message);
+            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send welcome SMS to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
+            _logger.LogError(ex, "Failed to send welcome WhatsApp to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
         }
     }
 
