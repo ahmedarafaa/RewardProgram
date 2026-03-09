@@ -27,6 +27,7 @@ public static class DataSeeder
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
+        await SeedRewardSettingsAsync(context, logger);
     }
 
     #region Roles
@@ -674,6 +675,28 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         logger.LogInformation("Seeded {Count} Products", products.Count);
+    }
+
+    #endregion
+
+    #region RewardSettings
+
+    private static async Task SeedRewardSettingsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.RewardSettings.AnyAsync())
+        {
+            logger.LogInformation("RewardSettings already seeded, skipping");
+            return;
+        }
+
+        context.RewardSettings.Add(new RewardSettings
+        {
+            PointsToSarRate = 10m,
+            CreatedBy = "DataSeeder"
+        });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seeded default RewardSettings (PointsToSarRate: 10)");
     }
 
     #endregion

@@ -68,7 +68,7 @@ public class TwilioService : ITwilioService
 
             var verification = await VerificationResource.CreateAsync(
                 to: formattedNumber,
-                channel: "sms",
+                channel: "whatsapp",
                 pathServiceSid: _options.VerifyServiceSid
             );
 

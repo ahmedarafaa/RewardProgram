@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     DbSet<ScanRecord> ScanRecords { get; }
     DbSet<Wallet> Wallets { get; }
     DbSet<WalletTransaction> WalletTransactions { get; }
+    DbSet<RewardSettings> RewardSettings { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

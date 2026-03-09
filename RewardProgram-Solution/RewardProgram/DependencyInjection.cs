@@ -78,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminBarcodeService, AdminBarcodeService>();
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<IAdminRewardSettingsService, AdminRewardSettingsService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();

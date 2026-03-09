@@ -28,8 +28,10 @@ public class WalletService : IWalletService
             .AsNoTracking()
             .FirstOrDefaultAsync(w => w.UserId == userId, ct);
 
-        var balance = wallet?.Balance ?? 0;
-        return Result.Success(new WalletBalanceResponse(balance));
+        return Result.Success(new WalletBalanceResponse(
+            wallet?.Balance ?? 0,
+            wallet?.SarBalance ?? 0
+        ));
     }
 
     public async Task<Result<PaginatedResult<WalletTransactionResponse>>> GetTransactionsAsync(
@@ -58,6 +60,8 @@ public class WalletService : IWalletService
             .Select(t => new WalletTransactionResponse(
                 t.Id,
                 t.Amount,
+                t.SarRate,
+                t.SarAmount,
                 t.Type,
                 t.Description,
                 t.CreatedAt

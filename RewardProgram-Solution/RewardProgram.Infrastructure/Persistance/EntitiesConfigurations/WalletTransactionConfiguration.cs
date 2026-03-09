@@ -28,6 +28,14 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.Property(x => x.Description)
             .HasMaxLength(500);
 
+        builder.Property(x => x.SarRate)
+            .HasColumnType("decimal(10,2)")
+            .IsRequired();
+
+        builder.Property(x => x.SarAmount)
+            .HasColumnType("decimal(10,2)")
+            .IsRequired();
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

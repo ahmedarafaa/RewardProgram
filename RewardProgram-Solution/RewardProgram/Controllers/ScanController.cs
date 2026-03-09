@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Scan;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Constants;
@@ -29,6 +30,15 @@ public class ScanController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _scanService.ScanBarcodeAsync(request, userId, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("history")]
+    [ProducesResponseType(typeof(PaginatedResult<ScanHistoryItemResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetScanHistory([FromQuery] ScanHistoryQuery query, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _scanService.GetScanHistoryAsync(userId, query, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 }

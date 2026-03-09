@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts;
+using RewardProgram.Application.Contracts.Admin.Scans;
 using RewardProgram.Application.Contracts.Scan;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
@@ -65,7 +67,11 @@ public class ScanService : IScanService
         if (barcode.ScanRecords.Any(s => s.ScannerRole == scannerRole))
             return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.BarcodeAlreadyScanned);
 
-        // 5. Begin transaction
+        // 5. Get current SAR rate
+        var settings = await _context.RewardSettings.FirstOrDefaultAsync(ct);
+        var sarRate = settings?.PointsToSarRate ?? 10m;
+
+        // 6. Begin transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -76,7 +82,7 @@ public class ScanService : IScanService
             string? firstScannerUserId = null;
             string message;
 
-            // 6. Calculate points based on scan order and role
+            // 7. Calculate points based on scan order and role
             switch (barcode.Status)
             {
                 case BarcodeStatus.Available when scannerRole == ScannerRole.Seller:
@@ -114,7 +120,7 @@ public class ScanService : IScanService
                     return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.BarcodeAlreadyScanned);
             }
 
-            // 7. Create scan record
+            // 8. Create scan record
             var scanRecord = new ScanRecord
             {
                 BarcodeId = barcode.Id,
@@ -124,9 +130,11 @@ public class ScanService : IScanService
             };
             await _context.ScanRecords.AddAsync(scanRecord, ct);
 
-            // 8. Credit scanner's wallet
+            // 9. Credit scanner's wallet
+            var scannerSarAmount = pointsForScanner / sarRate;
             var scannerWallet = await GetOrCreateWalletAsync(userId, ct);
             scannerWallet.Balance += pointsForScanner;
+            scannerWallet.SarBalance += scannerSarAmount;
 
             await _context.WalletTransactions.AddAsync(new WalletTransaction
             {
@@ -134,14 +142,18 @@ public class ScanService : IScanService
                 Amount = pointsForScanner,
                 Type = WalletTransactionType.Earned,
                 ReferenceId = scanRecord.Id,
-                Description = $"مسح باركود — {barcode.Product.Name}"
+                Description = $"مسح باركود — {barcode.Product.Name}",
+                SarRate = sarRate,
+                SarAmount = scannerSarAmount
             }, ct);
 
-            // 9. Credit deferred points to first scanner (if applicable)
+            // 10. Credit deferred points to first scanner (if applicable)
             if (deferredPointsForFirstScanner.HasValue && firstScannerUserId is not null)
             {
+                var deferredSarAmount = deferredPointsForFirstScanner.Value / sarRate;
                 var firstScannerWallet = await GetOrCreateWalletAsync(firstScannerUserId, ct);
                 firstScannerWallet.Balance += deferredPointsForFirstScanner.Value;
+                firstScannerWallet.SarBalance += deferredSarAmount;
 
                 await _context.WalletTransactions.AddAsync(new WalletTransaction
                 {
@@ -149,11 +161,13 @@ public class ScanService : IScanService
                     Amount = deferredPointsForFirstScanner.Value,
                     Type = WalletTransactionType.Earned,
                     ReferenceId = scanRecord.Id,
-                    Description = $"نقاط مؤجلة — {barcode.Product.Name}"
+                    Description = $"نقاط مؤجلة — {barcode.Product.Name}",
+                    SarRate = sarRate,
+                    SarAmount = deferredSarAmount
                 }, ct);
             }
 
-            // 10. Save & commit
+            // 11. Save & commit
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
@@ -180,6 +194,89 @@ public class ScanService : IScanService
             _logger.LogError(ex, "Failed to scan barcode '{Code}' by user {UserId}", request.BarcodeCode, userId);
             throw;
         }
+    }
+
+    public async Task<Result<PaginatedResult<ScanHistoryItemResponse>>> GetScanHistoryAsync(
+        string userId, ScanHistoryQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = _context.ScanRecords
+            .AsNoTracking()
+            .Include(s => s.Barcode)
+                .ThenInclude(b => b.Product)
+            .Where(s => s.UserId == userId);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        var items = await dbQuery
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(s => new ScanHistoryItemResponse(
+                s.Id,
+                s.Barcode.Code,
+                s.Barcode.Product.Name,
+                s.Barcode.Product.ProductCode,
+                s.Barcode.Product.PointValue,
+                s.PointsAwarded,
+                s.ScannerRole,
+                s.Barcode.Status,
+                s.CreatedAt
+            ))
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<ScanHistoryItemResponse>(items, totalCount, query.Page, query.PageSize));
+    }
+
+    public async Task<Result<PaginatedResult<AdminScanListItemResponse>>> GetAdminScanListAsync(
+        AdminScanListQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = _context.ScanRecords
+            .AsNoTracking()
+            .Include(s => s.Barcode)
+                .ThenInclude(b => b.Product)
+            .Include(s => s.User)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.UserId))
+            dbQuery = dbQuery.Where(s => s.UserId == query.UserId);
+
+        if (!string.IsNullOrWhiteSpace(query.ProductId))
+            dbQuery = dbQuery.Where(s => s.Barcode.ProductId == query.ProductId);
+
+        if (query.ScannerRole.HasValue)
+            dbQuery = dbQuery.Where(s => s.ScannerRole == query.ScannerRole.Value);
+
+        if (query.BarcodeStatus.HasValue)
+            dbQuery = dbQuery.Where(s => s.Barcode.Status == query.BarcodeStatus.Value);
+
+        if (query.FromDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt >= query.FromDate.Value);
+
+        if (query.ToDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt <= query.ToDate.Value);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        var items = await dbQuery
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(s => new AdminScanListItemResponse(
+                s.Id,
+                s.Barcode.Code,
+                s.Barcode.Product.Name,
+                s.Barcode.Product.ProductCode,
+                s.Barcode.Product.PointValue,
+                s.PointsAwarded,
+                s.ScannerRole,
+                s.Barcode.Status,
+                s.User.Name,
+                s.User.MobileNumber,
+                s.CreatedAt
+            ))
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, query.Page, query.PageSize));
     }
 
     private async Task<Wallet> GetOrCreateWalletAsync(string userId, CancellationToken ct)

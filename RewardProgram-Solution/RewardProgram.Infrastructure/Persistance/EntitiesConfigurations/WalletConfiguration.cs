@@ -21,6 +21,11 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
             .IsRequired()
             .HasDefaultValue(0m);
 
+        builder.Property(x => x.SarBalance)
+            .HasColumnType("decimal(10,2)")
+            .IsRequired()
+            .HasDefaultValue(0m);
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

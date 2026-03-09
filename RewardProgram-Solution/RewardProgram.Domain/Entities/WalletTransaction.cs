@@ -9,6 +9,8 @@ public class WalletTransaction : TrackableEntity
     public WalletTransactionType Type { get; set; }
     public string? ReferenceId { get; set; }
     public string? Description { get; set; }
+    public decimal SarRate { get; set; }
+    public decimal SarAmount { get; set; }
 
     // Navigation
     public Wallet Wallet { get; set; } = null!;
