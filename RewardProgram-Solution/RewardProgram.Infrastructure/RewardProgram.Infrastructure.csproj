@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Persistance\Data\SeedData\ErpCustomers.csv" />
+    <EmbeddedResource Include="Persistance\Data\SeedData\Products.csv" />
   </ItemGroup>
 
 </Project>

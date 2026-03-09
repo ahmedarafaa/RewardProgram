@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Domain.Constants;
+using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Domain.Enums.UserEnums;
 
@@ -25,6 +26,7 @@ public static class DataSeeder
         var users = await SeedUsersAsync(userManager, logger);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
+        await SeedProductsAsync(context, logger);
     }
 
     #region Roles
@@ -599,6 +601,79 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         logger.LogInformation("Seeded {Count} ErpCustomers", customers.Count);
+    }
+
+    #endregion
+
+    #region Products
+
+    private static async Task SeedProductsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.Products.AnyAsync())
+        {
+            logger.LogInformation("Products already seeded, skipping");
+            return;
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("Products.csv", StringComparison.OrdinalIgnoreCase));
+
+        if (resourceName is null)
+        {
+            logger.LogWarning("Products.csv embedded resource not found, skipping product seeding");
+            return;
+        }
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+
+        var content = await reader.ReadToEndAsync();
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        var products = new List<Product>();
+
+        // Skip header line (index 0): كود الصنف;اسم الصنف;المجموعة;السعر;النقاط
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (string.IsNullOrEmpty(line))
+                continue;
+
+            var parts = line.Split(';');
+            if (parts.Length < 5)
+            {
+                logger.LogWarning("Skipping malformed Products CSV line {LineNumber}: {Line}", i + 1, line);
+                continue;
+            }
+
+            if (!decimal.TryParse(parts[3].Trim(), out var price))
+            {
+                logger.LogWarning("Skipping invalid price on line {LineNumber}: {Value}", i + 1, parts[3].Trim());
+                continue;
+            }
+
+            if (!int.TryParse(parts[4].Trim(), out var points))
+            {
+                logger.LogWarning("Skipping invalid points on line {LineNumber}: {Value}", i + 1, parts[4].Trim());
+                continue;
+            }
+
+            products.Add(new Product
+            {
+                ProductCode = parts[0].Trim(),
+                Name = parts[1].Trim(),
+                Category = parts[2].Trim(),
+                Price = price,
+                PointValue = points,
+                CreatedBy = "DataSeeder"
+            });
+        }
+
+        context.Products.AddRange(products);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Seeded {Count} Products", products.Count);
     }
 
     #endregion
