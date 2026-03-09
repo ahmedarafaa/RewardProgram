@@ -8,6 +8,7 @@ using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Interfaces.Files;
+using RewardProgram.Application.Services;
 using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Services.Auth;
 using RewardProgram.Application.Services.Lookups;
@@ -73,6 +74,10 @@ public static class DependencyInjection
         services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IAdminProductService, AdminProductService>();
+        services.AddScoped<IAdminBarcodeService, AdminBarcodeService>();
+        services.AddScoped<IScanService, ScanService>();
+        services.AddScoped<IWalletService, WalletService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
