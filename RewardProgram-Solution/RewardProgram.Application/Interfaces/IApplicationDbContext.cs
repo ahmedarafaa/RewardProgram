@@ -18,6 +18,11 @@ public interface IApplicationDbContext
     DbSet<District> Districts { get; }
     DbSet<ErpCustomer> ErpCustomers { get; }
     DbSet<ShopData> ShopData { get; }
+    DbSet<Product> Products { get; }
+    DbSet<ProductBarcode> ProductBarcodes { get; }
+    DbSet<ScanRecord> ScanRecords { get; }
+    DbSet<Wallet> Wallets { get; }
+    DbSet<WalletTransaction> WalletTransactions { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

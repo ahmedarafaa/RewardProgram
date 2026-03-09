@@ -27,6 +27,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TechnicianProfile> TechnicianProfiles { get; set; }
     public DbSet<ApprovalRecord> ApprovalRecords { get; set; }
     public DbSet<OtpCode> OtpCodes { get; set; }
+    public DbSet<Product> Products { get; set; }
+    public DbSet<ProductBarcode> ProductBarcodes { get; set; }
+    public DbSet<ScanRecord> ScanRecords { get; set; }
+    public DbSet<Wallet> Wallets { get; set; }
+    public DbSet<WalletTransaction> WalletTransactions { get; set; }
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
