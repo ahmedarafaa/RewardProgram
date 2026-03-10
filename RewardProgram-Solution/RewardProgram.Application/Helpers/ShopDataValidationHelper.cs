@@ -18,16 +18,21 @@ public static class ShopDataValidationHelper
         if (excludeCustomerCode != null)
             query = query.Where(sd => sd.CustomerCode != excludeCustomerCode);
 
-        if (await query.AnyAsync(sd => sd.VAT == vat, ct))
+        var conflict = await query
+            .Where(sd => sd.VAT == vat || sd.CRN == crn || sd.ShortAddress == shortAddress)
+            .Select(sd => new { sd.VAT, sd.CRN, sd.ShortAddress })
+            .FirstOrDefaultAsync(ct);
+
+        if (conflict is null)
+            return Result.Success();
+
+        if (conflict.VAT == vat)
             return Result.Failure(ShopDataErrors.VatAlreadyExists);
 
-        if (await query.AnyAsync(sd => sd.CRN == crn, ct))
+        if (conflict.CRN == crn)
             return Result.Failure(ShopDataErrors.CrnAlreadyExists);
 
-        if (await query.AnyAsync(sd => sd.ShortAddress == shortAddress, ct))
-            return Result.Failure(ShopDataErrors.ShortAddressAlreadyExists);
-
-        return Result.Success();
+        return Result.Failure(ShopDataErrors.ShortAddressAlreadyExists);
     }
 
     public static async Task<Result> ValidateUniqueFieldsPartialAsync(
@@ -36,18 +41,30 @@ public static class ShopDataValidationHelper
         string excludeCustomerCode,
         CancellationToken ct = default)
     {
-        if (!string.IsNullOrEmpty(vat)
-            && await context.ShopData.AnyAsync(sd => sd.VAT == vat && sd.CustomerCode != excludeCustomerCode, ct))
+        var hasVat = !string.IsNullOrEmpty(vat);
+        var hasCrn = !string.IsNullOrEmpty(crn);
+        var hasAddr = !string.IsNullOrEmpty(shortAddress);
+
+        if (!hasVat && !hasCrn && !hasAddr)
+            return Result.Success();
+
+        var conflict = await context.ShopData
+            .Where(sd => sd.CustomerCode != excludeCustomerCode
+                && ((hasVat && sd.VAT == vat)
+                    || (hasCrn && sd.CRN == crn)
+                    || (hasAddr && sd.ShortAddress == shortAddress)))
+            .Select(sd => new { sd.VAT, sd.CRN, sd.ShortAddress })
+            .FirstOrDefaultAsync(ct);
+
+        if (conflict is null)
+            return Result.Success();
+
+        if (hasVat && conflict.VAT == vat)
             return Result.Failure(ShopDataErrors.VatAlreadyExists);
 
-        if (!string.IsNullOrEmpty(crn)
-            && await context.ShopData.AnyAsync(sd => sd.CRN == crn && sd.CustomerCode != excludeCustomerCode, ct))
+        if (hasCrn && conflict.CRN == crn)
             return Result.Failure(ShopDataErrors.CrnAlreadyExists);
 
-        if (!string.IsNullOrEmpty(shortAddress)
-            && await context.ShopData.AnyAsync(sd => sd.ShortAddress == shortAddress && sd.CustomerCode != excludeCustomerCode, ct))
-            return Result.Failure(ShopDataErrors.ShortAddressAlreadyExists);
-
-        return Result.Success();
+        return Result.Failure(ShopDataErrors.ShortAddressAlreadyExists);
     }
 }
