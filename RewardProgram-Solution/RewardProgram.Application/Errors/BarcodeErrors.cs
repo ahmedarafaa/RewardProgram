@@ -18,4 +18,7 @@ public static class BarcodeErrors
 
     public static readonly Error ConcurrencyConflict =
         new("Barcode.ConcurrencyConflict", "حدث تعارض أثناء المعالجة، يرجى المحاولة مرة أخرى", 409);
+
+    public static readonly Error CollisionRetryExhausted =
+        new("Barcode.CollisionRetryExhausted", "فشل إنشاء أكواد فريدة، يرجى المحاولة مرة أخرى", 500);
 }

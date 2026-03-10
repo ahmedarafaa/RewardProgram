@@ -57,7 +57,7 @@ public class AdminBarcodeService : IAdminBarcodeService
             if (attempt == MaxCollisionRetries)
             {
                 _logger.LogError("Failed to generate unique barcode codes after {MaxRetries} retries", MaxCollisionRetries);
-                return Result.Failure<AdminGenerateBarcodesResponse>(BarcodeErrors.InvalidQuantity);
+                return Result.Failure<AdminGenerateBarcodesResponse>(BarcodeErrors.CollisionRetryExhausted);
             }
 
             foreach (var collision in existingCodes)
