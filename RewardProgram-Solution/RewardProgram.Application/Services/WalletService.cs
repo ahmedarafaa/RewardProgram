@@ -40,16 +40,9 @@ public class WalletService : IWalletService
     {
         var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
 
-        var wallet = await _context.Wallets
-            .AsNoTracking()
-            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
-
-        if (wallet is null)
-            return Result.Success(new PaginatedResult<WalletTransactionResponse>([], 0, page, pageSize));
-
         var dbQuery = _context.WalletTransactions
             .AsNoTracking()
-            .Where(t => t.WalletId == wallet.Id);
+            .Where(t => t.Wallet.UserId == userId);
 
         if (query.Type.HasValue)
             dbQuery = dbQuery.Where(t => t.Type == query.Type.Value);
