@@ -54,13 +54,15 @@ public class AdminBarcodeService : IAdminBarcodeService
             "Generated {Count} barcodes for product '{ProductCode}' by admin {AdminId}",
             request.Quantity, product.ProductCode, adminUserId);
 
-        return Result.Success(new AdminGenerateBarcodesResponse(request.Quantity, product.Name));
+        var codes = barcodes.Select(b => b.Code).ToList();
+        return Result.Success(new AdminGenerateBarcodesResponse(request.Quantity, product.Name, product.ProductCode, codes));
     }
 
     public async Task<Result<PaginatedResult<AdminBarcodeListItemResponse>>> ListBarcodesAsync(
         AdminBarcodeListQuery query, CancellationToken ct = default)
     {
         var dbQuery = _context.ProductBarcodes
+            .AsNoTracking()
             .Include(b => b.Product)
             .AsQueryable();
 
