@@ -215,12 +215,11 @@ public class AdminUserService : IAdminUserService
             if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
 
-            using var imageStream = request.ShopImage.OpenReadStream();
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ImageUploadFailed);
+            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            if (imgResult.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
 
-            shopImageUrl = imageResult.Value;
+            shopImageUrl = imgResult.Value;
         }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -354,12 +353,11 @@ public class AdminUserService : IAdminUserService
             if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
 
-            using var imageStream = request.ShopImage.OpenReadStream();
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ImageUploadFailed);
+            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            if (imgResult.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
 
-            shopImageUrl = imageResult.Value;
+            shopImageUrl = imgResult.Value;
         }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -958,11 +956,10 @@ public class AdminUserService : IAdminUserService
         string? newImageUrl = null;
         if (request.ShopImage != null)
         {
-            using var imageStream = request.ShopImage.OpenReadStream();
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ImageUploadFailed);
-            newImageUrl = imageResult.Value;
+            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            if (imgResult.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
+            newImageUrl = imgResult.Value;
         }
 
         // Validate VAT/CRN uniqueness (exclude current ShopData)
@@ -1113,11 +1110,10 @@ public class AdminUserService : IAdminUserService
         string? newImageUrl = null;
         if (request.ShopImage != null)
         {
-            using var imageStream = request.ShopImage.OpenReadStream();
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ImageUploadFailed);
-            newImageUrl = imageResult.Value;
+            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            if (imgResult.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
+            newImageUrl = imgResult.Value;
         }
 
         if (!string.IsNullOrEmpty(request.VAT))

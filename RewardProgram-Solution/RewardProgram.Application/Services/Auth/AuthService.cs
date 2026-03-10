@@ -110,15 +110,11 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
         // Upload shop image
-        string shopImageUrl;
-        using (var imageStream = request.ShopImage.OpenReadStream())
-        {
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<RegisterResponse>(AuthErrors.ImageUploadFailed);
+        var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+        if (imageUploadResult.IsFailure)
+            return Result.Failure<RegisterResponse>(imageUploadResult.Error);
 
-            shopImageUrl = imageResult.Value;
-        }
+        var shopImageUrl = imageUploadResult.Value;
 
         // 7. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -280,12 +276,11 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
             // Upload shop image
-            using var imageStream = request.ShopImage.OpenReadStream();
-            var imageResult = await _fileStorageService.UploadAsync(imageStream, request.ShopImage.FileName, "shops", ct);
-            if (imageResult.IsFailure)
-                return Result.Failure<RegisterResponse>(AuthErrors.ImageUploadFailed);
+            var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            if (imageUploadResult.IsFailure)
+                return Result.Failure<RegisterResponse>(imageUploadResult.Error);
 
-            shopImageUrl = imageResult.Value;
+            shopImageUrl = imageUploadResult.Value;
             cityId = request.CityId;
         }
         else
