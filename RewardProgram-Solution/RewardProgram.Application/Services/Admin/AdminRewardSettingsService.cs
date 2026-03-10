@@ -56,8 +56,17 @@ public class AdminRewardSettingsService : IAdminRewardSettingsService
             PointsToSarRate = 10m
         };
 
-        await _context.RewardSettings.AddAsync(settings, ct);
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.RewardSettings.AddAsync(settings, ct);
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Concurrent insert won the race — re-query the existing row
+            _logger.LogWarning("Concurrent RewardSettings creation detected, re-querying");
+            settings = await _context.RewardSettings.FirstAsync(ct);
+        }
 
         return settings;
     }

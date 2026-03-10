@@ -189,6 +189,12 @@ public class ScanService : IScanService
             _logger.LogWarning("Concurrency conflict scanning barcode '{Code}' by user {UserId}", request.BarcodeCode, userId);
             return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.ConcurrencyConflict);
         }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning("Duplicate key conflict scanning barcode '{Code}' by user {UserId} (likely concurrent wallet creation)", request.BarcodeCode, userId);
+            return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.ConcurrencyConflict);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
