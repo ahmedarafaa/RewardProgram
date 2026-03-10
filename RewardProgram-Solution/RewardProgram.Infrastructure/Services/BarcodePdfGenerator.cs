@@ -17,7 +17,10 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     private const int BarcodeImageWidth = 300;
     private const int BarcodeImageHeight = 80;
 
-    private static readonly BarcodeWriterPixelData BarcodeWriter = new()
+    [ThreadStatic]
+    private static BarcodeWriterPixelData? _barcodeWriter;
+
+    private static BarcodeWriterPixelData BarcodeWriter => _barcodeWriter ??= new()
     {
         Format = BarcodeFormat.CODE_128,
         Options = new EncodingOptions
