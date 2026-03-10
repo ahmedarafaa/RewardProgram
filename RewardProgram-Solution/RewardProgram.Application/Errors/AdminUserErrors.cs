@@ -25,20 +25,8 @@ public static class AdminUserErrors
     public static readonly Error ShopDataRequired =
         new("Admin.ShopDataRequired", "بيانات المحل مطلوبة — لا توجد بيانات سابقة لهذا الكود", 400);
 
-    public static readonly Error VatAlreadyExists =
-        new("Admin.VatAlreadyExists", "الرقم الضريبي مسجل مسبقاً", 409);
-
-    public static readonly Error CrnAlreadyExists =
-        new("Admin.CrnAlreadyExists", "رقم السجل التجاري مسجل مسبقاً", 409);
-
-    public static readonly Error ShortAddressAlreadyExists =
-        new("Admin.ShortAddressAlreadyExists", "العنوان المختصر مسجل مسبقاً", 409);
-
     public static readonly Error CreateUserFailed =
         new("Admin.CreateUserFailed", "فشل إنشاء الحساب", 500);
-
-    public static readonly Error ImageUploadFailed =
-        new("Admin.ImageUploadFailed", "فشل رفع الصورة", 500);
 
     public static readonly Error NoApprovalSalesMan =
         new("Admin.NoApprovalSalesMan", "لا يوجد مندوب مبيعات معتمد لهذه المدينة", 400);

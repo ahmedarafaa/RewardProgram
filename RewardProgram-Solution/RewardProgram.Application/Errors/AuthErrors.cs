@@ -9,13 +9,7 @@ public static class AuthErrors
     public static readonly Error MobileAlreadyRegistered =
         new("Auth.MobileAlreadyRegistered", "رقم الجوال مسجل مسبقاً", 409);
 
-    public static readonly Error VatAlreadyExists =
-        new("Auth.VatAlreadyExists", "الرقم الضريبي مسجل مسبقاً", 409);
-
-    public static readonly Error CrnAlreadyExists =
-        new("Auth.CrnAlreadyExists", "رقم السجل التجاري مسجل مسبقاً", 409);
-
-    public static readonly Error RegistrationDataNotFound =
+public static readonly Error RegistrationDataNotFound =
         new("Auth.RegistrationDataNotFound", "بيانات التسجيل غير موجودة، يرجى إعادة التسجيل", 400);
 
     public static readonly Error CreateUserFailed =
@@ -56,9 +50,6 @@ public static class AuthErrors
 
     public static readonly Error ShopDataRequired =
         new("Auth.ShopDataRequired", "بيانات المحل مطلوبة (اسم المتجر، الرقم الضريبي، السجل التجاري، صورة المحل، العنوان)", 400);
-
-    public static readonly Error ShortAddressAlreadyExists =
-        new("Auth.ShortAddressAlreadyExists", "العنوان المختصر مسجل مسبقاً", 409);
 
     public static readonly Error MobileMismatch =
         new("Auth.MobileMismatch", "رقم الجوال لا يتطابق مع رمز التحقق", 400);
@@ -106,16 +97,4 @@ public static class AuthErrors
 
     #endregion
 
-    #region File Upload Errors
-
-    public static readonly Error ImageUploadFailed =
-        new("Auth.ImageUploadFailed", "فشل رفع الصورة", 500);
-
-    public static readonly Error InvalidImageType =
-        new("Auth.InvalidImageType", "صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG", 400);
-
-    public static readonly Error ImageTooLarge =
-        new("Auth.ImageTooLarge", "حجم الصورة كبير جداً، الحد الأقصى 5 ميجابايت", 400);
-
-    #endregion
 }
