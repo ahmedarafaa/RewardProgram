@@ -102,7 +102,7 @@ public class AdminProductService : IAdminProductService
     public async Task<Result<PaginatedResult<AdminProductResponse>>> ListProductsAsync(
         AdminProductListQuery query, CancellationToken ct = default)
     {
-        var dbQuery = _context.Products.AsQueryable();
+        var dbQuery = _context.Products.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
