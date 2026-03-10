@@ -4,6 +4,7 @@ using NanoidDotNet;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Barcodes;
+using RewardProgram.Application.Contracts.Admin.Scans;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
@@ -129,5 +130,59 @@ public class AdminBarcodeService : IAdminBarcodeService
             .ToListAsync(ct);
 
         return Result.Success(new PaginatedResult<AdminBarcodeListItemResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<PaginatedResult<AdminScanListItemResponse>>> GetAdminScanListAsync(
+        AdminScanListQuery query, CancellationToken ct = default)
+    {
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
+        var dbQuery = _context.ScanRecords
+            .AsNoTracking()
+            .Include(s => s.Barcode)
+                .ThenInclude(b => b.Product)
+            .Include(s => s.User)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.UserId))
+            dbQuery = dbQuery.Where(s => s.UserId == query.UserId);
+
+        if (!string.IsNullOrWhiteSpace(query.ProductId))
+            dbQuery = dbQuery.Where(s => s.Barcode.ProductId == query.ProductId);
+
+        if (query.ScannerRole.HasValue)
+            dbQuery = dbQuery.Where(s => s.ScannerRole == query.ScannerRole.Value);
+
+        if (query.BarcodeStatus.HasValue)
+            dbQuery = dbQuery.Where(s => s.Barcode.Status == query.BarcodeStatus.Value);
+
+        if (query.FromDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt >= query.FromDate.Value);
+
+        if (query.ToDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt <= query.ToDate.Value);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        var items = await dbQuery
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(s => new AdminScanListItemResponse(
+                s.Id,
+                s.Barcode.Code,
+                s.Barcode.Product.Name,
+                s.Barcode.Product.ProductCode,
+                s.Barcode.Product.PointValue,
+                s.PointsAwarded,
+                s.ScannerRole,
+                s.Barcode.Status,
+                s.User.Name,
+                s.User.MobileNumber,
+                s.CreatedAt
+            ))
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, page, pageSize));
     }
 }

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Scans;
-using RewardProgram.Application.Interfaces;
+using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Constants;
 
 namespace RewardProgram.API.Controllers.Admin;
@@ -12,18 +12,18 @@ namespace RewardProgram.API.Controllers.Admin;
 [Authorize(Roles = UserRoles.SystemAdmin)]
 public class AdminScanController : ControllerBase
 {
-    private readonly IScanService _scanService;
+    private readonly IAdminBarcodeService _barcodeService;
 
-    public AdminScanController(IScanService scanService)
+    public AdminScanController(IAdminBarcodeService barcodeService)
     {
-        _scanService = scanService;
+        _barcodeService = barcodeService;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<AdminScanListItemResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ListScans([FromQuery] AdminScanListQuery query, CancellationToken ct)
     {
-        var result = await _scanService.GetAdminScanListAsync(query, ct);
+        var result = await _barcodeService.GetAdminScanListAsync(query, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 }
