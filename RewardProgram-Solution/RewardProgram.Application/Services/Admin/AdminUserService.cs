@@ -208,12 +208,10 @@ public class AdminUserService : IAdminUserService
                 || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShopDataRequired);
 
-            if (await _context.ShopData.AnyAsync(sd => sd.VAT == request.VAT, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
-            if (await _context.ShopData.AnyAsync(sd => sd.CRN == request.CRN, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
-            if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
+            var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsAsync(
+                _context, request.VAT!, request.CRN!, request.ShortAddress!, ct: ct);
+            if (uniqueCheck.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
             var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
             if (imgResult.IsFailure)
@@ -346,12 +344,10 @@ public class AdminUserService : IAdminUserService
                 || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShopDataRequired);
 
-            if (await _context.ShopData.AnyAsync(sd => sd.VAT == request.VAT, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
-            if (await _context.ShopData.AnyAsync(sd => sd.CRN == request.CRN, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
-            if (await _context.ShopData.AnyAsync(sd => sd.ShortAddress == request.ShortAddress, ct))
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
+            var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsAsync(
+                _context, request.VAT!, request.CRN!, request.ShortAddress!, ct: ct);
+            if (uniqueCheck.IsFailure)
+                return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
             var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
             if (imgResult.IsFailure)
@@ -962,30 +958,11 @@ public class AdminUserService : IAdminUserService
             newImageUrl = imgResult.Value;
         }
 
-        // Validate VAT/CRN uniqueness (exclude current ShopData)
-        if (!string.IsNullOrEmpty(request.VAT))
-        {
-            var vatInUse = await _context.ShopData
-                .AnyAsync(sd => sd.VAT == request.VAT && sd.CustomerCode != request.CustomerCode, ct);
-            if (vatInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
-        }
-
-        if (!string.IsNullOrEmpty(request.CRN))
-        {
-            var crnInUse = await _context.ShopData
-                .AnyAsync(sd => sd.CRN == request.CRN && sd.CustomerCode != request.CustomerCode, ct);
-            if (crnInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
-        }
-
-        if (!string.IsNullOrEmpty(request.ShortAddress))
-        {
-            var shortAddressInUse = await _context.ShopData
-                .AnyAsync(sd => sd.ShortAddress == request.ShortAddress && sd.CustomerCode != request.CustomerCode, ct);
-            if (shortAddressInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
-        }
+        // Validate VAT/CRN/ShortAddress uniqueness (exclude current ShopData)
+        var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
+            _context, request.VAT, request.CRN, request.ShortAddress, request.CustomerCode, ct);
+        if (uniqueCheck.IsFailure)
+            return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
@@ -1116,29 +1093,10 @@ public class AdminUserService : IAdminUserService
             newImageUrl = imgResult.Value;
         }
 
-        if (!string.IsNullOrEmpty(request.VAT))
-        {
-            var vatInUse = await _context.ShopData
-                .AnyAsync(sd => sd.VAT == request.VAT && sd.CustomerCode != request.CustomerCode, ct);
-            if (vatInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.VatAlreadyExists);
-        }
-
-        if (!string.IsNullOrEmpty(request.CRN))
-        {
-            var crnInUse = await _context.ShopData
-                .AnyAsync(sd => sd.CRN == request.CRN && sd.CustomerCode != request.CustomerCode, ct);
-            if (crnInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CrnAlreadyExists);
-        }
-
-        if (!string.IsNullOrEmpty(request.ShortAddress))
-        {
-            var shortAddressInUse = await _context.ShopData
-                .AnyAsync(sd => sd.ShortAddress == request.ShortAddress && sd.CustomerCode != request.CustomerCode, ct);
-            if (shortAddressInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ShortAddressAlreadyExists);
-        }
+        var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
+            _context, request.VAT, request.CRN, request.ShortAddress, request.CustomerCode, ct);
+        if (uniqueCheck.IsFailure)
+            return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 

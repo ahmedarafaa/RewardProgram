@@ -104,8 +104,8 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 
         // Validate VAT/CRN/ShortAddress uniqueness (exclude own record when overwriting)
-        var uniqueValidation = await ValidateUniqueFieldsAsync(
-            request.VAT, request.CRN, request.ShortAddress, existingShopData?.CustomerCode, ct);
+        var uniqueValidation = await ShopDataValidationHelper.ValidateUniqueFieldsAsync(
+            _context, request.VAT, request.CRN, request.ShortAddress, existingShopData?.CustomerCode, ct);
         if (uniqueValidation.IsFailure)
             return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
@@ -271,7 +271,8 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(AuthErrors.ShopDataRequired);
 
             // Validate VAT/CRN/ShortAddress uniqueness
-            var uniqueValidation = await ValidateUniqueFieldsAsync(request.VAT, request.CRN, request.ShortAddress, ct: ct);
+            var uniqueValidation = await ShopDataValidationHelper.ValidateUniqueFieldsAsync(
+                _context, request.VAT, request.CRN, request.ShortAddress, ct: ct);
             if (uniqueValidation.IsFailure)
                 return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
@@ -633,29 +634,4 @@ public class AuthService : IAuthService
 
     #endregion
 
-    #region Private Helper Methods
-
-    private async Task<Result> ValidateUniqueFieldsAsync(
-        string vat, string crn, string shortAddress,
-        string? excludeCustomerCode = null, CancellationToken ct = default)
-    {
-        var query = _context.ShopData.AsQueryable();
-
-        // When overwriting existing ShopData, exclude the record being overwritten
-        if (excludeCustomerCode != null)
-            query = query.Where(sd => sd.CustomerCode != excludeCustomerCode);
-
-        if (await query.AnyAsync(sd => sd.VAT == vat, ct))
-            return Result.Failure(AuthErrors.VatAlreadyExists);
-
-        if (await query.AnyAsync(sd => sd.CRN == crn, ct))
-            return Result.Failure(AuthErrors.CrnAlreadyExists);
-
-        if (await query.AnyAsync(sd => sd.ShortAddress == shortAddress, ct))
-            return Result.Failure(AuthErrors.ShortAddressAlreadyExists);
-
-        return Result.Success();
-    }
-
-    #endregion
 }
