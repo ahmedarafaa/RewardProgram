@@ -43,38 +43,42 @@ public class AuthService : IAuthService
 
     public async Task<Result<SendOtpResponse>> SendRegistrationOtpAsync(SendOtpRequest request, CancellationToken ct = default)
     {
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
         // Validate mobile uniqueness
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Send OTP without registration data
-        var otpResult = await _otpService.SendAsync(request.MobileNumber, ct: ct);
+        var otpResult = await _otpService.SendAsync(mobile, ct: ct);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
 
         _logger.LogInformation(
             "Registration OTP sent. Mobile: {Mobile}",
-            MobileNumberHelper.Mask(request.MobileNumber));
+            MobileNumberHelper.Mask(mobile));
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
-            MaskedMobileNumber: MobileNumberHelper.Mask(request.MobileNumber)
+            MaskedMobileNumber: MobileNumberHelper.Mask(mobile)
         ));
     }
 
     public async Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
     {
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
         // 1. Verify OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
             return Result.Failure<RegisterResponse>(verifyResult.Error);
 
         // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != request.MobileNumber)
+        if (verifyResult.Value.MobileNumber != mobile)
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // 3. Validate mobile uniqueness (race condition protection)
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // 4. Validate CustomerCode exists in ErpCustomers
@@ -123,10 +127,10 @@ public class AuthService : IAuthService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.OwnerName,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.ShopOwner,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -215,7 +219,7 @@ public class AuthService : IAuthService
             _logger.LogInformation(
                 "ShopOwner registered successfully. UserId: {UserId}, Mobile: {Mobile}",
                 user.Id,
-                MobileNumberHelper.Mask(request.MobileNumber));
+                MobileNumberHelper.Mask(mobile));
 
             return Result.Success(new RegisterResponse(
                 UserId: user.Id,
@@ -226,24 +230,26 @@ public class AuthService : IAuthService
         {
             await transaction.RollbackAsync(ct);
             _logger.LogError(ex, "Failed to complete ShopOwner registration for mobile: {Mobile}",
-                MobileNumberHelper.Mask(request.MobileNumber));
+                MobileNumberHelper.Mask(mobile));
             return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
         }
     }
 
     public async Task<Result<RegisterResponse>> RegisterSellerAsync(RegisterSellerRequest request, CancellationToken ct = default)
     {
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
         // 1. Verify OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
             return Result.Failure<RegisterResponse>(verifyResult.Error);
 
         // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != request.MobileNumber)
+        if (verifyResult.Value.MobileNumber != mobile)
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // 3. Validate mobile uniqueness (race condition protection)
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // 4. Validate CustomerCode exists in ErpCustomers
@@ -314,10 +320,10 @@ public class AuthService : IAuthService
 
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.Seller,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -394,7 +400,7 @@ public class AuthService : IAuthService
             _logger.LogInformation(
                 "Seller registered successfully. UserId: {UserId}, Mobile: {Mobile}, CustomerCode: {CustomerCode}",
                 user.Id,
-                MobileNumberHelper.Mask(request.MobileNumber),
+                MobileNumberHelper.Mask(mobile),
                 request.CustomerCode);
 
             return Result.Success(new RegisterResponse(
@@ -406,24 +412,26 @@ public class AuthService : IAuthService
         {
             await transaction.RollbackAsync(ct);
             _logger.LogError(ex, "Failed to complete Seller registration for mobile: {Mobile}",
-                MobileNumberHelper.Mask(request.MobileNumber));
+                MobileNumberHelper.Mask(mobile));
             return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
         }
     }
 
     public async Task<Result<RegisterResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request, CancellationToken ct = default)
     {
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
         // 1. Verify OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
             return Result.Failure<RegisterResponse>(verifyResult.Error);
 
         // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != request.MobileNumber)
+        if (verifyResult.Value.MobileNumber != mobile)
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // 3. Validate mobile uniqueness (race condition protection)
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // 4. Validate city and has ApprovalSalesManId
@@ -443,10 +451,10 @@ public class AuthService : IAuthService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.Technician,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -490,7 +498,7 @@ public class AuthService : IAuthService
             _logger.LogInformation(
                 "Technician registered successfully. UserId: {UserId}, Mobile: {Mobile}",
                 user.Id,
-                MobileNumberHelper.Mask(request.MobileNumber));
+                MobileNumberHelper.Mask(mobile));
 
             return Result.Success(new RegisterResponse(
                 UserId: user.Id,
@@ -501,7 +509,7 @@ public class AuthService : IAuthService
         {
             await transaction.RollbackAsync(ct);
             _logger.LogError(ex, "Failed to complete Technician registration for mobile: {Mobile}",
-                MobileNumberHelper.Mask(request.MobileNumber));
+                MobileNumberHelper.Mask(mobile));
             return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
         }
     }
@@ -512,7 +520,8 @@ public class AuthService : IAuthService
 
     public async Task<Result<SendOtpResponse>> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
-        var user = await _userRepository.FindByMobileAsync(request.MobileNumber, ct);
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+        var user = await _userRepository.FindByMobileAsync(mobile, ct);
 
         if (user == null)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserNotFound);
@@ -526,18 +535,18 @@ public class AuthService : IAuthService
         if (user.RegistrationStatus != RegistrationStatus.Approved)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserNotApproved);
 
-        var otpResult = await _otpService.SendAsync(request.MobileNumber, ct: ct);
+        var otpResult = await _otpService.SendAsync(mobile, ct: ct);
         if (otpResult.IsFailure)
             return Result.Failure<SendOtpResponse>(otpResult.Error);
 
         _logger.LogInformation(
             "OTP sent for login. UserId: {UserId}, Mobile: {Mobile}",
             user.Id,
-            MobileNumberHelper.Mask(request.MobileNumber));
+            MobileNumberHelper.Mask(mobile));
 
         return Result.Success(new SendOtpResponse(
             PinId: otpResult.Value,
-            MaskedMobileNumber: MobileNumberHelper.Mask(request.MobileNumber)
+            MaskedMobileNumber: MobileNumberHelper.Mask(mobile)
         ));
     }
 

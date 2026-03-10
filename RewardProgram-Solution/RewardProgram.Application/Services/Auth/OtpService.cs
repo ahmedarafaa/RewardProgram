@@ -28,6 +28,7 @@ public class OtpService : IOtpService
 
     public async Task<Result<string>> SendAsync(string mobileNumber, string? registrationData = null, CancellationToken ct = default)
     {
+        mobileNumber = MobileNumberHelper.Normalize(mobileNumber);
         var rateLimitResult = await CheckRateLimitAsync(mobileNumber, ct);
         if (rateLimitResult.IsFailure)
             return Result.Failure<string>(rateLimitResult.Error);
@@ -60,6 +61,8 @@ public class OtpService : IOtpService
 
     public async Task<Result<SendOtpResponse>> ResendAsync(string mobileNumber, CancellationToken ct = default)
     {
+        mobileNumber = MobileNumberHelper.Normalize(mobileNumber);
+
         // 1. Find the most recent OTP for this mobile
         var lastOtp = await _context.OtpCodes
             .Where(o => o.MobileNumber == mobileNumber)
