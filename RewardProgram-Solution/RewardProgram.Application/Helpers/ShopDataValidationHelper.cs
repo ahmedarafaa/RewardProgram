@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
+using RewardProgram.Domain.Entities.Users;
 
 namespace RewardProgram.Application.Helpers;
 
@@ -66,5 +68,37 @@ public static class ShopDataValidationHelper
             return Result.Failure(ShopDataErrors.CrnAlreadyExists);
 
         return Result.Failure(ShopDataErrors.ShortAddressAlreadyExists);
+    }
+
+    /// <summary>
+    /// Applies partial field updates to an existing ShopData entity (used by EditShopOwner / EditSeller).
+    /// </summary>
+    public static void ApplyPartialUpdate(
+        ShopData shopData,
+        string? storeName, string? vat, string? crn, string? shortAddress,
+        string? newImageUrl, string cityId, NationalAddressResponse? nationalAddress,
+        string updatedBy)
+    {
+        if (!string.IsNullOrEmpty(storeName))
+            shopData.StoreName = storeName;
+        if (!string.IsNullOrEmpty(vat))
+            shopData.VAT = vat;
+        if (!string.IsNullOrEmpty(crn))
+            shopData.CRN = crn;
+        if (!string.IsNullOrEmpty(shortAddress))
+            shopData.ShortAddress = shortAddress;
+        if (newImageUrl != null)
+            shopData.ShopImageUrl = newImageUrl;
+        if (nationalAddress != null)
+        {
+            shopData.CityId = cityId;
+            shopData.Street = nationalAddress.Street;
+            shopData.BuildingNumber = nationalAddress.BuildingNumber;
+            shopData.PostalCode = nationalAddress.PostalCode;
+            shopData.SubNumber = nationalAddress.SubNumber;
+            shopData.District = nationalAddress.District ?? string.Empty;
+        }
+        shopData.UpdatedBy = updatedBy;
+        shopData.UpdatedAt = DateTime.UtcNow;
     }
 }

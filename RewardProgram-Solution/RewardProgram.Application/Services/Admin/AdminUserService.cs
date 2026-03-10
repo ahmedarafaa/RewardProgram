@@ -63,22 +63,12 @@ public class AdminUserService : IAdminUserService
                 RegistrationStatus = RegistrationStatus.Approved
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.SalesMan, AdminUserErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                _logger.LogError("Admin: Failed to create SalesMan: {Errors}",
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.SalesMan);
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to add SalesMan role to {UserId}: {Errors}",
-                    user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
+                return Result.Failure<AdminAddUserResponse>(createRoleResult.Error);
             }
 
             foreach (var city in cities)
@@ -136,22 +126,12 @@ public class AdminUserService : IAdminUserService
                 RegistrationStatus = RegistrationStatus.Approved
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.ZoneManager, AdminUserErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                _logger.LogError("Admin: Failed to create ZoneManager: {Errors}",
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.ZoneManager);
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to add ZoneManager role to {UserId}: {Errors}",
-                    user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
+                return Result.Failure<AdminAddUserResponse>(createRoleResult.Error);
             }
 
             region.ZoneManagerId = user.Id;
@@ -246,22 +226,12 @@ public class AdminUserService : IAdminUserService
                     : new NationalAddress { CityId = request.CityId }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.ShopOwner, AdminUserErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                _logger.LogError("Admin: Failed to create ShopOwner: {Errors}",
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.ShopOwner);
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to add ShopOwner role to {UserId}: {Errors}",
-                    user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
+                return Result.Failure<AdminAddUserResponse>(createRoleResult.Error);
             }
 
             if (!shopDataExists)
@@ -382,22 +352,12 @@ public class AdminUserService : IAdminUserService
                     : new NationalAddress { CityId = request.CityId }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.Seller, AdminUserErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                _logger.LogError("Admin: Failed to create Seller: {Errors}",
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.Seller);
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to add Seller role to {UserId}: {Errors}",
-                    user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
+                return Result.Failure<AdminAddUserResponse>(createRoleResult.Error);
             }
 
             if (!shopDataExists)
@@ -484,22 +444,12 @@ public class AdminUserService : IAdminUserService
                 }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.Technician, AdminUserErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                _logger.LogError("Admin: Failed to create Technician: {Errors}",
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.Technician);
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to add Technician role to {UserId}: {Errors}",
-                    user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CreateUserFailed);
+                return Result.Failure<AdminAddUserResponse>(createRoleResult.Error);
             }
 
             var profile = new TechnicianProfile
@@ -1012,29 +962,9 @@ public class AdminUserService : IAdminUserService
                 .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 
             if (shopData != null)
-            {
-                if (!string.IsNullOrEmpty(request.StoreName))
-                    shopData.StoreName = request.StoreName;
-                if (!string.IsNullOrEmpty(request.VAT))
-                    shopData.VAT = request.VAT;
-                if (!string.IsNullOrEmpty(request.CRN))
-                    shopData.CRN = request.CRN;
-                if (!string.IsNullOrEmpty(request.ShortAddress))
-                    shopData.ShortAddress = request.ShortAddress;
-                if (newImageUrl != null)
-                    shopData.ShopImageUrl = newImageUrl;
-                if (request.NationalAddress != null)
-                {
-                    shopData.CityId = request.CityId;
-                    shopData.Street = request.NationalAddress.Street;
-                    shopData.BuildingNumber = request.NationalAddress.BuildingNumber;
-                    shopData.PostalCode = request.NationalAddress.PostalCode;
-                    shopData.SubNumber = request.NationalAddress.SubNumber;
-                    shopData.District = request.NationalAddress.District ?? string.Empty;
-                }
-                shopData.UpdatedBy = adminUserId;
-                shopData.UpdatedAt = DateTime.UtcNow;
-            }
+                ShopDataValidationHelper.ApplyPartialUpdate(
+                    shopData, request.StoreName, request.VAT, request.CRN, request.ShortAddress,
+                    newImageUrl, request.CityId, request.NationalAddress, adminUserId);
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -1142,29 +1072,9 @@ public class AdminUserService : IAdminUserService
                 .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 
             if (shopData != null)
-            {
-                if (!string.IsNullOrEmpty(request.StoreName))
-                    shopData.StoreName = request.StoreName;
-                if (!string.IsNullOrEmpty(request.VAT))
-                    shopData.VAT = request.VAT;
-                if (!string.IsNullOrEmpty(request.CRN))
-                    shopData.CRN = request.CRN;
-                if (!string.IsNullOrEmpty(request.ShortAddress))
-                    shopData.ShortAddress = request.ShortAddress;
-                if (newImageUrl != null)
-                    shopData.ShopImageUrl = newImageUrl;
-                if (request.NationalAddress != null)
-                {
-                    shopData.CityId = request.CityId;
-                    shopData.Street = request.NationalAddress.Street;
-                    shopData.BuildingNumber = request.NationalAddress.BuildingNumber;
-                    shopData.PostalCode = request.NationalAddress.PostalCode;
-                    shopData.SubNumber = request.NationalAddress.SubNumber;
-                    shopData.District = request.NationalAddress.District ?? string.Empty;
-                }
-                shopData.UpdatedBy = adminUserId;
-                shopData.UpdatedAt = DateTime.UtcNow;
-            }
+                ShopDataValidationHelper.ApplyPartialUpdate(
+                    shopData, request.StoreName, request.VAT, request.CRN, request.ShortAddress,
+                    newImageUrl, request.CityId, request.NationalAddress, adminUserId);
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

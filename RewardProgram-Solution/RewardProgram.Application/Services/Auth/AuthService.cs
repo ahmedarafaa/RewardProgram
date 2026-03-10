@@ -145,22 +145,12 @@ public class AuthService : IAuthService
                 }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.ShopOwner, AuthErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create ShopOwner user: {Errors}", errors);
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.ShopOwner);
-            if (!roleResult.Succeeded)
-            {
-                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to add ShopOwner role to user {UserId}: {Errors}", user.Id, errors);
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
+                return Result.Failure<RegisterResponse>(createRoleResult.Error);
             }
 
             // ShopOwner always owns ShopData — create if missing, overwrite if exists
@@ -338,22 +328,12 @@ public class AuthService : IAuthService
                 }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.Seller, AuthErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create Seller user: {Errors}", errors);
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.Seller);
-            if (!roleResult.Succeeded)
-            {
-                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to add Seller role to user {UserId}: {Errors}", user.Id, errors);
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
+                return Result.Failure<RegisterResponse>(createRoleResult.Error);
             }
 
             // Create ShopData if needed
@@ -466,22 +446,12 @@ public class AuthService : IAuthService
                 }
             };
 
-            var createResult = await _userRepository.CreateAsync(user);
-            if (!createResult.Succeeded)
+            var createRoleResult = await UserCreationHelper.CreateWithRoleAsync(
+                _userRepository, user, UserRoles.Technician, AuthErrors.CreateUserFailed, _logger);
+            if (createRoleResult.IsFailure)
             {
-                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create Technician user: {Errors}", errors);
                 await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
-            }
-
-            var roleResult = await _userRepository.AddToRoleAsync(user, UserRoles.Technician);
-            if (!roleResult.Succeeded)
-            {
-                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to add Technician role to user {UserId}: {Errors}", user.Id, errors);
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<RegisterResponse>(AuthErrors.CreateUserFailed);
+                return Result.Failure<RegisterResponse>(createRoleResult.Error);
             }
 
             var profile = new TechnicianProfile
