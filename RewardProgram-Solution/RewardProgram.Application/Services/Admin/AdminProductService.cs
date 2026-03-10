@@ -4,6 +4,7 @@ using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Products;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Entities;
@@ -113,12 +114,14 @@ public class AdminProductService : IAdminProductService
         if (!string.IsNullOrWhiteSpace(query.Category))
             dbQuery = dbQuery.Where(p => p.Category == query.Category);
 
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var totalCount = await dbQuery.CountAsync(ct);
 
         var products = await dbQuery
             .OrderBy(p => p.Name)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         var productIds = products.Select(p => p.Id).ToList();
@@ -140,7 +143,7 @@ public class AdminProductService : IAdminProductService
             return MapToResponse(p, stats?.Total ?? 0, stats?.Available ?? 0);
         }).ToList();
 
-        return Result.Success(new PaginatedResult<AdminProductResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(new PaginatedResult<AdminProductResponse>(items, totalCount, page, pageSize));
     }
 
     public async Task<Result<AdminProductResponse>> GetProductAsync(

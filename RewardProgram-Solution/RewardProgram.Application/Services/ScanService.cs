@@ -5,6 +5,7 @@ using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Scans;
 using RewardProgram.Application.Contracts.Scan;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
@@ -199,6 +200,8 @@ public class ScanService : IScanService
     public async Task<Result<PaginatedResult<ScanHistoryItemResponse>>> GetScanHistoryAsync(
         string userId, ScanHistoryQuery query, CancellationToken ct = default)
     {
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var dbQuery = _context.ScanRecords
             .AsNoTracking()
             .Include(s => s.Barcode)
@@ -209,8 +212,8 @@ public class ScanService : IScanService
 
         var items = await dbQuery
             .OrderByDescending(s => s.CreatedAt)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new ScanHistoryItemResponse(
                 s.Id,
                 s.Barcode.Code,
@@ -224,12 +227,14 @@ public class ScanService : IScanService
             ))
             .ToListAsync(ct);
 
-        return Result.Success(new PaginatedResult<ScanHistoryItemResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(new PaginatedResult<ScanHistoryItemResponse>(items, totalCount, page, pageSize));
     }
 
     public async Task<Result<PaginatedResult<AdminScanListItemResponse>>> GetAdminScanListAsync(
         AdminScanListQuery query, CancellationToken ct = default)
     {
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var dbQuery = _context.ScanRecords
             .AsNoTracking()
             .Include(s => s.Barcode)
@@ -259,8 +264,8 @@ public class ScanService : IScanService
 
         var items = await dbQuery
             .OrderByDescending(s => s.CreatedAt)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new AdminScanListItemResponse(
                 s.Id,
                 s.Barcode.Code,
@@ -276,7 +281,7 @@ public class ScanService : IScanService
             ))
             .ToListAsync(ct);
 
-        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, page, pageSize));
     }
 
     private async Task<Wallet> GetOrCreateWalletAsync(string userId, CancellationToken ct)

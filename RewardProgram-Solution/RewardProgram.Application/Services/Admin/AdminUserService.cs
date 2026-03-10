@@ -6,6 +6,7 @@ using RewardProgram.Application.Contracts.Admin.Users;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
+using static RewardProgram.Application.Helpers.PaginationHelper;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Files;
 using RewardProgram.Domain.Constants;
@@ -573,8 +574,7 @@ public class AdminUserService : IAdminUserService
         // Count and paginate
         var totalCount = await usersQuery.CountAsync(ct);
 
-        var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var (page, pageSize) = Normalize(query.Page, query.PageSize);
 
         var users = await usersQuery
             .OrderByDescending(u => u.CreatedAt)

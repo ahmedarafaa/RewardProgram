@@ -6,6 +6,7 @@ using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
+using static RewardProgram.Application.Helpers.PaginationHelper;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
@@ -35,8 +36,7 @@ public class ApprovalService : IApprovalService
 
     public async Task<Result<PaginatedResult<PendingUserResponse>>> GetPendingRequestsAsync(string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 1, 50);
+        (page, pageSize) = Normalize(page, pageSize, maxPageSize: 50);
 
         var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)

@@ -5,6 +5,7 @@ using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Barcodes;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Entities;
@@ -72,12 +73,14 @@ public class AdminBarcodeService : IAdminBarcodeService
         if (query.Status.HasValue)
             dbQuery = dbQuery.Where(b => b.Status == query.Status.Value);
 
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var totalCount = await dbQuery.CountAsync(ct);
 
         var items = await dbQuery
             .OrderByDescending(b => b.CreatedAt)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(b => new AdminBarcodeListItemResponse(
                 b.Id,
                 b.Code,
@@ -88,6 +91,6 @@ public class AdminBarcodeService : IAdminBarcodeService
             ))
             .ToListAsync(ct);
 
-        return Result.Success(new PaginatedResult<AdminBarcodeListItemResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(new PaginatedResult<AdminBarcodeListItemResponse>(items, totalCount, page, pageSize));
     }
 }
