@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 using RewardProgram.API;
 using RewardProgram.Infrastructure.Persistance;
 using RewardProgram.Infrastructure.Persistance.Data;
@@ -10,6 +11,8 @@ namespace RewardProgram
     {
         public static async Task Main(string[] args)
         {
+            QuestPDF.Settings.License = LicenseType.Community;
+
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddDependencies(builder.Configuration);
