@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "reward-program-api",
 		"name": "RewardProgram API",
-		"description": "RewardProgram API collection for Development (localhost).\n\n**Setup:**\n1. Import this collection\n2. The base URL is set to `https://localhost:44315`\n3. In Development mode, any 6-digit OTP code works (e.g. `123456`)\n\n**Seeded Users (all pre-approved):**\n- SystemAdmin: `0500000001`\n- ZoneManagers: `0500000002` – `0500000006`\n- SalesMan+ZoneManager (dual): `0500000007` – `0500000009`\n- SalesMan: `0500000010` – `0500000031`\n\n**OTP-first Registration Flow:**\n1. Send OTP → get pinId\n2. Register (shop-owner/seller/technician) with pinId + OTP → user created\n\n**Login Flow:**\n1. Login → get pinId\n2. Verify Login → get JWT token + refresh token (auto-saved)\n3. Use Approval endpoints (JWT auto-attached)",
+		"description": "RewardProgram API collection for Development (localhost).\n\n**Setup:**\n1. Import this collection\n2. The base URL is set to `https://localhost:44315`\n3. In Development mode, any 6-digit OTP code works (e.g. `123456`)\n\n**Seeded Users (all pre-approved):**\n- SystemAdmin: `0500000001`\n- ZoneManagers: `0500000002` – `0500000006`\n- SalesMan+ZoneManager (dual): `0500000007` – `0500000009`\n- SalesMan: `0500000010` – `0500000031`\n\n**OTP-first Registration Flow:**\n1. Send OTP → get pinId\n2. Register (shop-owner/seller/technician) with pinId + OTP → user created\n\n**Login Flow:**\n1. Login → get pinId\n2. Verify Login → get JWT token + refresh token (auto-saved)\n3. Use Approval/Scan/Wallet endpoints (JWT auto-attached)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -164,20 +164,20 @@
 							"formdata": [
 								{ "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
 								{ "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP (any works in dev)" },
-								{ "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
-								{ "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text" },
+								{ "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table. Only one ShopOwner per CustomerCode." },
+								{ "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
 								{ "key": "MobileNumber", "value": "0555000001", "type": "text", "description": "Same mobile used in Send OTP" },
 								{ "key": "CityId", "value": "", "type": "text", "description": "City GUID — get from Lookups" },
 								{ "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 2-150 chars" },
 								{ "key": "VAT", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
 								{ "key": "CRN", "value": "1010000000", "type": "text", "description": "Required — 10-digit Commercial Registration Number" },
-								{ "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 8-char alphanumeric short address" },
+								{ "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 4 letters + 4 digits" },
 								{ "key": "ShopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
-								{ "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text" },
-								{ "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text" },
-								{ "key": "NationalAddress.PostalCode", "value": "12345", "type": "text" },
-								{ "key": "NationalAddress.SubNumber", "value": "6789", "type": "text" },
-								{ "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional district name" }
+								{ "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text", "description": "Required — 4 digits (1000-9999)" },
+								{ "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text", "description": "Required — max 100 chars" },
+								{ "key": "NationalAddress.PostalCode", "value": "12345", "type": "text", "description": "Required — 5 digits" },
+								{ "key": "NationalAddress.SubNumber", "value": "6789", "type": "text", "description": "Required — 4 digits (1000-9999)" },
+								{ "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" }
 							]
 						},
 						"url": {
@@ -185,7 +185,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "shop-owner"]
 						},
-						"description": "Register a new shop owner. Uses form-data for file upload support.\n\nShopOwner ALWAYS provides all shop data fields (StoreName, VAT, CRN, ShortAddress, ShopImage, NationalAddress).\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\n\nRequires pinId + OTP from Send OTP step. OTP verified inline."
+						"description": "Register a new shop owner. Uses form-data for file upload support.\n\nShopOwner ALWAYS provides all shop data fields.\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\nOnly one ShopOwner per CustomerCode allowed.\n\nRequires pinId + OTP from Send OTP step. OTP verified inline."
 					}
 				},
 				{
@@ -211,20 +211,20 @@
 							"formdata": [
 								{ "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
 								{ "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP (any works in dev)" },
-								{ "key": "Name", "value": "بائع تجريبي", "type": "text" },
+								{ "key": "Name", "value": "بائع تجريبي", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
 								{ "key": "MobileNumber", "value": "0555000002", "type": "text", "description": "Same mobile used in Send OTP" },
 								{ "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
 								{ "key": "StoreName", "value": "متجر البائع", "type": "text", "description": "Required if first registration for this CustomerCode" },
 								{ "key": "VAT", "value": "300000000000003", "type": "text" },
 								{ "key": "CRN", "value": "1010000000", "type": "text" },
-								{ "key": "ShortAddress", "value": "EFGH5678", "type": "text", "description": "8-char alphanumeric short address" },
-								{ "key": "ShopImage", "type": "file", "src": "", "description": "Optional shop image" },
+								{ "key": "ShortAddress", "value": "EFGH5678", "type": "text", "description": "4 letters + 4 digits" },
+								{ "key": "ShopImage", "type": "file", "src": "", "description": "Optional — JPG/PNG, max 5MB" },
 								{ "key": "CityId", "value": "", "type": "text", "description": "City GUID — get from Lookups" },
-								{ "key": "NationalAddress.Street", "value": "شارع العليا", "type": "text" },
-								{ "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text" },
-								{ "key": "NationalAddress.PostalCode", "value": "11111", "type": "text" },
-								{ "key": "NationalAddress.SubNumber", "value": "4321", "type": "text" },
-								{ "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional district name" }
+								{ "key": "NationalAddress.Street", "value": "شارع العليا", "type": "text", "description": "Required — max 100 chars" },
+								{ "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text", "description": "Required — 4 digits (1000-9999)" },
+								{ "key": "NationalAddress.PostalCode", "value": "11111", "type": "text", "description": "Required — 5 digits" },
+								{ "key": "NationalAddress.SubNumber", "value": "4321", "type": "text", "description": "Required — 4 digits (1000-9999)" },
+								{ "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" }
 							]
 						},
 						"url": {
@@ -232,7 +232,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "seller"]
 						},
-						"description": "Register a new seller. Uses form-data for file upload support.\n\nRequires pinId + OTP from Send OTP step."
+						"description": "Register a new seller. Uses form-data for file upload support.\n\nFirst Seller for a CustomerCode provides shop data. Subsequent Sellers skip.\n\nRequires pinId + OTP from Send OTP step."
 					}
 				},
 				{
@@ -265,7 +265,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "auth", "register", "technician"]
 						},
-						"description": "Register a new technician. Fill in `cityId` from Lookups.\n\nRequires pinId + OTP from Send OTP step."
+						"description": "Register a new technician. Fill in `cityId` from Lookups.\n\nName: 3+ letters only (Arabic/English), no numbers.\nPostalCode: 5 digits.\n\nRequires pinId + OTP from Send OTP step."
 					}
 				},
 				{
@@ -527,6 +527,102 @@
 							"path": ["api", "approvals", "reject"]
 						},
 						"description": "Reject a pending user registration with a reason.\n\nGet the `userId` from the pending requests list.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Scanning",
+			"description": "Barcode scanning endpoints.\n\nRequires Seller or Technician JWT — login with an approved Seller/Technician mobile first.",
+			"item": [
+				{
+					"name": "Scan Barcode",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"barcodeCode\": \"ABCDEFGHIJKL\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/scan",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "scan"]
+						},
+						"description": "Scan a barcode to earn points.\n\nBarcodeCode must be exactly 12 characters (NanoID).\nSeller and Technician each scan once per barcode.\nWhen both roles scan → barcode becomes Consumed.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Scan History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/scan/history?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "scan", "history"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Get paginated scan history for the current user.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Wallet",
+			"description": "Wallet and transaction endpoints.\n\nRequires Seller or Technician JWT.",
+			"item": [
+				{
+					"name": "Get Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wallet/balance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallet", "balance"]
+						},
+						"description": "Get current point balance and SAR balance.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wallet/transactions?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallet", "transactions"],
+							"query": [
+								{ "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed (optional filter)" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Get paginated wallet transactions with SAR amounts.\n\nRequires Seller or Technician JWT.",
 						"auth": {
 							"type": "bearer",
 							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
