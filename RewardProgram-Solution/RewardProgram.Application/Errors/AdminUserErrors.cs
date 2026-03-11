@@ -45,4 +45,7 @@ public static class AdminUserErrors
 
     public static readonly Error UpdateUserFailed =
         new("Admin.UpdateUserFailed", "فشل تحديث بيانات المستخدم", 500);
+
+    public static readonly Error CustomerCodeAlreadyOwned =
+        new("Admin.CustomerCodeAlreadyOwned", "كود العميل مسجل لصاحب محل آخر", 409);
 }

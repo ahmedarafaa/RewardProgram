@@ -97,6 +97,12 @@ public class AuthService : IAuthService
             || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
             return Result.Failure<RegisterResponse>(AuthErrors.ShopDataRequired);
 
+        // Reject if another ShopOwner already owns this CustomerCode
+        var existingOwner = await _context.ShopOwnerProfiles
+            .AnyAsync(p => p.CustomerCode == request.CustomerCode, ct);
+        if (existingOwner)
+            return Result.Failure<RegisterResponse>(AuthErrors.CustomerCodeAlreadyOwned);
+
         var existingShopData = await _context.ShopData
             .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 

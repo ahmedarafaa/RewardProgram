@@ -168,6 +168,12 @@ public class AdminUserService : IAdminUserService
         if (!erpExists)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CustomerCodeNotFound);
 
+        // Reject if another ShopOwner already owns this CustomerCode
+        var existingOwner = await _context.ShopOwnerProfiles
+            .AnyAsync(p => p.CustomerCode == request.CustomerCode, ct);
+        if (existingOwner)
+            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CustomerCodeAlreadyOwned);
+
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
         if (city == null)

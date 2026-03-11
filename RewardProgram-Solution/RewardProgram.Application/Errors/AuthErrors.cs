@@ -54,6 +54,9 @@ public static readonly Error RegistrationDataNotFound =
     public static readonly Error MobileMismatch =
         new("Auth.MobileMismatch", "رقم الجوال لا يتطابق مع رمز التحقق", 400);
 
+    public static readonly Error CustomerCodeAlreadyOwned =
+        new("Auth.CustomerCodeAlreadyOwned", "كود العميل مسجل لصاحب محل آخر", 409);
+
     #endregion
 
     #region OTP Errors

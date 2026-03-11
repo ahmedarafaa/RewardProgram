@@ -10,8 +10,8 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
         RuleSet("Default", () =>
         {
             RuleFor(x => x.BuildingNumber)
-            .GreaterThan(0)
-            .WithMessage("رقم المبنى مطلوب");
+            .InclusiveBetween(1000, 9999)
+            .WithMessage("رقم المبنى يجب أن يتكون من 4 أرقام");
 
             RuleFor(x => x.Street)
             .NotEmpty().WithMessage("الشارع مطلوب")
@@ -22,8 +22,8 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
             .Matches(@"^\d{5}$").WithMessage("الرمز البريدي يجب أن يتكون من 5 أرقام");
 
             RuleFor(x => x.SubNumber)
-            .GreaterThan(0)
-            .WithMessage("الرقم الفرعي مطلوب");
+            .InclusiveBetween(1000, 9999)
+            .WithMessage("الرقم الفرعي يجب أن يتكون من 4 أرقام");
 
             RuleFor(x => x.District)
             .MaximumLength(100).WithMessage("الحي يجب ألا يتجاوز 100 حرف")
