@@ -68,27 +68,20 @@ public class AuthService : IAuthService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        // 1. Verify OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
+        // 1. Validate all fields BEFORE consuming OTP (so user can retry without re-requesting OTP)
 
-        // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Validate mobile uniqueness (race condition protection)
+        // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 4. Validate CustomerCode exists in ErpCustomers
+        // Validate CustomerCode exists in ErpCustomers
         var erpCustomer = await _context.ErpCustomers
             .FirstOrDefaultAsync(e => e.CustomerCode == request.CustomerCode, ct);
 
         if (erpCustomer == null)
             return Result.Failure<RegisterResponse>(AuthErrors.CustomerCodeNotFound);
 
-        // 5. Validate city
+        // Validate city
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive, ct);
 
@@ -98,7 +91,7 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<RegisterResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 6. ShopOwner ALWAYS provides shop data (owner always wins — overwrites Seller's data)
+        // ShopOwner ALWAYS provides shop data (owner always wins — overwrites Seller's data)
         if (string.IsNullOrEmpty(request.StoreName) || string.IsNullOrEmpty(request.VAT)
             || string.IsNullOrEmpty(request.CRN) || request.ShopImage == null
             || request.NationalAddress == null || string.IsNullOrEmpty(request.ShortAddress))
@@ -120,7 +113,19 @@ public class AuthService : IAuthService
 
         var shopImageUrl = imageUploadResult.Value;
 
-        // 7. Create user in transaction
+        // 2. All validation passed — NOW consume OTP
+        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
+        if (verifyResult.IsFailure)
+            return Result.Failure<RegisterResponse>(verifyResult.Error);
+
+        if (verifyResult.Value.MobileNumber != mobile)
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
+
+        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
+
+        // 4. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -229,27 +234,20 @@ public class AuthService : IAuthService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        // 1. Verify OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
+        // 1. Validate all fields BEFORE consuming OTP
 
-        // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Validate mobile uniqueness (race condition protection)
+        // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 4. Validate CustomerCode exists in ErpCustomers
+        // Validate CustomerCode exists in ErpCustomers
         var erpCustomer = await _context.ErpCustomers
             .FirstOrDefaultAsync(e => e.CustomerCode == request.CustomerCode, ct);
 
         if (erpCustomer == null)
             return Result.Failure<RegisterResponse>(AuthErrors.CustomerCodeNotFound);
 
-        // 5. Check if ShopData already exists for this CustomerCode
+        // Check if ShopData already exists for this CustomerCode
         var existingShopData = await _context.ShopData
             .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
 
@@ -286,7 +284,7 @@ public class AuthService : IAuthService
             cityId = existingShopData!.CityId;
         }
 
-        // 6. Validate city and get SalesMan
+        // Validate city and get SalesMan
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == cityId && c.IsActive, ct);
 
@@ -296,7 +294,19 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<RegisterResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 7. Create user in transaction
+        // 2. All validation passed — NOW consume OTP
+        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
+        if (verifyResult.IsFailure)
+            return Result.Failure<RegisterResponse>(verifyResult.Error);
+
+        if (verifyResult.Value.MobileNumber != mobile)
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
+
+        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
+
+        // 4. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -401,20 +411,13 @@ public class AuthService : IAuthService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        // 1. Verify OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
+        // 1. Validate all fields BEFORE consuming OTP
 
-        // 2. Cross-check mobile
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Validate mobile uniqueness (race condition protection)
+        // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
-        // 4. Validate city and has ApprovalSalesManId
+        // Validate city and has ApprovalSalesManId
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive, ct);
 
@@ -424,7 +427,19 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<RegisterResponse>(AuthErrors.NoApprovalSalesMan);
 
-        // 5. Create user in transaction
+        // 2. All validation passed — NOW consume OTP
+        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
+        if (verifyResult.IsFailure)
+            return Result.Failure<RegisterResponse>(verifyResult.Error);
+
+        if (verifyResult.Value.MobileNumber != mobile)
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
+
+        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
+
+        // 4. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
