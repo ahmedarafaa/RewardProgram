@@ -126,7 +126,9 @@ public class ScanService : IScanService
                 BarcodeId = barcode.Id,
                 UserId = userId,
                 ScannerRole = scannerRole,
-                PointsAwarded = pointsForScanner
+                PointsAwarded = pointsForScanner,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude
             };
             await _context.ScanRecords.AddAsync(scanRecord, ct);
 
@@ -228,7 +230,9 @@ public class ScanService : IScanService
                 s.PointsAwarded,
                 s.ScannerRole,
                 s.Barcode.Status,
-                s.CreatedAt
+                s.CreatedAt,
+                s.Latitude,
+                s.Longitude
             ))
             .ToListAsync(ct);
 

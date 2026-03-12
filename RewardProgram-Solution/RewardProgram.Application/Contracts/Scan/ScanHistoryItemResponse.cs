@@ -11,5 +11,7 @@ public record ScanHistoryItemResponse(
     decimal PointsAwarded,
     ScannerRole ScannerRole,
     BarcodeStatus BarcodeStatus,
-    DateTime ScannedAt
+    DateTime ScannedAt,
+    double? Latitude,
+    double? Longitude
 );

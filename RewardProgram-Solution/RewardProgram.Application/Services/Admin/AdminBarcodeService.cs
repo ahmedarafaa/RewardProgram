@@ -179,7 +179,9 @@ public class AdminBarcodeService : IAdminBarcodeService
                 s.Barcode.Status,
                 s.User.Name,
                 s.User.MobileNumber,
-                s.CreatedAt
+                s.CreatedAt,
+                s.Latitude,
+                s.Longitude
             ))
             .ToListAsync(ct);
 

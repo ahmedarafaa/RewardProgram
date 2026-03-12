@@ -26,6 +26,9 @@ public class ScanRecordConfiguration : IEntityTypeConfiguration<ScanRecord>
             .HasColumnType("decimal(8,1)")
             .IsRequired();
 
+        builder.Property(x => x.Latitude);
+        builder.Property(x => x.Longitude);
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

@@ -13,5 +13,7 @@ public record AdminScanListItemResponse(
     BarcodeStatus BarcodeStatus,
     string UserName,
     string UserMobile,
-    DateTime ScannedAt
+    DateTime ScannedAt,
+    double? Latitude,
+    double? Longitude
 );
