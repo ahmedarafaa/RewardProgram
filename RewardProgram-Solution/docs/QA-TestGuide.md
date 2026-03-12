@@ -1,8 +1,8 @@
 # AL-Raed Reward Program — QA Test Guide
 
-**Version:** 3.1
+**Version:** 4.0
 **Author:** Mahmoud Ibrahim Zahran — Backend Engineer
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-12
 **API Status:** Ready for QA Testing
 **Build Status:** 0 errors, 0 warnings
 
@@ -642,6 +642,127 @@ Logout — revokes the refresh token.
 
 Reason is required (1–500 chars). Result is always `Rejected` (final).
 
+---
+
+### 4.7 Scanning Endpoints (Auth — Seller/Technician Only)
+
+#### `POST /api/scan`
+
+Scan a barcode to earn points.
+
+```json
+// Request — application/json
+{
+  "barcodeCode": "ABCDEFGHIJKL",
+  "latitude": 24.7136,
+  "longitude": 46.6753
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| barcodeCode | string | **Yes** | 12-char NanoID code |
+| latitude | double | No | GPS latitude (sent by frontend if available) |
+| longitude | double | No | GPS longitude (sent by frontend if available) |
+
+```json
+// Response 200
+{
+  "productName": "اسم المنتج",
+  "pointsAwarded": 10.0,
+  "newBalance": 50.0,
+  "message": "تم مسح الباركود بنجاح — حصلت على 10 نقطة"
+}
+```
+
+**Point Calculation Rules:**
+
+| Scenario | Scanner | Points |
+|----------|---------|--------|
+| Seller scans first | Seller | 50% of product value |
+| Technician scans first | Technician | 100% of product value |
+| Technician scans second (after Seller) | Technician gets 100%, Seller gets remaining 50% (deferred bonus) |
+| Seller scans second (after Technician) | Seller gets 100% |
+
+**Barcode Status Transitions:**
+
+```
+Available → SellerScanned (Seller scans first)
+Available → TechnicianScanned (Technician scans first)
+SellerScanned → Consumed (Technician scans second)
+TechnicianScanned → Consumed (Seller scans second)
+```
+
+---
+
+#### `GET /api/scan/history?page=1&pageSize=20`
+
+Paginated scan history for the current user.
+
+```json
+// Response 200
+{
+  "items": [
+    {
+      "id": "guid",
+      "barcodeCode": "ABCDEFGHIJKL",
+      "productName": "اسم المنتج",
+      "productCode": "PROD001",
+      "productPointValue": 20,
+      "pointsAwarded": 10.0,
+      "scannerRole": "Seller",
+      "barcodeStatus": "SellerScanned",
+      "scannedAt": "2026-03-12T10:00:00Z",
+      "latitude": 24.7136,
+      "longitude": 46.6753
+    }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+---
+
+### 4.8 Wallet Endpoints (Auth — Seller/Technician Only)
+
+#### `GET /api/wallet/balance`
+
+```json
+// Response 200
+{
+  "balance": 50.0,
+  "sarBalance": 5.00
+}
+```
+
+---
+
+#### `GET /api/wallet/transactions?page=1&pageSize=20`
+
+Optional filter: `type=1` (1=Earned, 2=Redeemed, 3=Cancelled)
+
+```json
+// Response 200
+{
+  "items": [
+    {
+      "id": "guid",
+      "amount": 10.0,
+      "type": "Earned",
+      "description": "مسح باركود — اسم المنتج",
+      "sarRate": 10.0,
+      "sarAmount": 1.00,
+      "createdAt": "2026-03-12T10:00:00Z"
+    }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
 </details>
 
 ---
@@ -857,6 +978,171 @@ Flips user between active and disabled. No request body.
   "district": "حي الملك فهد"
 }
 ```
+
+---
+
+### 5.5 Products
+
+#### `POST /api/admin/products`
+
+```json
+// Request
+{
+  "name": "منتج جديد",
+  "productCode": "PROD001",
+  "pointValue": 10,
+  "price": 99.99,
+  "category": "فئة"
+}
+
+// Response 200
+{
+  "id": "guid",
+  "name": "منتج جديد",
+  "productCode": "PROD001",
+  "pointValue": 10,
+  "price": 99.99,
+  "category": "فئة"
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| name | string | **Yes** | Max 200 chars |
+| productCode | string | **Yes** | Max 50 chars, unique |
+| pointValue | int | **Yes** | > 0 |
+| price | decimal | **Yes** | >= 0 |
+| category | string | No | Max 100 chars |
+
+---
+
+#### `GET /api/admin/products?page=1&pageSize=20`
+
+Optional filters: `search`, `category`
+
+---
+
+#### `GET /api/admin/products/{id}`
+
+Returns product with barcode statistics (total count, available count).
+
+---
+
+#### `PUT /api/admin/products/{id}`
+
+Same body as POST. ProductCode uniqueness checked (excluding self).
+
+---
+
+#### `DELETE /api/admin/products/{id}`
+
+Returns `204 No Content`. **Blocked** if product has any barcodes.
+
+---
+
+### 5.6 Barcodes
+
+#### `POST /api/admin/barcodes/generate`
+
+```json
+// Request
+{
+  "productId": "guid",
+  "quantity": 10
+}
+```
+
+Quantity: 1–1000. Always returns a **PDF file** with barcode labels (CODE_128 format).
+
+---
+
+#### `GET /api/admin/barcodes?page=1&pageSize=20`
+
+Optional filters: `productId`, `status` (1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed)
+
+---
+
+### 5.7 Scans
+
+#### `GET /api/admin/scans?page=1&pageSize=20`
+
+Optional filters: `userId`, `productId`, `scannerRole` (1=Seller, 2=Technician), `barcodeStatus`, `fromDate`, `toDate`
+
+```json
+// Response includes scanner info + location
+{
+  "items": [
+    {
+      "id": "guid",
+      "barcodeCode": "ABCDEFGHIJKL",
+      "productName": "اسم المنتج",
+      "productCode": "PROD001",
+      "productPointValue": 20,
+      "pointsAwarded": 10.0,
+      "scannerRole": "Seller",
+      "barcodeStatus": "SellerScanned",
+      "userName": "اسم المستخدم",
+      "userMobile": "+966500000001",
+      "scannedAt": "2026-03-12T10:00:00Z",
+      "latitude": 24.7136,
+      "longitude": 46.6753
+    }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+---
+
+#### `POST /api/admin/scans/{scanId}/cancel`
+
+Cancel a scan and reverse wallet points/SAR.
+
+```json
+// Response 200
+{
+  "scanId": "guid",
+  "barcodeCode": "ABCDEFGHIJKL",
+  "pointsReversed": 10.0,
+  "sarReversed": 1.00,
+  "message": "تم إلغاء المسح بنجاح وتم استرداد النقاط"
+}
+```
+
+**Reversal logic:**
+- Deducts points + SAR from scanner's wallet
+- If second scan triggered deferred bonus for first scanner, reverses those too
+- Creates `Cancelled` wallet transactions (negative amounts) for audit trail
+- Reverts barcode status (Consumed → SellerScanned/TechnicianScanned, or → Available)
+- Soft-deletes the scan record
+
+**Rule:** If barcode is Consumed (both scanned), must cancel the **second** scan first. Cannot cancel the first while the second exists.
+
+---
+
+### 5.8 Reward Settings
+
+#### `GET /api/admin/reward-settings`
+
+```json
+// Response 200
+{
+  "pointsToSarRate": 10.0
+}
+```
+
+---
+
+#### `PUT /api/admin/reward-settings`
+
+```json
+// Request
+{ "pointsToSarRate": 10 }
+```
+
+Rate must be > 0. Existing wallet transactions keep their original rate (immutable).
 
 </details>
 
@@ -1085,13 +1371,13 @@ POST /api/auth/login → { "mobileNumber": "..." }        → 200 (works again)
 | VAT | `3XXXXXXXXXXXXX3` | 15 digits, starts & ends with 3, unique |
 | CRN | `XXXXXXXXXX` | 10 digits, unique |
 | PostalCode | `XXXXX` | 5 digits |
-| ShortAddress | `XXXXXXXX` | 8 alphanumeric chars, unique |
+| ShortAddress | `ABCD1234` | 4 letters + 4 digits (`ABCD1234`), unique |
 | OTP | `XXXXXX` | 6 digits |
-| Name/OwnerName | string | 2–100 chars |
+| Name/OwnerName | string | 3–100 chars, letters only (Arabic/English), no numbers |
 | StoreName | string | 2–150 chars |
-| Street | string | 1–100 chars |
-| BuildingNumber | int | > 0 |
-| SubNumber | int | > 0 |
+| Street | string | 3–100 chars |
+| BuildingNumber | int | 4 digits (1000–9999) |
+| SubNumber | int | 4 digits (1000–9999) |
 | District | string | Free text, optional for ShopOwner/Seller, **required** for Technician |
 | ShopImage | file | JPG/PNG only, max 5 MB |
 | Rejection Reason | string | 1–500 chars |
@@ -1212,6 +1498,29 @@ There are **two error formats** depending on the source:
 | Admin.MobileAlreadyInUse | 409 | رقم الجوال مستخدم من قبل مستخدم آخر |
 | Admin.UpdateUserFailed | 500 | فشل تحديث بيانات المستخدم |
 
+### Scan & Barcode Errors
+
+| Code | Status | Arabic |
+|------|--------|--------|
+| Scan.UnauthorizedRole | 403 | لا يحق لك مسح الباركود — مخصص للبائعين والفنيين فقط |
+| Scan.UserNotApproved | 403 | الحساب غير مفعل أو غير معتمد |
+| Barcode.NotFound | 404 | الباركود غير موجود |
+| Barcode.AlreadyScanned | 409 | تم مسح هذا الباركود مسبقاً من قبل نفس الدور |
+| Barcode.Consumed | 400 | الباركود مستهلك بالكامل |
+| Barcode.InvalidQuantity | 400 | الكمية يجب أن تكون بين 1 و 10000 |
+| Barcode.ConcurrencyConflict | 409 | حدث تعارض أثناء المعالجة، يرجى المحاولة مرة أخرى |
+| Scan.NotFound | 404 | سجل المسح غير موجود |
+| Scan.AlreadyCancelled | 400 | تم إلغاء هذا المسح مسبقاً |
+| Scan.CannotCancelFirstScan | 400 | لا يمكن إلغاء المسح الأول بعد اكتمال المسح الثاني — قم بإلغاء المسح الثاني أولاً |
+
+### Product Errors
+
+| Code | Status | Arabic |
+|------|--------|--------|
+| Product.NotFound | 404 | المنتج غير موجود |
+| Product.CodeAlreadyExists | 409 | كود المنتج مسجل مسبقاً |
+| Product.HasBarcodes | 400 | لا يمكن حذف المنتج — يحتوي على باركودات |
+
 ### Lookup Errors
 
 | Code | Status | Arabic |
@@ -1245,6 +1554,20 @@ There are **two error formats** depending on the source:
 | `GET /api/admin/users` | — | Yes | 403 | 403 | 403 | 403 | 403 |
 | `PATCH /api/admin/users/*/toggle-status` | — | Yes | 403 | 403 | 403 | 403 | 403 |
 | `PUT /api/admin/users/*` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `POST /api/scan` | — | 403 | 403 | 403 | 403 | Yes | Yes |
+| `GET /api/scan/history` | — | 403 | 403 | 403 | 403 | Yes | Yes |
+| `GET /api/wallet/balance` | — | 403 | 403 | 403 | 403 | Yes | Yes |
+| `GET /api/wallet/transactions` | — | 403 | 403 | 403 | 403 | Yes | Yes |
+| `POST /api/admin/products` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `GET /api/admin/products` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `PUT /api/admin/products/*` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `DELETE /api/admin/products/*` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `POST /api/admin/barcodes/generate` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `GET /api/admin/barcodes` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `GET /api/admin/scans` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `POST /api/admin/scans/*/cancel` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `GET /api/admin/reward-settings` | — | Yes | 403 | 403 | 403 | 403 | 403 |
+| `PUT /api/admin/reward-settings` | — | Yes | 403 | 403 | 403 | 403 | 403 |
 
 </details>
 
@@ -1382,6 +1705,58 @@ There are **two error formats** depending on the source:
 - [ ] Admin-created user can login immediately (no approval needed)
 - [ ] Expired JWT (after 60 min) → `401` on protected endpoints
 
+### 10.11 Scanning
+
+- [ ] Seller scans available barcode → 200, gets 50% points
+- [ ] Technician scans available barcode → 200, gets 100% points
+- [ ] Technician scans seller-scanned barcode → 200, 100% + seller gets deferred 50%
+- [ ] Seller scans technician-scanned barcode → 200, gets 100% points
+- [ ] Scan consumed barcode → 400
+- [ ] Same role scans same barcode twice → 409
+- [ ] Scan with location (lat/lng) → stored and returned in history
+- [ ] Scan without location → works fine, null in history
+- [ ] Non-Seller/Technician scans → 403
+- [ ] Invalid barcode code → 404
+- [ ] Disabled user scans → 403
+
+### 10.12 Wallet
+
+- [ ] Get balance after scan → correct points and SAR
+- [ ] Transaction history shows scan entries
+- [ ] SAR amount = points / pointsToSarRate
+- [ ] Filter transactions by type (Earned/Cancelled)
+- [ ] Pagination works correctly
+
+### 10.13 Admin — Products
+
+- [ ] Add product → 200
+- [ ] Duplicate productCode → 409
+- [ ] Edit product → 200
+- [ ] Delete product with no barcodes → 204
+- [ ] Delete product with barcodes → 400
+
+### 10.14 Admin — Barcodes
+
+- [ ] Generate 10 barcodes → PDF returned
+- [ ] Generate > 1000 → 400
+- [ ] List barcodes, filter by status → correct results
+
+### 10.15 Admin — Scans & Cancel
+
+- [ ] List scans with filters → paginated results
+- [ ] Cancel a single scan (no sibling) → barcode back to Available
+- [ ] Cancel second scan (Consumed barcode) → barcode reverts to SellerScanned/TechnicianScanned
+- [ ] Cancel second scan with deferred bonus → both wallets reversed
+- [ ] Try to cancel first scan when second exists → 400 error
+- [ ] Cancelled scan shows negative wallet transaction (type=Cancelled)
+
+### 10.16 Admin — Reward Settings
+
+- [ ] Get reward settings → current rate
+- [ ] Update rate → 200
+- [ ] Rate 0 or negative → 400
+- [ ] Existing transactions keep old rate after update
+
 </details>
 
 ---
@@ -1427,7 +1802,30 @@ User selects role:
 
 **RegistrationStatus:** `1`=PendingSalesman, `2`=PendingZoneManager, `3`=Approved, `4`=Rejected
 
+**BarcodeStatus:** `1`=Available, `2`=SellerScanned, `3`=TechnicianScanned, `4`=Consumed
+
+**ScannerRole:** `1`=Seller, `2`=Technician
+
+**WalletTransactionType:** `1`=Earned, `2`=Redeemed, `3`=Cancelled
+
 These are used as integers in query params (admin list) and returned as strings in JSON responses.
+
+### 11.4 Scanning Flow — Frontend Decision Tree
+
+```
+User opens scanner:
+├── Request GPS permission (optional)
+├── Scan barcode (camera or manual entry)
+├── POST /api/scan with barcodeCode + latitude/longitude (if GPS available)
+├── On success:
+│   ├── Show productName, pointsAwarded, newBalance from response
+│   └── Show message from response
+└── On error:
+    ├── 404 → "الباركود غير موجود"
+    ├── 409 → "تم مسح هذا الباركود مسبقاً"
+    ├── 400 → "الباركود مستهلك بالكامل"
+    └── 403 → "الحساب غير مفعل"
+```
 
 </details>
 
@@ -1465,6 +1863,9 @@ These are used as integers in query params (admin list) and returned as strings 
 | JWT Expiry | 60 minutes |
 | Refresh Token Expiry | 7 days |
 | Auth Header | `Authorization: Bearer {token}` |
+| BarcodeCode | 12-char NanoID |
+| Barcode Quantity | 1–1000 per request |
+| SAR Rate | Default 10 points = 1 SAR |
 
 ### Registration Status Flow
 
@@ -1490,4 +1891,4 @@ login → get pinId → login/verify with pinId + otp → JWT + refreshToken
 
 ---
 
-*End of QA Test Guide — Version 3.1*
+*End of QA Test Guide — Version 4.0*
