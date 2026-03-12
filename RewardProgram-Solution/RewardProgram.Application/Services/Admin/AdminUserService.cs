@@ -39,7 +39,9 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<AdminAddUserResponse>> AddSalesManAsync(
         AdminAddSalesManRequest request, string adminUserId, CancellationToken ct = default)
     {
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
 
         var cities = await _context.Cities
@@ -55,10 +57,10 @@ public class AdminUserService : IAdminUserService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.SalesMan,
                 RegistrationStatus = RegistrationStatus.Approved
             };
@@ -100,7 +102,9 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<AdminAddUserResponse>> AddZoneManagerAsync(
         AdminAddZoneManagerRequest request, string adminUserId, CancellationToken ct = default)
     {
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
 
         var region = await _context.Regions
@@ -118,10 +122,10 @@ public class AdminUserService : IAdminUserService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.ZoneManager,
                 RegistrationStatus = RegistrationStatus.Approved
             };
@@ -160,7 +164,9 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<AdminAddUserResponse>> AddShopOwnerAsync(
         AdminAddShopOwnerRequest request, string adminUserId, CancellationToken ct = default)
     {
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
 
         var erpExists = await _context.ErpCustomers
@@ -212,10 +218,10 @@ public class AdminUserService : IAdminUserService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.OwnerName,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.ShopOwner,
                 RegistrationStatus = RegistrationStatus.Approved,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -292,7 +298,9 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<AdminAddUserResponse>> AddSellerAsync(
         AdminAddSellerRequest request, string adminUserId, CancellationToken ct = default)
     {
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
 
         var erpExists = await _context.ErpCustomers
@@ -338,10 +346,10 @@ public class AdminUserService : IAdminUserService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.Seller,
                 RegistrationStatus = RegistrationStatus.Approved,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -418,7 +426,9 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<AdminAddUserResponse>> AddTechnicianAsync(
         AdminAddTechnicianRequest request, string adminUserId, CancellationToken ct = default)
     {
-        if (await _userRepository.MobileExistsAsync(request.MobileNumber, ct))
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
 
         var city = await _context.Cities
@@ -435,10 +445,10 @@ public class AdminUserService : IAdminUserService
         {
             var user = new ApplicationUser
             {
-                UserName = request.MobileNumber,
-                PhoneNumber = request.MobileNumber,
+                UserName = mobile,
+                PhoneNumber = mobile,
                 Name = request.Name,
-                MobileNumber = request.MobileNumber,
+                MobileNumber = mobile,
                 UserType = UserType.Technician,
                 RegistrationStatus = RegistrationStatus.Approved,
                 AssignedSalesManId = city.ApprovalSalesManId,
@@ -673,11 +683,13 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.SalesMan)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
         // Check mobile uniqueness (excluding current user)
-        if (user.MobileNumber != request.MobileNumber)
+        if (user.MobileNumber != mobile)
         {
             var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == request.MobileNumber && u.Id != userId, ct);
+                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
             if (mobileInUse)
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
         }
@@ -696,9 +708,9 @@ public class AdminUserService : IAdminUserService
         {
             // Update user fields
             user.Name = request.Name;
-            user.MobileNumber = request.MobileNumber;
-            user.UserName = request.MobileNumber;
-            user.PhoneNumber = request.MobileNumber;
+            user.MobileNumber = mobile;
+            user.UserName = mobile;
+            user.PhoneNumber = mobile;
 
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -796,10 +808,12 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ZoneManager)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        if (user.MobileNumber != request.MobileNumber)
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (user.MobileNumber != mobile)
         {
             var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == request.MobileNumber && u.Id != userId, ct);
+                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
             if (mobileInUse)
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
         }
@@ -820,9 +834,9 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = request.MobileNumber;
-            user.UserName = request.MobileNumber;
-            user.PhoneNumber = request.MobileNumber;
+            user.MobileNumber = mobile;
+            user.UserName = mobile;
+            user.PhoneNumber = mobile;
 
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -880,10 +894,12 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ShopOwner)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        if (user.MobileNumber != request.MobileNumber)
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (user.MobileNumber != mobile)
         {
             var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == request.MobileNumber && u.Id != userId, ct);
+                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
             if (mobileInUse)
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
         }
@@ -926,9 +942,9 @@ public class AdminUserService : IAdminUserService
         {
             // Update user
             user.Name = request.OwnerName;
-            user.MobileNumber = request.MobileNumber;
-            user.UserName = request.MobileNumber;
-            user.PhoneNumber = request.MobileNumber;
+            user.MobileNumber = mobile;
+            user.UserName = mobile;
+            user.PhoneNumber = mobile;
 
             // Update city and salesman assignment
             if (user.NationalAddress == null)
@@ -999,10 +1015,12 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Seller)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        if (user.MobileNumber != request.MobileNumber)
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (user.MobileNumber != mobile)
         {
             var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == request.MobileNumber && u.Id != userId, ct);
+                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
             if (mobileInUse)
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
         }
@@ -1039,9 +1057,9 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = request.MobileNumber;
-            user.UserName = request.MobileNumber;
-            user.PhoneNumber = request.MobileNumber;
+            user.MobileNumber = mobile;
+            user.UserName = mobile;
+            user.PhoneNumber = mobile;
 
             if (user.NationalAddress == null)
                 user.NationalAddress = new NationalAddress();
@@ -1109,10 +1127,12 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Technician)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        if (user.MobileNumber != request.MobileNumber)
+        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+
+        if (user.MobileNumber != mobile)
         {
             var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == request.MobileNumber && u.Id != userId, ct);
+                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
             if (mobileInUse)
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
         }
@@ -1127,9 +1147,9 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = request.MobileNumber;
-            user.UserName = request.MobileNumber;
-            user.PhoneNumber = request.MobileNumber;
+            user.MobileNumber = mobile;
+            user.UserName = mobile;
+            user.PhoneNumber = mobile;
 
             if (user.NationalAddress == null)
                 user.NationalAddress = new NationalAddress();

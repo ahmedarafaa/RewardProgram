@@ -7,6 +7,7 @@ using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Domain.Enums.UserEnums;
+using RewardProgram.Application.Helpers;
 
 namespace RewardProgram.Infrastructure.Persistance.Data;
 
@@ -255,8 +256,9 @@ public static class DataSeeder
             return;
         }
 
-        var mobile = mobileOverride ?? $"05{_mobileCounter:D8}";
+        var rawMobile = mobileOverride ?? $"05{_mobileCounter:D8}";
         if (mobileOverride is null) _mobileCounter++;
+        var mobile = MobileNumberHelper.Normalize(rawMobile);
 
         var user = new ApplicationUser
         {
