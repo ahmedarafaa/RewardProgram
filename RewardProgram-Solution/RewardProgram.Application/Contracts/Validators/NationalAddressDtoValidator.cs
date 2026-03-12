@@ -15,6 +15,7 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
 
             RuleFor(x => x.Street)
             .NotEmpty().WithMessage("الشارع مطلوب")
+            .MinimumLength(3).WithMessage("الشارع يجب أن يتكون من 3 أحرف على الأقل")
             .MaximumLength(100).WithMessage("الشارع يجب ألا يتجاوز 100 حرف");
 
             RuleFor(x => x.PostalCode)
