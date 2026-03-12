@@ -187,4 +187,110 @@ public class AdminBarcodeService : IAdminBarcodeService
 
         return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, page, pageSize));
     }
+
+    public async Task<Result<AdminCancelScanResponse>> CancelScanAsync(
+        string scanId, string adminUserId, CancellationToken ct = default)
+    {
+        // 1. Find scan record with barcode and all sibling scans
+        var scan = await _context.ScanRecords
+            .Include(s => s.Barcode)
+                .ThenInclude(b => b.Product)
+            .Include(s => s.Barcode)
+                .ThenInclude(b => b.ScanRecords)
+            .FirstOrDefaultAsync(s => s.Id == scanId, ct);
+
+        if (scan is null)
+            return Result.Failure<AdminCancelScanResponse>(BarcodeErrors.ScanNotFound);
+
+        var barcode = scan.Barcode;
+        var siblingScans = barcode.ScanRecords.Where(s => s.Id != scanId).ToList();
+
+        // 2. If barcode is Consumed (both scanned), only allow cancelling the LAST scan
+        if (barcode.Status == BarcodeStatus.Consumed && siblingScans.Count > 0)
+        {
+            var otherScan = siblingScans.First();
+            // The first scan is the one that was created earlier
+            if (scan.CreatedAt < otherScan.CreatedAt)
+                return Result.Failure<AdminCancelScanResponse>(BarcodeErrors.CannotCancelFirstScan);
+        }
+
+        // 3. Find all wallet transactions referencing this scan
+        var walletTransactions = await _context.WalletTransactions
+            .Where(t => t.ReferenceId == scanId)
+            .ToListAsync(ct);
+
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
+        try
+        {
+            decimal totalPointsReversed = 0;
+            decimal totalSarReversed = 0;
+
+            // 4. Reverse each wallet transaction
+            foreach (var wt in walletTransactions)
+            {
+                var wallet = await _context.Wallets.FirstAsync(w => w.Id == wt.WalletId, ct);
+                wallet.Balance -= wt.Amount;
+                wallet.SarBalance -= wt.SarAmount;
+                totalPointsReversed += wt.Amount;
+                totalSarReversed += wt.SarAmount;
+
+                // Create reversal transaction
+                await _context.WalletTransactions.AddAsync(new WalletTransaction
+                {
+                    WalletId = wt.WalletId,
+                    Amount = -wt.Amount,
+                    Type = WalletTransactionType.Cancelled,
+                    ReferenceId = scanId,
+                    Description = $"إلغاء مسح — {barcode.Product.Name}",
+                    SarRate = wt.SarRate,
+                    SarAmount = -wt.SarAmount
+                }, ct);
+            }
+
+            // 5. Revert barcode status
+            if (barcode.Status == BarcodeStatus.Consumed)
+            {
+                // Was consumed (both scanned), revert to the remaining scan's status
+                var remainingScan = siblingScans.FirstOrDefault();
+                if (remainingScan is not null)
+                    barcode.Status = remainingScan.ScannerRole == ScannerRole.Seller
+                        ? BarcodeStatus.SellerScanned
+                        : BarcodeStatus.TechnicianScanned;
+                else
+                    barcode.Status = BarcodeStatus.Available;
+            }
+            else
+            {
+                // Only one scan existed, revert to Available
+                barcode.Status = BarcodeStatus.Available;
+            }
+
+            // 6. Soft-delete scan record
+            scan.IsDeleted = true;
+            scan.DeletedAt = DateTime.UtcNow;
+            scan.DeletedBy = adminUserId;
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation(
+                "Admin {AdminId} cancelled scan {ScanId} for barcode '{Code}' — reversed {Points} points, {Sar} SAR",
+                adminUserId, scanId, barcode.Code, totalPointsReversed, totalSarReversed);
+
+            return Result.Success(new AdminCancelScanResponse(
+                scanId,
+                barcode.Code,
+                totalPointsReversed,
+                totalSarReversed,
+                "تم إلغاء المسح بنجاح وتم استرداد النقاط"
+            ));
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(ex, "Admin: Failed to cancel scan {ScanId}", scanId);
+            throw;
+        }
+    }
 }

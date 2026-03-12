@@ -21,4 +21,13 @@ public static class BarcodeErrors
 
     public static readonly Error CollisionRetryExhausted =
         new("Barcode.CollisionRetryExhausted", "فشل إنشاء أكواد فريدة، يرجى المحاولة مرة أخرى", 500);
+
+    public static readonly Error ScanNotFound =
+        new("Scan.NotFound", "سجل المسح غير موجود", 404);
+
+    public static readonly Error ScanAlreadyCancelled =
+        new("Scan.AlreadyCancelled", "تم إلغاء هذا المسح مسبقاً", 400);
+
+    public static readonly Error CannotCancelFirstScan =
+        new("Scan.CannotCancelFirstScan", "لا يمكن إلغاء المسح الأول بعد اكتمال المسح الثاني — قم بإلغاء المسح الثاني أولاً", 400);
 }
