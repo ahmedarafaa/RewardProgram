@@ -595,7 +595,7 @@
 		},
 		{
 			"name": "Scans",
-			"description": "Admin scan record listing. Requires SystemAdmin JWT.",
+			"description": "Admin scan management — list and cancel scans. Requires SystemAdmin JWT.",
 			"item": [
 				{
 					"name": "List Scans",
@@ -616,7 +616,26 @@
 								{ "key": "pageSize", "value": "20" }
 							]
 						},
-						"description": "List/filter scan records with pagination.\n\nShows scanner name, mobile, product info, points awarded, and scan timestamp."
+						"description": "List/filter scan records with pagination.\n\nShows scanner name, mobile, product info, points awarded, scan location, and timestamp."
+					}
+				},
+				{
+					"name": "Cancel Scan",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/scans/:scanId/cancel",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "scans", ":scanId", "cancel"],
+							"variable": [
+								{
+									"key": "scanId",
+									"value": "",
+									"description": "Scan record ID to cancel"
+								}
+							]
+						},
+						"description": "Cancel a scan and reverse wallet points/SAR.\n\n**What it does:**\n- Deducts points and SAR from scanner's wallet\n- If this was a second scan that triggered deferred bonus for the first scanner, reverses those too\n- Creates Cancelled wallet transactions for audit trail\n- Reverts barcode status (Consumed → SellerScanned/TechnicianScanned, or → Available)\n- Soft-deletes the scan record\n\n**Rules:**\n- If barcode is Consumed (both roles scanned), you must cancel the second scan first\n- Cannot cancel the first scan while the second scan still exists"
 					}
 				}
 			]

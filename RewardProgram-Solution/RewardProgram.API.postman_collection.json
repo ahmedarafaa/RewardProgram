@@ -512,7 +512,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"barcodeCode\": \"ABCDEFGHIJKL\"\n}",
+              "raw": "{\n  \"barcodeCode\": \"ABCDEFGHIJKL\",\n  \"latitude\": 24.7136,\n  \"longitude\": 46.6753\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -520,7 +520,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "scan"]
             },
-            "description": "Scan a barcode to earn points.\n\nBarcodeCode must be exactly 12 characters (NanoID).\nSeller and Technician each scan once per barcode.\nWhen both roles scan → barcode becomes Consumed.\n\nRequires Seller or Technician JWT."
+            "description": "Scan a barcode to earn points.\n\nBarcodeCode must be exactly 12 characters (NanoID).\nLatitude/Longitude are optional — sent by frontend if GPS is available.\nSeller and Technician each scan once per barcode.\nWhen both roles scan → barcode becomes Consumed.\n\nRequires Seller or Technician JWT."
           },
           "response": []
         },
@@ -572,7 +572,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "wallet", "transactions"],
               "query": [
-                { "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed (optional filter)" },
+                { "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed, 3=Cancelled (optional filter)" },
                 { "key": "page", "value": "1" },
                 { "key": "pageSize", "value": "20" }
               ]
