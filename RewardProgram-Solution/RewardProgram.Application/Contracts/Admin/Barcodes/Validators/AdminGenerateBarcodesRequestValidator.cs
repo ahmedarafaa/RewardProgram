@@ -10,6 +10,6 @@ public class AdminGenerateBarcodesRequestValidator : AbstractValidator<AdminGene
             .NotEmpty().WithMessage("معرف المنتج مطلوب");
 
         RuleFor(x => x.Quantity)
-            .InclusiveBetween(1, 10000).WithMessage("الكمية يجب أن تكون بين 1 و 10000");
+            .InclusiveBetween(1, 1000).WithMessage("الكمية يجب أن تكون بين 1 و 1000");
     }
 }
