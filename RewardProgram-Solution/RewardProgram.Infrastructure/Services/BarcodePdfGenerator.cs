@@ -9,13 +9,12 @@ namespace RewardProgram.Infrastructure.Services;
 
 public class BarcodePdfGenerator : IBarcodePdfGenerator
 {
-    private const int ColumnsPerRow = 3;
-    private const float LabelWidthMm = 64f;
-    private const float LabelHeightMm = 30f;
-    private const float PageMarginMm = 8f;
-    private const float LabelPaddingMm = 2f;
-    private const int BarcodeImageWidth = 300;
-    private const int BarcodeImageHeight = 80;
+    // Zebra label: 50mm x 25mm — one label per page
+    private const float LabelWidthMm = 50f;
+    private const float LabelHeightMm = 25f;
+    private const float PaddingMm = 1.5f;
+    private const int BarcodeImageWidth = 250;
+    private const int BarcodeImageHeight = 50;
 
     [ThreadStatic]
     private static BarcodeWriterPixelData? _barcodeWriter;
@@ -27,7 +26,7 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
         {
             Width = BarcodeImageWidth,
             Height = BarcodeImageHeight,
-            Margin = 2,
+            Margin = 0,
             PureBarcode = true
         }
     };
@@ -36,58 +35,35 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     {
         var document = Document.Create(container =>
         {
-            container.Page(page =>
+            foreach (var code in barcodeCodes)
             {
-                page.Size(PageSizes.A4);
-                page.Margin(PageMarginMm, Unit.Millimetre);
-
-                page.Content().Column(column =>
+                container.Page(page =>
                 {
-                    var chunks = barcodeCodes.Chunk(ColumnsPerRow);
+                    page.Size(LabelWidthMm, LabelHeightMm, Unit.Millimetre);
+                    page.Margin(PaddingMm, Unit.Millimetre);
 
-                    foreach (var row in chunks)
-                    {
-                        column.Item().Row(r =>
+                    page.Content()
+                        .Column(label =>
                         {
-                            foreach (var code in row)
-                            {
-                                r.ConstantItem(LabelWidthMm, Unit.Millimetre)
-                                    .Height(LabelHeightMm, Unit.Millimetre)
-                                    .Border(0.3f)
-                                    .BorderColor(Colors.Grey.Lighten2)
-                                    .Padding(LabelPaddingMm, Unit.Millimetre)
-                                    .Column(label =>
-                                    {
-                                        label.Item()
-                                            .AlignCenter()
-                                            .Text(productName)
-                                            .FontSize(7)
-                                            .FontColor(Colors.Black);
+                            label.Item()
+                                .AlignCenter()
+                                .Text(productName)
+                                .FontSize(5)
+                                .FontColor(Colors.Black);
 
-                                        label.Item()
-                                            .AlignCenter()
-                                            .PaddingVertical(1, Unit.Millimetre)
-                                            .Image(GenerateBarcodeImage(code));
+                            label.Item()
+                                .AlignCenter()
+                                .PaddingVertical(0.5f, Unit.Millimetre)
+                                .Image(GenerateBarcodeImage(code));
 
-                                        label.Item()
-                                            .AlignCenter()
-                                            .Text(code)
-                                            .FontSize(7)
-                                            .FontColor(Colors.Black);
-                                    });
-                            }
-
-                            // Fill remaining cells in incomplete rows
-                            var remaining = ColumnsPerRow - row.Count();
-                            for (var i = 0; i < remaining; i++)
-                            {
-                                r.ConstantItem(LabelWidthMm, Unit.Millimetre)
-                                    .Height(LabelHeightMm, Unit.Millimetre);
-                            }
+                            label.Item()
+                                .AlignCenter()
+                                .Text(code)
+                                .FontSize(5)
+                                .FontColor(Colors.Black);
                         });
-                    }
                 });
-            });
+            }
         });
 
         return document.GeneratePdf();
