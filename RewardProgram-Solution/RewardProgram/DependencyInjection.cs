@@ -17,6 +17,7 @@ using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
 using RewardProgram.Infrastructure.Services;
 using RewardProgram.Infrastructure.Services.FileStorage;
+using RewardProgram.Infrastructure.Services;
 using RewardProgram.Infrastructure.Services.WhatsAppService;
 using System.Text;
 
@@ -80,7 +81,11 @@ public static class DependencyInjection
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IAdminRewardSettingsService, AdminRewardSettingsService>();
+        services.AddScoped<IRedemptionService, RedemptionService>();
+        services.AddScoped<IRedemptionApprovalService, RedemptionApprovalService>();
+        services.AddScoped<IAdminRedemptionService, AdminRedemptionService>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
+        services.AddHostedService<PointsExpiryBackgroundService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
