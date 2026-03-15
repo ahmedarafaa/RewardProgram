@@ -33,6 +33,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Wallet> Wallets { get; set; }
     public DbSet<WalletTransaction> WalletTransactions { get; set; }
     public DbSet<RewardSettings> RewardSettings { get; set; }
+    public DbSet<RedemptionRequest> RedemptionRequests { get; set; }
+    public DbSet<RedemptionApproval> RedemptionApprovals { get; set; }
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

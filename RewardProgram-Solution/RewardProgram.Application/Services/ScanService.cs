@@ -146,7 +146,8 @@ public class ScanService : IScanService
                 ReferenceId = scanRecord.Id,
                 Description = $"مسح باركود — {barcode.Product.Name}",
                 SarRate = sarRate,
-                SarAmount = scannerSarAmount
+                SarAmount = scannerSarAmount,
+                RemainingAmount = pointsForScanner
             }, ct);
 
             // 10. Credit deferred points to first scanner (if applicable)
@@ -165,7 +166,8 @@ public class ScanService : IScanService
                     ReferenceId = scanRecord.Id,
                     Description = $"نقاط مؤجلة — {barcode.Product.Name}",
                     SarRate = sarRate,
-                    SarAmount = deferredSarAmount
+                    SarAmount = deferredSarAmount,
+                    RemainingAmount = deferredPointsForFirstScanner.Value
                 }, ct);
             }
 

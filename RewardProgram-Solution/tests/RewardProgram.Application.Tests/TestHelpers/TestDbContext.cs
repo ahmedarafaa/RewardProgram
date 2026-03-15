@@ -27,6 +27,8 @@ public class TestDbContext : DbContext, IApplicationDbContext
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<RewardSettings> RewardSettings => Set<RewardSettings>();
+    public DbSet<RedemptionRequest> RedemptionRequests => Set<RedemptionRequest>();
+    public DbSet<RedemptionApproval> RedemptionApprovals => Set<RedemptionApproval>();
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -125,6 +127,22 @@ public class TestDbContext : DbContext, IApplicationDbContext
 
         modelBuilder.Entity<WalletTransaction>(b => b.HasKey(e => e.Id));
         modelBuilder.Entity<RewardSettings>(b => b.HasKey(e => e.Id));
+
+        // Redemption
+        modelBuilder.Entity<RedemptionRequest>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
+            b.HasOne(e => e.CashHandoverBy).WithMany().HasForeignKey(e => e.CashHandoverById);
+            b.HasOne(e => e.RejectedBy).WithMany().HasForeignKey(e => e.RejectedById);
+            b.HasMany(e => e.Approvals).WithOne(a => a.RedemptionRequest).HasForeignKey(a => a.RedemptionRequestId);
+        });
+
+        modelBuilder.Entity<RedemptionApproval>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.Approver).WithMany().HasForeignKey(e => e.ApproverId);
+        });
     }
 
     public static TestDbContext Create()

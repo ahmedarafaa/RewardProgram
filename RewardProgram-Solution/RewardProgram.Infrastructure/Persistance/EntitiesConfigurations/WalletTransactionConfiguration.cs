@@ -36,6 +36,11 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
             .HasColumnType("decimal(10,2)")
             .IsRequired();
 
+        builder.Property(x => x.RemainingAmount)
+            .HasColumnType("decimal(8,1)")
+            .IsRequired()
+            .HasDefaultValue(0m);
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

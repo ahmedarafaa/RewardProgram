@@ -24,6 +24,8 @@ public interface IApplicationDbContext
     DbSet<Wallet> Wallets { get; }
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<RewardSettings> RewardSettings { get; }
+    DbSet<RedemptionRequest> RedemptionRequests { get; }
+    DbSet<RedemptionApproval> RedemptionApprovals { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
