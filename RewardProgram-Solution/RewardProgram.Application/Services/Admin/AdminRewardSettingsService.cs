@@ -36,6 +36,7 @@ public class AdminRewardSettingsService : IAdminRewardSettingsService
         settings.PointsToSarRate = request.PointsToSarRate;
         settings.InviterRewardPoints = request.InviterRewardPoints;
         settings.InviteeRewardPoints = request.InviteeRewardPoints;
+        settings.MinimumRedemptionPoints = request.MinimumRedemptionPoints;
 
         await _context.SaveChangesAsync(ct);
 
@@ -79,6 +80,7 @@ public class AdminRewardSettingsService : IAdminRewardSettingsService
             settings.Id,
             settings.PointsToSarRate,
             settings.InviterRewardPoints,
-            settings.InviteeRewardPoints);
+            settings.InviteeRewardPoints,
+            settings.MinimumRedemptionPoints);
     }
 }

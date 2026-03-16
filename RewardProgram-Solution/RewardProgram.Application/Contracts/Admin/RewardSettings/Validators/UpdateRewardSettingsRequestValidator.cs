@@ -14,5 +14,8 @@ public class UpdateRewardSettingsRequestValidator : AbstractValidator<UpdateRewa
 
         RuleFor(x => x.InviteeRewardPoints)
             .GreaterThanOrEqualTo(0).WithMessage("نقاط مكافأة المدعو يجب أن تكون صفر أو أكثر");
+
+        RuleFor(x => x.MinimumRedemptionPoints)
+            .GreaterThan(0).WithMessage("الحد الأدنى للاستبدال يجب أن يكون أكبر من صفر");
     }
 }

@@ -4,5 +4,6 @@ public record RewardSettingsResponse(
     string Id,
     decimal PointsToSarRate,
     decimal InviterRewardPoints,
-    decimal InviteeRewardPoints
+    decimal InviteeRewardPoints,
+    decimal MinimumRedemptionPoints
 );

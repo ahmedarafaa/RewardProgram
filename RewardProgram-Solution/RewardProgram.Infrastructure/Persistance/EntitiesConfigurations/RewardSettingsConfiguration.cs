@@ -26,6 +26,11 @@ public class RewardSettingsConfiguration : IEntityTypeConfiguration<RewardSettin
             .HasDefaultValue(50m)
             .IsRequired();
 
+        builder.Property(x => x.MinimumRedemptionPoints)
+            .HasColumnType("decimal(10,1)")
+            .HasDefaultValue(1000m)
+            .IsRequired();
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

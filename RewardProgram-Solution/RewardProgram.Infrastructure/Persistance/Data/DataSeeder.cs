@@ -696,6 +696,7 @@ public static class DataSeeder
             PointsToSarRate = 10m,
             InviterRewardPoints = 100m,
             InviteeRewardPoints = 50m,
+            MinimumRedemptionPoints = 1000m,
             CreatedBy = "DataSeeder"
         });
 

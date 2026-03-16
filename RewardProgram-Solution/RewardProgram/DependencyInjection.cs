@@ -85,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<IRedemptionApprovalService, RedemptionApprovalService>();
         services.AddScoped<IAdminRedemptionService, AdminRedemptionService>();
         services.AddScoped<IInvitationService, InvitationService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
         services.AddHostedService<PointsExpiryBackgroundService>();
