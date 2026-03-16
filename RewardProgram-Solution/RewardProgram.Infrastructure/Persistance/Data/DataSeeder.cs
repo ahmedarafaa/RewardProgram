@@ -694,6 +694,8 @@ public static class DataSeeder
         context.RewardSettings.Add(new RewardSettings
         {
             PointsToSarRate = 10m,
+            InviterRewardPoints = 100m,
+            InviteeRewardPoints = 50m,
             CreatedBy = "DataSeeder"
         });
 
