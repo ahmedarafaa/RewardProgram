@@ -72,12 +72,23 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 
         // Region.ZoneManagerId → ApplicationUser.ManagedRegion is configured in RegionConfiguration
 
+        // Invitation
+        builder.Property(x => x.InvitationCode)
+            .HasMaxLength(8);
+
+        builder.HasOne(x => x.InvitedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.InvitedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes
         builder.HasIndex(x => x.MobileNumber).IsUnique();
         builder.HasIndex(x => x.UserType);
         builder.HasIndex(x => x.RegistrationStatus);
         builder.HasIndex(x => x.AssignedSalesManId);
         builder.HasIndex(x => x.IsDisabled);
+        builder.HasIndex(x => x.InvitationCode).IsUnique().HasFilter("[InvitationCode] IS NOT NULL");
+        builder.HasIndex(x => x.InvitedByUserId);
 
         // Composite indexes
         builder.HasIndex(x => new { x.UserType, x.RegistrationStatus });

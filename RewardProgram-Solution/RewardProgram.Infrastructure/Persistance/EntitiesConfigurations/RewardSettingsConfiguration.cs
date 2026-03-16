@@ -16,6 +16,16 @@ public class RewardSettingsConfiguration : IEntityTypeConfiguration<RewardSettin
             .HasColumnType("decimal(10,2)")
             .IsRequired();
 
+        builder.Property(x => x.InviterRewardPoints)
+            .HasColumnType("decimal(10,1)")
+            .HasDefaultValue(100m)
+            .IsRequired();
+
+        builder.Property(x => x.InviteeRewardPoints)
+            .HasColumnType("decimal(10,1)")
+            .HasDefaultValue(50m)
+            .IsRequired();
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);
