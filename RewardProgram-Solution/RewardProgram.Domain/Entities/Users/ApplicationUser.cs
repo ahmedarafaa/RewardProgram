@@ -34,6 +34,11 @@ public class ApplicationUser : IdentityUser
     public List<City> ApprovalCities { get; set; } = [];  // Cities where this user is ApprovalSalesMan
     public Region? ManagedRegion { get; set; }  // Region where this user is ZoneManager (inverse nav, no FK)
     public List<RefreshToken> RefreshTokens { get; set; } = [];
+
+    // === Invitation ===
+    public string? InvitationCode { get; set; }
+    public string? InvitedByUserId { get; set; }
+    public ApplicationUser? InvitedByUser { get; set; }
 }
 
 [Owned]

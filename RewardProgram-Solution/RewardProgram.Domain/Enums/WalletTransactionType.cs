@@ -6,5 +6,6 @@ public enum WalletTransactionType
     Redeemed = 2,
     Cancelled = 3,
     Expired = 4,
-    Refunded = 5
+    Refunded = 5,
+    InvitationReward = 6
 }
