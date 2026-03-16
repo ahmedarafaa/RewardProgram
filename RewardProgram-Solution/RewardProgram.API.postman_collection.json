@@ -39,9 +39,11 @@
   "item": [
     {
       "name": "Auth",
+      "description": "Authentication endpoints — registration, login, and token management.\n\nNo authentication required for registration and login. Token endpoints require JWT.",
       "item": [
         {
           "name": "Registration",
+          "description": "User registration — OTP-first flow.\n\n1. Send OTP → get pinId\n2. Register with pinId + OTP → user created\n\nOptionally include an `InvitationCode` from an existing user's invite link.",
           "item": [
             {
               "name": "Send OTP",
@@ -104,7 +106,8 @@
                     { "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text", "description": "Required — max 100 chars" },
                     { "key": "NationalAddress.PostalCode", "value": "12345", "type": "text", "description": "Required — 5 digits" },
                     { "key": "NationalAddress.SubNumber", "value": "6789", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" }
+                    { "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" },
+                    { "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
                   ]
                 },
                 "url": {
@@ -139,7 +142,8 @@
                     { "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text", "description": "Required — 4 digits (1000-9999)" },
                     { "key": "NationalAddress.PostalCode", "value": "11111", "type": "text", "description": "Required — 5 digits" },
                     { "key": "NationalAddress.SubNumber", "value": "4321", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" }
+                    { "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" },
+                    { "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
                   ]
                 },
                 "url": {
@@ -160,7 +164,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": {
@@ -363,6 +367,7 @@
     },
     {
       "name": "Approvals",
+      "description": "3-level approval flow for user registrations.\n\nSalesMan approves first (PendingSalesman → PendingZoneManager).\nZoneManager approves second (PendingZoneManager → Approved).\nOn final approval, invitation rewards are credited if the user was invited.\n\nRequires SalesMan or ZoneManager JWT.",
       "item": [
         {
           "name": "Get Pending Requests",
@@ -398,7 +403,8 @@
               "raw": "{{baseUrl}}/api/approvals/approve",
               "host": ["{{baseUrl}}"],
               "path": ["api", "approvals", "approve"]
-            }
+            },
+            "description": "Approve a pending user registration.\n\nSalesMan: PendingSalesman → PendingZoneManager.\nZoneManager: PendingZoneManager → Approved (triggers invitation rewards if invited).\n\nRequires SalesMan or ZoneManager JWT."
           },
           "response": []
         },
@@ -426,6 +432,7 @@
     },
     {
       "name": "Lookups",
+      "description": "Public lookup endpoints — no authentication required.\n\nUse these to get Region/City IDs for registration and to check ShopData status.",
       "item": [
         {
           "name": "Get Regions",
@@ -578,6 +585,26 @@
               ]
             },
             "description": "Get paginated wallet transactions with SAR amounts.\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invitation",
+      "description": "Invitation/referral system endpoints.\n\nEach approved user gets a unique 8-char invitation code + QR code + shareable link.\nNew users can provide an invitation code at registration.\nWhen the invited user gets approved, both inviter (100 pts) and invitee (50 pts) receive rewards.\nInviter reward is capped at 20 approved invitations.\n\nRequires ShopOwner, Seller, or Technician JWT.",
+      "item": [
+        {
+          "name": "Get Invitation Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invitation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invitation"]
+            },
+            "description": "Get your invitation code, QR code (base64 BMP), shareable link, and invitation stats.\n\nLazy-generates the invitation code on first call if missing.\n\n**Response:**\n- `invitationCode`: 8-char alphanumeric code\n- `shareLink`: Full URL for sharing\n- `qrCodeBase64`: Base64-encoded BMP image of the QR code\n- `totalInvitations`: Total users who registered with your code\n- `approvedInvitations`: How many of those were approved\n- `totalPointsEarned`: Total points earned from invitation rewards\n\nRequires ShopOwner, Seller, or Technician JWT."
           },
           "response": []
         }

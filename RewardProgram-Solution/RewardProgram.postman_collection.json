@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "reward-program-api",
-		"name": "RewardProgram API",
+		"name": "RewardProgram API — DEV",
 		"description": "RewardProgram API collection for Development (localhost).\n\n**Setup:**\n1. Import this collection\n2. The base URL is set to `https://localhost:44315`\n3. In Development mode, any 6-digit OTP code works (e.g. `123456`)\n\n**Seeded Users (all pre-approved):**\n- SystemAdmin: `0500000001`\n- ZoneManagers: `0500000002` – `0500000006`\n- SalesMan+ZoneManager (dual): `0500000007` – `0500000009`\n- SalesMan: `0500000010` – `0500000031`\n\n**OTP-first Registration Flow:**\n1. Send OTP → get pinId\n2. Register (shop-owner/seller/technician) with pinId + OTP → user created\n\n**Login Flow:**\n1. Login → get pinId\n2. Verify Login → get JWT token + refresh token (auto-saved)\n3. Use Approval/Scan/Wallet endpoints (JWT auto-attached)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -177,7 +177,8 @@
 								{ "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text", "description": "Required — max 100 chars" },
 								{ "key": "NationalAddress.PostalCode", "value": "12345", "type": "text", "description": "Required — 5 digits" },
 								{ "key": "NationalAddress.SubNumber", "value": "6789", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" }
+								{ "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" },
+								{ "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
 							]
 						},
 						"url": {
@@ -224,7 +225,8 @@
 								{ "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text", "description": "Required — 4 digits (1000-9999)" },
 								{ "key": "NationalAddress.PostalCode", "value": "11111", "type": "text", "description": "Required — 5 digits" },
 								{ "key": "NationalAddress.SubNumber", "value": "4321", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" }
+								{ "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" },
+								{ "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
 							]
 						},
 						"url": {
@@ -257,7 +259,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
+							"raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -623,6 +625,29 @@
 							]
 						},
 						"description": "Get paginated wallet transactions with SAR amounts.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Invitation",
+			"description": "Invitation/referral system endpoints.\n\nEach approved user gets a unique 8-char invitation code + QR code + shareable link.\nNew users can provide an invitation code at registration.\nWhen the invited user gets approved, both inviter (100 pts) and invitee (50 pts) receive rewards.\nInviter reward is capped at 20 approved invitations.\n\nRequires ShopOwner, Seller, or Technician JWT.",
+			"item": [
+				{
+					"name": "Get Invitation Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/invitation",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "invitation"]
+						},
+						"description": "Get your invitation code, QR code (base64 BMP), shareable link, and invitation stats.\n\nLazy-generates the invitation code on first call if missing.\n\n**Response:**\n- `invitationCode`: 8-char alphanumeric code\n- `shareLink`: Full URL for sharing (e.g. https://app.raedrewardapp.com/invite/ABC12345)\n- `qrCodeBase64`: Base64-encoded BMP image of the QR code\n- `totalInvitations`: Total users who registered with your code\n- `approvedInvitations`: How many of those were approved\n- `totalPointsEarned`: Total points earned from invitation rewards\n\nRequires ShopOwner, Seller, or Technician JWT.",
 						"auth": {
 							"type": "bearer",
 							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]

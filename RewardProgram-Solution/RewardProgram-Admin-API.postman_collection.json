@@ -35,6 +35,7 @@
 	"item": [
 		{
 			"name": "Users — Add",
+			"description": "Create new users by role. Requires SystemAdmin JWT.\n\nShopOwner/Seller use form-data (file upload). Others use JSON.",
 			"item": [
 				{
 					"name": "Add SalesMan",
@@ -173,6 +174,7 @@
 		},
 		{
 			"name": "Users — List & Status",
+			"description": "List, search, filter users and toggle active/disabled status. Requires SystemAdmin JWT.",
 			"item": [
 				{
 					"name": "List Users",
@@ -252,6 +254,7 @@
 		},
 		{
 			"name": "Users — Edit",
+			"description": "Edit existing users by role. Requires SystemAdmin JWT.\n\nShopOwner/Seller use form-data (file upload). Others use JSON.",
 			"item": [
 				{
 					"name": "Edit SalesMan",
@@ -642,7 +645,7 @@
 		},
 		{
 			"name": "Reward Settings",
-			"description": "SAR conversion rate management. Requires SystemAdmin JWT.",
+			"description": "SAR conversion rate and invitation reward settings management. Requires SystemAdmin JWT.",
 			"item": [
 				{
 					"name": "Get Reward Settings",
@@ -653,7 +656,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "reward-settings"]
 						},
-						"description": "Get current SAR conversion rate (Points → SAR).\n\nDefault: 10 points = 1 SAR."
+						"description": "Get current reward settings: SAR conversion rate + invitation reward points.\n\nDefaults: 10 pts = 1 SAR, Inviter = 100 pts, Invitee = 50 pts."
 					}
 				},
 				{
@@ -665,7 +668,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"pointsToSarRate\": 10\n}",
+							"raw": "{\n  \"pointsToSarRate\": 10,\n  \"inviterRewardPoints\": 100,\n  \"inviteeRewardPoints\": 50\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -673,7 +676,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "reward-settings"]
 						},
-						"description": "Update SAR conversion rate.\n\npointsToSarRate: must be > 0.\nExisting wallet transactions keep their original rate (immutable)."
+						"description": "Update reward settings.\n\n- `pointsToSarRate`: must be > 0\n- `inviterRewardPoints`: points awarded to inviter on approved invitation (>= 0)\n- `inviteeRewardPoints`: points awarded to invitee on approved invitation (>= 0)\n\nExisting wallet transactions keep their original rate (immutable).\nInviter reward is capped at 20 approved invitations regardless of this setting."
 					}
 				}
 			]
