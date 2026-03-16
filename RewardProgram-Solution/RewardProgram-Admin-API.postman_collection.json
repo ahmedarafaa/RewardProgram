@@ -656,7 +656,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "reward-settings"]
 						},
-						"description": "Get current reward settings: SAR conversion rate + invitation reward points.\n\nDefaults: 10 pts = 1 SAR, Inviter = 100 pts, Invitee = 50 pts."
+						"description": "Get current reward settings: SAR conversion rate, invitation rewards, and minimum redemption threshold.\n\nDefaults: 10 pts = 1 SAR, Inviter = 100 pts, Invitee = 50 pts, Min Redemption = 1000 pts."
 					}
 				},
 				{
@@ -668,7 +668,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"pointsToSarRate\": 10,\n  \"inviterRewardPoints\": 100,\n  \"inviteeRewardPoints\": 50\n}",
+							"raw": "{\n  \"pointsToSarRate\": 10,\n  \"inviterRewardPoints\": 100,\n  \"inviteeRewardPoints\": 50,\n  \"minimumRedemptionPoints\": 1000\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -676,7 +676,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "reward-settings"]
 						},
-						"description": "Update reward settings.\n\n- `pointsToSarRate`: must be > 0\n- `inviterRewardPoints`: points awarded to inviter on approved invitation (>= 0)\n- `inviteeRewardPoints`: points awarded to invitee on approved invitation (>= 0)\n\nExisting wallet transactions keep their original rate (immutable).\nInviter reward is capped at 20 approved invitations regardless of this setting."
+						"description": "Update reward settings.\n\n- `pointsToSarRate`: must be > 0\n- `inviterRewardPoints`: points awarded to inviter on approved invitation (>= 0)\n- `inviteeRewardPoints`: points awarded to invitee on approved invitation (>= 0)\n- `minimumRedemptionPoints`: minimum points required to redeem (> 0, default 1000)\n\nExisting wallet transactions keep their original rate (immutable).\nInviter reward is capped at 20 approved invitations regardless of this setting."
 					}
 				}
 			]

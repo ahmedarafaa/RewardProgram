@@ -591,6 +591,26 @@
       ]
     },
     {
+      "name": "Dashboard",
+      "description": "Mobile app home screen endpoint. Returns user info, points, redemption progress, and recent transactions in a single call.\n\nRequires ShopOwner, Seller, or Technician JWT.",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard"]
+            },
+            "description": "Get the mobile app home screen data.\n\n**Response:**\n- `userName`: Display name\n- `points`: Current point balance\n- `sarBalance`: Current SAR balance\n- `minimumRedemptionPoints`: Admin-configured minimum (default 1000)\n- `pointsToRedeem`: Points remaining to reach minimum\n- `canRedeem`: Whether user has enough points to redeem\n- `recentTransactions`: Last 10 wallet transactions\n\nRequires ShopOwner, Seller, or Technician JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Invitation",
       "description": "Invitation/referral system endpoints.\n\nEach approved user gets a unique 8-char invitation code + QR code + shareable link.\nNew users can provide an invitation code at registration.\nWhen the invited user gets approved, both inviter (100 pts) and invitee (50 pts) receive rewards.\nInviter reward is capped at 20 approved invitations.\n\nRequires ShopOwner, Seller, or Technician JWT.",
       "item": [
