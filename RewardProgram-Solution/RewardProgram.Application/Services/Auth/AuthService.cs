@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NanoidDotNet;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
@@ -119,6 +120,11 @@ public class AuthService : IAuthService
 
         var shopImageUrl = imageUploadResult.Value;
 
+        // Validate invitation code (if provided)
+        var inviteResult = await ValidateInvitationCodeAsync(request.InvitationCode, mobile, ct);
+        if (inviteResult.IsFailure)
+            return Result.Failure<RegisterResponse>(inviteResult.Error);
+
         // 2. All validation passed — NOW consume OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
@@ -145,6 +151,8 @@ public class AuthService : IAuthService
                 UserType = UserType.ShopOwner,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
+                InvitationCode = await GenerateUniqueInvitationCodeAsync(ct),
+                InvitedByUserId = inviteResult.Value,
                 NationalAddress = new NationalAddress
                 {
                     CityId = request.CityId,
@@ -300,6 +308,11 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<RegisterResponse>(AuthErrors.NoApprovalSalesMan);
 
+        // Validate invitation code (if provided)
+        var inviteResult = await ValidateInvitationCodeAsync(request.InvitationCode, mobile, ct);
+        if (inviteResult.IsFailure)
+            return Result.Failure<RegisterResponse>(inviteResult.Error);
+
         // 2. All validation passed — NOW consume OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
@@ -333,6 +346,8 @@ public class AuthService : IAuthService
                 UserType = UserType.Seller,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
+                InvitationCode = await GenerateUniqueInvitationCodeAsync(ct),
+                InvitedByUserId = inviteResult.Value,
                 NationalAddress = new NationalAddress
                 {
                     CityId = cityId,
@@ -433,6 +448,11 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(city.ApprovalSalesManId))
             return Result.Failure<RegisterResponse>(AuthErrors.NoApprovalSalesMan);
 
+        // Validate invitation code (if provided)
+        var inviteResult = await ValidateInvitationCodeAsync(request.InvitationCode, mobile, ct);
+        if (inviteResult.IsFailure)
+            return Result.Failure<RegisterResponse>(inviteResult.Error);
+
         // 2. All validation passed — NOW consume OTP
         var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
         if (verifyResult.IsFailure)
@@ -459,6 +479,8 @@ public class AuthService : IAuthService
                 UserType = UserType.Technician,
                 RegistrationStatus = RegistrationStatus.PendingSalesman,
                 AssignedSalesManId = city.ApprovalSalesManId,
+                InvitationCode = await GenerateUniqueInvitationCodeAsync(ct),
+                InvitedByUserId = inviteResult.Value,
                 NationalAddress = new NationalAddress
                 {
                     CityId = request.CityId,
@@ -630,6 +652,47 @@ public class AuthService : IAuthService
         _logger.LogInformation("Token revoked for UserId: {UserId}", user.Id);
 
         return Result.Success();
+    }
+
+    #endregion
+
+    #region Invitation Helpers
+
+    private const string InviteAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private const int InviteCodeLength = 8;
+
+    private async Task<Result<string?>> ValidateInvitationCodeAsync(string? invitationCode, string mobile, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(invitationCode))
+            return Result.Success<string?>(null);
+
+        var inviter = await _userRepository.Query()
+            .FirstOrDefaultAsync(u => u.InvitationCode == invitationCode, ct);
+
+        if (inviter is null)
+            return Result.Failure<string?>(InvitationErrors.InvalidInvitationCode);
+
+        if (inviter.MobileNumber == mobile)
+            return Result.Failure<string?>(InvitationErrors.SelfInvitation);
+
+        if (inviter.RegistrationStatus != RegistrationStatus.Approved)
+            return Result.Failure<string?>(InvitationErrors.InviterNotApproved);
+
+        return Result.Success<string?>(inviter.Id);
+    }
+
+    private async Task<string> GenerateUniqueInvitationCodeAsync(CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var code = Nanoid.Generate(InviteAlphabet, InviteCodeLength);
+            var exists = await _userRepository.Query()
+                .AnyAsync(u => u.InvitationCode == code, ct);
+            if (!exists)
+                return code;
+        }
+
+        throw new InvalidOperationException("Failed to generate unique invitation code after 10 attempts");
     }
 
     #endregion
