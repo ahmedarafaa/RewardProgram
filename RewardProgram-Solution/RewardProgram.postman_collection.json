@@ -168,7 +168,7 @@
 								{ "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
 								{ "key": "MobileNumber", "value": "0555000001", "type": "text", "description": "Same mobile used in Send OTP" },
 								{ "key": "CityId", "value": "", "type": "text", "description": "City GUID — get from Lookups" },
-								{ "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 2-150 chars" },
+								{ "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 5-150 chars" },
 								{ "key": "VAT", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
 								{ "key": "CRN", "value": "1010000000", "type": "text", "description": "Required — 10-digit Commercial Registration Number" },
 								{ "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 4 letters + 4 digits" },

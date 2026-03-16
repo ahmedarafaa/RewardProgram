@@ -95,7 +95,7 @@
 								{ "key": "mobileNumber", "value": "0512345680", "type": "text" },
 								{ "key": "customerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table. Only one ShopOwner per CustomerCode." },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر الرائد", "type": "text", "description": "Required — 2-150 chars" },
+								{ "key": "storeName", "value": "متجر الرائد", "type": "text", "description": "Required — 5-150 chars" },
 								{ "key": "vat", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
 								{ "key": "crn", "value": "1234567890", "type": "text", "description": "Required — 10-digit CRN" },
 								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 4 letters + 4 digits" },
