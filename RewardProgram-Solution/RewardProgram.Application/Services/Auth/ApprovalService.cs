@@ -20,17 +20,20 @@ public class ApprovalService : IApprovalService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
+    private readonly IInvitationService _invitationService;
     private readonly ILogger<ApprovalService> _logger;
 
     public ApprovalService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         ITwilioService twilioService,
+        IInvitationService invitationService,
         ILogger<ApprovalService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
+        _invitationService = invitationService;
         _logger = logger;
     }
 
@@ -261,6 +264,19 @@ public class ApprovalService : IApprovalService
             _logger.LogInformation(
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
                 approverId, userId);
+
+            // Credit invitation rewards (if user was invited)
+            if (user.InvitedByUserId is not null)
+            {
+                try
+                {
+                    await _invitationService.CreditInvitationRewardsAsync(user.Id, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to credit invitation rewards for user {UserId}", user.Id);
+                }
+            }
 
             // Send WhatsApp welcome (fire-and-forget with captured data)
             var welcomeMobile = user.MobileNumber;
