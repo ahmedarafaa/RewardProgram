@@ -55,7 +55,7 @@ POST /api/auth/register/shop-owner
 | ownerName | string | yes | 3-100 chars, letters only (`^[\p{L}\s]+$`), no numbers |
 | mobileNumber | string | yes | `05XXXXXXXX` or `+XXXXXXXXXXX` |
 | cityId | string (GUID) | yes | Valid city ID from lookups |
-| storeName | string | yes | 2-150 chars |
+| storeName | string | yes | 5-150 chars |
 | vat | string | yes | Exactly 15 digits, must start and end with `3` (`^3\d{13}3$`) |
 | crn | string | yes | Exactly 10 digits (`^\d{10}$`) |
 | shortAddress | string | yes | 4 letters + 4 digits (`^[A-Za-z]{4}\d{4}$`) |
@@ -86,7 +86,7 @@ POST /api/auth/register/seller
 | name | string | yes | 3-100 chars, letters only (`^[\p{L}\s]+$`) |
 | mobileNumber | string | yes | `05XXXXXXXX` or `+XXXXXXXXXXX` |
 | customerCode | string | yes | Max 50 chars |
-| storeName | string | conditional | 2-150 chars (required if first Seller for this CustomerCode) |
+| storeName | string | conditional | 5-150 chars (required if first Seller for this CustomerCode) |
 | vat | string | conditional | 15 digits, starts & ends with `3` |
 | crn | string | conditional | 10 digits |
 | shortAddress | string | conditional | 4 letters + 4 digits |
@@ -475,7 +475,7 @@ POST /api/approvals/reject     → { "userId": "...", "reason": "..." }
 | Barcode Code | Exactly 12 characters | Length = 12 |
 | Redemption Points | Minimum 1000 | >= 1000 |
 | Shop Image | JPG/PNG, max 5 MB | Extensions: .jpg, .jpeg, .png |
-| Store Name | 2-150 chars | — |
+| Store Name | 5-150 chars | — |
 | Street | 3-100 chars | — |
 | District | Max 100 chars | — |
 | Bank Name | Max 200 chars | — |

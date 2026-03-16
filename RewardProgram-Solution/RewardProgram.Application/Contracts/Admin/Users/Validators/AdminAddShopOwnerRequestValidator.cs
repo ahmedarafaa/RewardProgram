@@ -34,7 +34,7 @@ public class AdminAddShopOwnerRequestValidator : AbstractValidator<AdminAddShopO
         {
             RuleFor(x => x.StoreName)
                 .NotEmpty().WithMessage("اسم المتجر مطلوب")
-                .MinimumLength(2).WithMessage("اسم المتجر يجب أن يكون حرفين على الأقل")
+                .MinimumLength(5).WithMessage("اسم المتجر يجب أن يكون 5 أحرف على الأقل")
                 .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
 
             RuleFor(x => x.VAT)
