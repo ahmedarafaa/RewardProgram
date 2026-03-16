@@ -34,6 +34,8 @@ public class AdminRewardSettingsService : IAdminRewardSettingsService
 
         var oldRate = settings.PointsToSarRate;
         settings.PointsToSarRate = request.PointsToSarRate;
+        settings.InviterRewardPoints = request.InviterRewardPoints;
+        settings.InviteeRewardPoints = request.InviteeRewardPoints;
 
         await _context.SaveChangesAsync(ct);
 
@@ -73,6 +75,10 @@ public class AdminRewardSettingsService : IAdminRewardSettingsService
 
     private static RewardSettingsResponse MapToResponse(RewardSettings settings)
     {
-        return new RewardSettingsResponse(settings.Id, settings.PointsToSarRate);
+        return new RewardSettingsResponse(
+            settings.Id,
+            settings.PointsToSarRate,
+            settings.InviterRewardPoints,
+            settings.InviteeRewardPoints);
     }
 }

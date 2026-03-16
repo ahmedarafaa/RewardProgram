@@ -7,5 +7,6 @@ public record RegisterTechnicianRequest(
    string MobileNumber,
    string CityId,
    string PostalCode,
-   string District
+   string District,
+   string? InvitationCode
 );

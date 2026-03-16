@@ -15,5 +15,6 @@ public record RegisterSellerRequest(
     string? ShortAddress,
     IFormFile? ShopImage,
     string? CityId,
-    NationalAddressResponse? NationalAddress
+    NationalAddressResponse? NationalAddress,
+    string? InvitationCode
 );

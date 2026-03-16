@@ -49,7 +49,7 @@ public class AdminRewardSettingsServiceTests : IDisposable
         _context.RewardSettings.Add(new RewardSettings { PointsToSarRate = 10m });
         await _context.SaveChangesAsync();
 
-        var request = new UpdateRewardSettingsRequest(20m);
+        var request = new UpdateRewardSettingsRequest(20m, 100m, 50m);
         var result = await _sut.UpdateSettingsAsync(request, AdminId);
 
         result.IsSuccess.Should().BeTrue();
@@ -59,7 +59,7 @@ public class AdminRewardSettingsServiceTests : IDisposable
     [Fact]
     public async Task UpdateSettings_NoExistingRecord_ShouldCreateAndUpdate()
     {
-        var request = new UpdateRewardSettingsRequest(15m);
+        var request = new UpdateRewardSettingsRequest(15m, 100m, 50m);
         var result = await _sut.UpdateSettingsAsync(request, AdminId);
 
         result.IsSuccess.Should().BeTrue();

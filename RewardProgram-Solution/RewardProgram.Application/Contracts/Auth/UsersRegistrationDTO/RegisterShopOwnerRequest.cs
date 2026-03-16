@@ -16,5 +16,6 @@ public record RegisterShopOwnerRequest
     string? CRN,
     string? ShortAddress,
     IFormFile? ShopImage,
-    NationalAddressResponse? NationalAddress
+    NationalAddressResponse? NationalAddress,
+    string? InvitationCode
 );
