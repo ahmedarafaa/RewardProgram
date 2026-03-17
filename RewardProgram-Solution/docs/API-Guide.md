@@ -345,6 +345,80 @@ Image.memory(base64Decode(qrCodeBase64))
 - Invalid invitation codes are silently ignored during registration (no error thrown)
 - Self-invitation is blocked
 
+### Invitation Deep Link Flow
+
+The `invitationCode` field exists in the registration API, but the **user should never type it manually**. The app should extract it from the deep link URL and inject it silently into the registration request.
+
+**Share link format:** `https://app.raedrewardapp.com/invite/{CODE}`
+
+#### Scenario 1: User already has the app installed
+
+1. User A shares link `https://app.raedrewardapp.com/invite/ABC12345` via WhatsApp
+2. User B taps the link
+3. OS deep link handler opens the app directly
+4. App reads the URL, extracts `ABC12345` from the path
+5. App navigates to the registration screen with the code stored in memory
+6. User B fills in their details (name, mobile, etc.) — **no invitation code field shown**
+7. On submit, the app includes `invitationCode: "ABC12345"` in the API request automatically
+
+```dart
+// Deep link handler
+void handleDeepLink(Uri uri) {
+  if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'invite') {
+    final code = uri.pathSegments[1]; // "ABC12345"
+    navigateToRegistration(invitationCode: code);
+  }
+}
+```
+
+#### Scenario 2: User does NOT have the app installed
+
+1. User A shares link `https://app.raedrewardapp.com/invite/ABC12345` via WhatsApp
+2. User B taps the link
+3. App is not installed — the link opens in the browser
+4. **Option A — Firebase Dynamic Links (recommended):**
+   - The link is a Firebase Dynamic Link that detects the platform
+   - Redirects to App Store (iOS) or Play Store (Android)
+   - After install and first launch, Firebase delivers the original deep link to the app
+   - App extracts `ABC12345` from the deferred deep link and proceeds as Scenario 1
+5. **Option B — Fallback landing page:**
+   - `app.raedrewardapp.com/invite/ABC12345` serves a web page with:
+     - Store download buttons (App Store + Play Store)
+     - The invitation code displayed with a "Copy code" button
+   - User downloads the app, opens it, and pastes the code manually (less ideal but works)
+
+```
+┌─────────────────────────────────────────────────┐
+│         User taps invitation link                │
+│                    │                             │
+│          ┌────────┴────────┐                     │
+│          ▼                 ▼                     │
+│    App installed?    App NOT installed?           │
+│          │                 │                     │
+│          ▼                 ▼                     │
+│   Deep link opens    Redirect to store           │
+│   app directly       (via Dynamic Link)          │
+│          │                 │                     │
+│          ▼                 ▼                     │
+│   Extract code       User installs app           │
+│   from URL           & opens it                  │
+│          │                 │                     │
+│          │                 ▼                     │
+│          │          Deferred deep link            │
+│          │          delivers the code             │
+│          │                 │                     │
+│          └────────┬────────┘                     │
+│                   ▼                              │
+│       Registration screen opens                  │
+│       (code injected silently)                   │
+│       No invitation code field shown             │
+└─────────────────────────────────────────────────┘
+```
+
+**Recommended approach:** Use [Firebase Dynamic Links](https://firebase.google.com/docs/dynamic-links) or [App Links](https://developer.android.com/training/app-links) (Android) + [Universal Links](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content) (iOS). This handles both scenarios seamlessly with zero manual code entry.
+
+**Backend note:** No backend changes needed. The API already accepts `invitationCode` as an optional field in all registration endpoints. The deep link handling is entirely a Flutter/mobile concern.
+
 ---
 
 ## 7. Redemption (Seller, Technician)
