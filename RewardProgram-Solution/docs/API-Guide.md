@@ -1,7 +1,7 @@
 # RewardProgram API Guide — Flutter Integration
 
 **Author:** Mahmoud Zahran
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-25
 
 **Base URLs:**
 - Dev: `https://localhost:44315`
@@ -38,8 +38,14 @@ POST /api/auth/send-otp
 POST /api/auth/resend-otp
 ```
 ```json
-{ "pinId": "..." }
+{ "mobileNumber": "0512345678" }
 ```
+
+| Field | Type | Required | Validation |
+|-------|------|----------|------------|
+| mobileNumber | string | yes | `05XXXXXXXX` or `+XXXXXXXXXXX` |
+
+**Response:** `{ "pinId": "...", "maskedMobileNumber": "05****5678" }`
 
 ### Register ShopOwner (no auth) `[FormData]`
 
@@ -170,9 +176,26 @@ POST /api/auth/login/verify
 {
   "token": "<JWT>",
   "refreshToken": "...",
-  "expiresOn": "2026-03-17T12:00:00Z"
+  "expiresIn": 3600,
+  "refreshTokenExpiration": "2026-03-24T12:00:00Z",
+  "user": {
+    "id": "...",
+    "name": "محمد عبد الرحمن",
+    "mobileNumber": "0512345678",
+    "userType": 2,
+    "registrationStatus": 3
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|------------|
+| token | string | JWT access token |
+| refreshToken | string | Token for refreshing the JWT |
+| expiresIn | int | Token lifetime in seconds |
+| refreshTokenExpiration | DateTime | When the refresh token expires |
+| user.userType | int | 1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager, 6=SystemAdmin |
+| user.registrationStatus | int | 1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected |
 
 **Login errors:**
 - Rejected user → 403
@@ -181,12 +204,12 @@ POST /api/auth/login/verify
 ### Token Management (auth required)
 
 ```
-POST /api/auth/refresh-token     → { token, refreshToken, expiresOn }
+POST /api/auth/refresh-token     → { token, refreshToken, expiresIn, refreshTokenExpiration, user }
 POST /api/auth/revoke-token      → 200 OK
 ```
 
-- Send `{ "token": "<current-JWT>", "refreshToken": "..." }` to refresh
-- Send `{ "token": "<current-JWT>" }` to revoke (logout)
+- Send `{ "refreshToken": "..." }` to refresh
+- Send `{ "refreshToken": "..." }` to revoke (logout)
 - Store both `token` and `refreshToken` securely on device
 - Refresh before token expires; if refresh fails, redirect to login
 
@@ -196,13 +219,31 @@ POST /api/auth/revoke-token      → 200 OK
 
 ```
 GET /api/lookup/regions                              → [{ id, nameAr, nameEn }]
-GET /api/lookup/regions/{regionId}/cities             → [{ id, nameAr, nameEn }]
-GET /api/lookup/cities                                → [{ id, nameAr, nameEn }]
-GET /api/lookup/customer/{customerCode}/shop-data-status → { exists }
+GET /api/lookup/regions/{regionId}/cities             → [{ id, nameAr, nameEn, regionId }]
+GET /api/lookup/cities                                → [{ id, nameAr, nameEn, regionId }]
+GET /api/lookup/customer/{customerCode}/shop-data-status
 ```
 
+**City response** includes `regionId` — useful for deriving the region from the selected city.
+
+**Shop data status response:**
+```json
+{
+  "customerCodeExists": true,
+  "customerName": "شركة الرائد",
+  "shopDataExists": false
+}
+```
+
+| Field | Description |
+|-------|------------|
+| customerCodeExists | Whether the CustomerCode exists in ERP |
+| customerName | ERP customer name (null if not found) |
+| shopDataExists | Whether shop data already exists — tells Seller if shop fields are needed |
+
 - Use city IDs for registration forms.
-- `shop-data-status` returns `{ "exists": true/false }` — tells Seller if shop fields are needed.
+- If `shopDataExists` is `true`, the Seller registration form should skip shop fields (storeName, vat, crn, etc.).
+- If `customerCodeExists` is `false`, show an error — the CustomerCode is invalid.
 - Cache regions/cities locally; they rarely change.
 
 ---
@@ -217,7 +258,7 @@ GET /api/dashboard
 ```json
 {
   "userName": "محمد عبد الرحمن",
-  "points": 532,
+  "points": 532.0,
   "sarBalance": 53.20,
   "minimumRedemptionPoints": 1000,
   "pointsToRedeem": 468,
@@ -290,6 +331,23 @@ POST /api/scan
 GET /api/scan/history?page=1&pageSize=20
 ```
 
+**Response item:**
+```json
+{
+  "id": "...",
+  "barcodeCode": "ABCDEFGHIJKL",
+  "productName": "شريط إضاءة لاسلكي",
+  "productCode": "P001",
+  "productPointValue": 15,
+  "pointsAwarded": 15.0,
+  "scannerRole": 1,
+  "barcodeStatus": 4,
+  "scannedAt": "2026-03-10T12:00:00Z",
+  "latitude": 24.7136,
+  "longitude": 46.6753
+}
+```
+
 Paginated scan history for the current user.
 
 ---
@@ -308,6 +366,24 @@ GET /api/wallet/transactions?page=1&pageSize=20&type=1
 | type | int | no | Filter by transaction type (1-6) |
 
 `type` filter is optional (same enum as dashboard transactions). Omit to get all types.
+
+**Transaction response item:**
+```json
+{
+  "id": "...",
+  "amount": 15.0,
+  "sarRate": 0.10,
+  "sarAmount": 1.50,
+  "type": 1,
+  "description": "مسح باركود — شريط إضاءة لاسلكي",
+  "createdAt": "2026-03-10T12:00:00Z"
+}
+```
+
+| Field | Description |
+|-------|------------|
+| sarRate | The SAR conversion rate at the time of this transaction |
+| sarAmount | amount * sarRate |
 
 Returns `{ "balance": 0, "sarBalance": 0 }` if wallet not created yet (user hasn't earned any points).
 
@@ -473,14 +549,45 @@ POST /api/redemption/request
 ### Get Active Request
 
 ```
-GET /api/redemption/active → RedemptionRequestResponse (or 404 if none)
+GET /api/redemption/active
 ```
+
+Returns the user's current active redemption request, or 404 if none.
+
+**Response:**
+```json
+{
+  "id": "...",
+  "method": 1,
+  "status": 1,
+  "pointsAmount": 1500.0,
+  "sarRate": 0.10,
+  "sarAmount": 150.00,
+  "iban": "SA1234567890123456789012",
+  "bankName": "الراجحي",
+  "accountHolderName": "محمد عبد الرحمن",
+  "cashOtpExpiresAt": null,
+  "rejectionReason": null,
+  "createdAt": "2026-03-10T12:00:00Z"
+}
+```
+
+| Field | Description |
+|-------|------------|
+| method | 1=BankTransfer, 2=Cash |
+| status | Current status (see RedemptionRequestStatus enum) |
+| sarRate | SAR conversion rate at time of request |
+| cashOtpExpiresAt | Only for Cash method — when the handover OTP expires |
+| rejectionReason | Only if status = Rejected |
+| iban/bankName/accountHolderName | Only for BankTransfer method |
 
 ### Redemption History
 
 ```
 GET /api/redemption/history?page=1&pageSize=20
 ```
+
+Returns paginated list of all past redemption requests (same response shape as active request).
 
 ### Approval Endpoints (SalesMan, ZoneManager, SystemAdmin)
 
@@ -522,7 +629,7 @@ POST /api/approvals/reject     → { "userId": "...", "reason": "..." }
 
 | Enum | Values |
 |------|--------|
-| UserType | 1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager |
+| UserType | 1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager, 6=SystemAdmin |
 | RegistrationStatus | 1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected |
 | WalletTransactionType | 1=Earned, 2=Redeemed, 3=Cancelled, 4=Expired, 5=Refunded, 6=InvitationReward |
 | BarcodeStatus | 1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed |
@@ -606,7 +713,10 @@ Response wrapper:
   "items": [...],
   "totalCount": 150,
   "page": 1,
-  "pageSize": 20
+  "pageSize": 20,
+  "totalPages": 8,
+  "hasNextPage": true,
+  "hasPreviousPage": false
 }
 ```
 
