@@ -182,7 +182,7 @@ public class TwilioService : ITwilioService
         }
     }
 
-    public async Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string message, CancellationToken ct = default)
+    public async Task<Result> SendWhatsAppMessageAsync(string mobileNumber, string contentSid, Dictionary<string, string>? contentVariables = null, CancellationToken ct = default)
     {
         try
         {
@@ -191,22 +191,31 @@ public class TwilioService : ITwilioService
             if (_useMockMode)
             {
                 _logger.LogInformation(
-                    "[MOCK] WhatsApp message sent to {MobileNumber}: {Message}",
+                    "[MOCK] WhatsApp template message sent to {MobileNumber}, ContentSid: {ContentSid}",
                     MobileNumberHelper.Mask(mobileNumber),
-                    message);
+                    contentSid);
 
                 return Result.Success();
             }
 
-            await MessageResource.CreateAsync(
-                to: new PhoneNumber($"whatsapp:{formattedNumber}"),
-                from: new PhoneNumber(_options.WhatsAppFromNumber),
-                body: message
-            );
+            var messageOptions = new CreateMessageOptions(
+                new PhoneNumber($"whatsapp:{formattedNumber}"))
+            {
+                From = new PhoneNumber(_options.WhatsAppFromNumber),
+                ContentSid = contentSid
+            };
+
+            if (contentVariables != null)
+            {
+                messageOptions.ContentVariables = System.Text.Json.JsonSerializer.Serialize(contentVariables);
+            }
+
+            await MessageResource.CreateAsync(messageOptions);
 
             _logger.LogInformation(
-                "WhatsApp message sent to {MobileNumber}",
-                MobileNumberHelper.Mask(mobileNumber));
+                "WhatsApp template message sent to {MobileNumber}, ContentSid: {ContentSid}",
+                MobileNumberHelper.Mask(mobileNumber),
+                contentSid);
 
             return Result.Success();
         }

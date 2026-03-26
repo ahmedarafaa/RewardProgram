@@ -381,8 +381,9 @@ public class ApprovalService : IApprovalService
     {
         try
         {
-            var message = $"مرحباً {userName}! تمت الموافقة على طلب انضمامك لبرنامج مكافآت الرائد، يمكنك الآن تسجيل الدخول عبر التطبيق";
-            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, message);
+            const string welcomeTemplateSid = "HX34492ec3a59b30d95256da95a5515723";
+            var variables = new Dictionary<string, string> { { "1", userName } };
+            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, welcomeTemplateSid, variables);
         }
         catch (Exception ex)
         {

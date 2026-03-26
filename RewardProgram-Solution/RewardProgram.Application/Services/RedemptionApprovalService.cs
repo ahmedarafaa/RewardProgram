@@ -9,6 +9,7 @@ using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services;
@@ -147,13 +148,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             redemptionRequest.CashOtp = otp;
             redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.AddDays(14);
 
-            // Send OTP via WhatsApp
+            // TODO: Send OTP via WhatsApp once cash OTP content template is created in Twilio
             var mobile = redemptionRequest.User.MobileNumber;
-            if (!string.IsNullOrEmpty(mobile))
-            {
-                await _twilioService.SendWhatsAppMessageAsync(mobile,
-                    $"رمز تسليم المبلغ النقدي: {otp} — صالح لمدة 14 يوم", ct);
-            }
+            _logger.LogWarning("Cash OTP WhatsApp message skipped for {Mobile} — no content template configured yet",
+                MobileNumberHelper.Mask(mobile));
         }
 
         // If AdminApproved and BankTransfer → complete immediately
