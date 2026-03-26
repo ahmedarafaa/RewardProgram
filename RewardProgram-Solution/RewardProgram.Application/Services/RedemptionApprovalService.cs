@@ -148,10 +148,14 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             redemptionRequest.CashOtp = otp;
             redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.AddDays(14);
 
-            // TODO: Send OTP via WhatsApp once cash OTP content template is created in Twilio
+            // Send OTP via WhatsApp
             var mobile = redemptionRequest.User.MobileNumber;
-            _logger.LogWarning("Cash OTP WhatsApp message skipped for {Mobile} — no content template configured yet",
-                MobileNumberHelper.Mask(mobile));
+            if (!string.IsNullOrEmpty(mobile))
+            {
+                const string cashOtpTemplateSid = "HX3a29e8b025e259971190ac0d1ae60ea3";
+                var variables = new Dictionary<string, string> { { "1", otp } };
+                await _twilioService.SendWhatsAppMessageAsync(mobile, cashOtpTemplateSid, variables, ct);
+            }
         }
 
         // If AdminApproved and BankTransfer → complete immediately
