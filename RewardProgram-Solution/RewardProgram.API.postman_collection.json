@@ -629,6 +629,27 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Dev",
+      "description": "Development/staging helper endpoints. Only available in Development and Staging environments.\n\nNo authentication required.",
+      "item": [
+        {
+          "name": "Get Seeded Users",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dev/seeded-users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dev", "seeded-users"]
+            },
+            "description": "List all seeded users with their roles and assignments.\n\nReturns 404 in Production.\n\n**Response:** Array of:\n- `name`: User display name\n- `mobileNumber`: Phone number\n- `role`: UserType (ShopOwner, Seller, Technician, SalesMan, ZoneManager, SystemAdmin)\n- `status`: RegistrationStatus\n- `managedRegion`: Region name (ZoneManager only)\n- `managedCities`: City names list (SalesMan only)"
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

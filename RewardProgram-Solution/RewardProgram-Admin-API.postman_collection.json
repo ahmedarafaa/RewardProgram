@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "RewardProgram — Admin API",
-		"description": "Admin API endpoints — Users, Products, Barcodes, Scans, Reward Settings\n\nBase URL: http://staging.raedrewardapp.com\n\nRequires SystemAdmin JWT token.\n\n**To get a token:**\n1. Use the Public API collection to Login with SystemAdmin mobile `0500000001`\n2. Verify Login with any OTP → copy the JWT token here",
+		"description": "Admin API endpoints — Auth, Users, Products, Barcodes, Scans, Reward Settings\n\nBase URL: http://staging.raedrewardapp.com\n\nRequires SystemAdmin JWT token.\n\n**To get a token:**\n1. Use the **Admin Login** request below with username `admin` / password `Admin@123`\n2. The token is auto-saved to the collection variable\n\nAlternatively: Login via Public API with SystemAdmin mobile `0500000001` + OTP",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -33,6 +33,53 @@
 		]
 	},
 	"item": [
+		{
+			"name": "Auth",
+			"description": "Admin authentication — username/password login for SystemAdmin users.\n\nNo JWT required for login.",
+			"item": [
+				{
+					"name": "Admin Login",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "auth", "login"]
+						},
+						"description": "Login with username and password. Only SystemAdmin users can login.\n\n**Seeded accounts:**\n- `admin` / `Admin@123` — مدير النظام\n- `admin.test` / `Admin@123` — مدير النظام - تست\n\n**Response:**\n- `token`: JWT access token\n- `refreshToken`: Refresh token string\n- `expiresIn`: Token expiry in minutes\n- `refreshTokenExpiration`: Refresh token expiry datetime\n- `user`: { id, name, mobileNumber, userType, registrationStatus }"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    if (json.token) {",
+									"        pm.collectionVariables.set('token', json.token);",
+									"        console.log('Admin token saved');",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
 		{
 			"name": "Users — Add",
 			"description": "Create new users by role. Requires SystemAdmin JWT.\n\nShopOwner/Seller use form-data (file upload). Others use JSON.",
