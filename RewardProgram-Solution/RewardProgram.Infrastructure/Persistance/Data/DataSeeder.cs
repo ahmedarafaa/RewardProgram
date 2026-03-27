@@ -73,13 +73,17 @@ public static class DataSeeder
         await CreateUser(userManager, users, logger,
             name: "مدير النظام",
             userType: UserType.SystemAdmin,
-            roles: [UserRoles.SystemAdmin]);
+            roles: [UserRoles.SystemAdmin],
+            usernameOverride: "admin",
+            password: "Admin@123");
 
         await CreateUser(userManager, users, logger,
             name: "مدير النظام - تست",
             userType: UserType.SystemAdmin,
             roles: [UserRoles.SystemAdmin],
-            mobileOverride: "+201121007505");
+            mobileOverride: "+201121007505",
+            usernameOverride: "admin.test",
+            password: "Admin@123");
 
         // === Pure ZoneManagers (not also salesmen) ===
         await CreateUser(userManager, users, logger,
@@ -244,7 +248,9 @@ public static class DataSeeder
         string name,
         UserType userType,
         string[] roles,
-        string? mobileOverride = null)
+        string? mobileOverride = null,
+        string? usernameOverride = null,
+        string? password = null)
     {
         var trimmedName = name.Trim();
 
@@ -252,6 +258,20 @@ public static class DataSeeder
         var existing = await userManager.Users.FirstOrDefaultAsync(u => u.Name == trimmedName);
         if (existing != null)
         {
+            // Ensure password is set for existing admin users
+            if (password != null && !await userManager.HasPasswordAsync(existing))
+            {
+                await userManager.AddPasswordAsync(existing, password);
+                logger.LogInformation("Password added to existing user '{Name}'", trimmedName);
+            }
+
+            // Ensure username is updated for existing admin users
+            if (usernameOverride != null && existing.UserName != usernameOverride)
+            {
+                await userManager.SetUserNameAsync(existing, usernameOverride);
+                logger.LogInformation("Username updated for existing user '{Name}' to '{Username}'", trimmedName, usernameOverride);
+            }
+
             users[trimmedName] = existing;
             return;
         }
@@ -263,7 +283,7 @@ public static class DataSeeder
         var user = new ApplicationUser
         {
             Name = trimmedName,
-            UserName = mobile,
+            UserName = usernameOverride ?? mobile,
             MobileNumber = mobile,
             PhoneNumber = mobile,
             PhoneNumberConfirmed = true,
@@ -272,7 +292,10 @@ public static class DataSeeder
             IsDisabled = false
         };
 
-        var result = await userManager.CreateAsync(user);
+        var result = password != null
+            ? await userManager.CreateAsync(user, password)
+            : await userManager.CreateAsync(user);
+
         if (!result.Succeeded)
         {
             logger.LogError("Failed to create user '{Name}': {Errors}", trimmedName,
@@ -288,8 +311,8 @@ public static class DataSeeder
         }
 
         users[trimmedName] = user;
-        logger.LogInformation("User '{Name}' created ({UserType}, Mobile: {Mobile}, Roles: {Roles})",
-            trimmedName, userType, mobile, string.Join("+", roles));
+        logger.LogInformation("User '{Name}' created ({UserType}, Username: {Username}, Mobile: {Mobile}, Roles: {Roles})",
+            trimmedName, userType, user.UserName, mobile, string.Join("+", roles));
     }
 
     #endregion
