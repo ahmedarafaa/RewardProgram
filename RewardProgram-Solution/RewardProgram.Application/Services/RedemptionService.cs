@@ -16,15 +16,18 @@ public class RedemptionService : IRedemptionService
 {
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<RedemptionService> _logger;
 
     public RedemptionService(
         IApplicationDbContext context,
         IUserRepository userRepository,
+        INotificationService notificationService,
         ILogger<RedemptionService> logger)
     {
         _context = context;
         _userRepository = userRepository;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -100,6 +103,10 @@ public class RedemptionService : IRedemptionService
 
         _logger.LogInformation("Redemption request {Id} created by user {UserId} for {Points} points",
             redemptionRequest.Id, userId, request.PointsAmount);
+
+        await _notificationService.CreateAsync(userId, NotificationType.RedemptionCreated,
+            "طلب استبدال جديد", $"تم تقديم طلب استبدال {request.PointsAmount} نقطة",
+            redemptionRequest.Id, ct);
 
         return Result.Success(MapToResponse(redemptionRequest));
     }

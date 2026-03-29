@@ -17,15 +17,18 @@ public class ScanService : IScanService
 {
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<ScanService> _logger;
 
     public ScanService(
         IApplicationDbContext context,
         IUserRepository userRepository,
+        INotificationService notificationService,
         ILogger<ScanService> logger)
     {
         _context = context;
         _userRepository = userRepository;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -178,6 +181,18 @@ public class ScanService : IScanService
             _logger.LogInformation(
                 "Barcode '{Code}' scanned by {Role} user {UserId} — {Points} points awarded",
                 barcode.Code, scannerRole, userId, pointsForScanner);
+
+            await _notificationService.CreateAsync(userId, NotificationType.PointsEarned,
+                "نقاط جديدة", $"حصلت على {pointsForScanner} نقطة من مسح {barcode.Product.Name}",
+                scanRecord.Id, ct);
+
+            // Notify first scanner about deferred points
+            if (deferredPointsForFirstScanner.HasValue && firstScannerUserId is not null)
+            {
+                await _notificationService.CreateAsync(firstScannerUserId, NotificationType.PointsEarned,
+                    "نقاط جديدة", $"حصلت على {deferredPointsForFirstScanner.Value} نقطة مؤجلة — {barcode.Product.Name}",
+                    scanRecord.Id, ct);
+            }
 
             return Result.Success(new ScanBarcodeResponse(
                 barcode.Product.Name,

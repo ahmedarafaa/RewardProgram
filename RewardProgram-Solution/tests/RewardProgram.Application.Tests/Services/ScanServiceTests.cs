@@ -24,7 +24,7 @@ public class ScanServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _sut = new ScanService(_context, _userRepo, Substitute.For<ILogger<ScanService>>());
+        _sut = new ScanService(_context, _userRepo, Substitute.For<INotificationService>(), Substitute.For<ILogger<ScanService>>());
     }
 
     public void Dispose() => _context.Dispose();

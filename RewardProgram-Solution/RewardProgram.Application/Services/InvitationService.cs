@@ -19,17 +19,20 @@ public class InvitationService : IInvitationService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IQrCodeGenerator _qrCodeGenerator;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<InvitationService> _logger;
 
     public InvitationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IQrCodeGenerator qrCodeGenerator,
+        INotificationService notificationService,
         ILogger<InvitationService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _qrCodeGenerator = qrCodeGenerator;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -160,6 +163,27 @@ public class InvitationService : IInvitationService
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            // Notify invitee
+            if (inviteePoints > 0)
+            {
+                await _notificationService.CreateAsync(invitee.Id, NotificationType.InvitationReward,
+                    "مكافأة تسجيل", $"حصلت على {inviteePoints} نقطة مكافأة تسجيل عبر دعوة", ct: ct);
+            }
+
+            // Notify inviter
+            if (inviterPoints > 0)
+            {
+                var inviterRewardCount = await _context.WalletTransactions
+                    .CountAsync(t => t.Wallet.UserId == inviter.Id
+                        && t.Type == WalletTransactionType.InvitationReward, ct);
+
+                if (inviterRewardCount <= MaxRewardedInvitations)
+                {
+                    await _notificationService.CreateAsync(inviter.Id, NotificationType.InvitationReward,
+                        "مكافأة دعوة", $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}", ct: ct);
+                }
+            }
         }
         catch (Exception ex)
         {

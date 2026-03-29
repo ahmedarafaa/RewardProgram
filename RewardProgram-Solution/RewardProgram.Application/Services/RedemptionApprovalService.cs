@@ -19,17 +19,20 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<RedemptionApprovalService> _logger;
 
     public RedemptionApprovalService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         ITwilioService twilioService,
+        INotificationService notificationService,
         ILogger<RedemptionApprovalService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -171,6 +174,19 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         _logger.LogInformation("Redemption request {Id} approved by {ApproverId}: {From} → {To}",
             redemptionRequest.Id, approverId, fromStatus, redemptionRequest.Status);
 
+        if (redemptionRequest.Status == RedemptionRequestStatus.Completed)
+        {
+            await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionCompleted,
+                "اكتمل طلب الاستبدال", "تم إتمام طلب الاستبدال بنجاح",
+                redemptionRequest.Id, ct);
+        }
+        else
+        {
+            await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionApproved,
+                "تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال وانتقل للمرحلة التالية",
+                redemptionRequest.Id, ct);
+        }
+
         return Result.Success();
     }
 
@@ -213,6 +229,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
         _logger.LogInformation("Redemption request {Id} rejected by {ApproverId}",
             redemptionRequest.Id, approverId);
+
+        await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionRejected,
+            "تم رفض طلب الاستبدال", $"تم رفض طلب الاستبدال. السبب: {request.RejectionReason}",
+            redemptionRequest.Id, ct);
 
         return Result.Success();
     }
@@ -260,6 +280,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
         _logger.LogInformation("Cash handover confirmed for request {Id} by {HandoverBy}",
             redemptionRequest.Id, handoverById);
+
+        await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionCompleted,
+            "اكتمل طلب الاستبدال", "تم تسليم المبلغ بنجاح",
+            redemptionRequest.Id, ct);
 
         return Result.Success();
     }

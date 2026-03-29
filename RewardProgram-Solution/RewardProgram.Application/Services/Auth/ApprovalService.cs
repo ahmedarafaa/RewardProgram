@@ -11,6 +11,7 @@ using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
+using RewardProgram.Domain.Enums;
 using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services.Auth;
@@ -21,6 +22,7 @@ public class ApprovalService : IApprovalService
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
     private readonly IInvitationService _invitationService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<ApprovalService> _logger;
 
     public ApprovalService(
@@ -28,12 +30,14 @@ public class ApprovalService : IApprovalService
         IUserRepository userRepository,
         ITwilioService twilioService,
         IInvitationService invitationService,
+        INotificationService notificationService,
         ILogger<ApprovalService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
         _invitationService = invitationService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -283,6 +287,9 @@ public class ApprovalService : IApprovalService
             var welcomeName = user.Name;
             _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
 
+            await _notificationService.CreateAsync(user.Id, NotificationType.RegistrationApproved,
+                "تم قبول تسجيلك", $"مرحباً {user.Name}، تم قبول طلب تسجيلك بنجاح", ct: ct);
+
             return Result.Success();
         }
 
@@ -347,6 +354,9 @@ public class ApprovalService : IApprovalService
         _logger.LogInformation(
             "Approver {ApproverId} rejected user {UserId}. Status: {FromStatus} → Rejected. Reason: {Reason}",
             approverId, userId, fromStatus, reason);
+
+        await _notificationService.CreateAsync(user.Id, NotificationType.RegistrationRejected,
+            "تم رفض تسجيلك", $"تم رفض طلب تسجيلك. السبب: {reason}", ct: ct);
 
         return Result.Success();
     }
