@@ -14,4 +14,5 @@ public interface IUserRepository
     Task<IdentityResult> UpdateAsync(ApplicationUser user);
     Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role);
     Task<IList<string>> GetRolesAsync(ApplicationUser user);
+    Task<IList<ApplicationUser>> GetUsersInRoleAsync(string roleName);
 }

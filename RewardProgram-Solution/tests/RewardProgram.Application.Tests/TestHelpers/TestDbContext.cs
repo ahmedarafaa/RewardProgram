@@ -29,6 +29,7 @@ public class TestDbContext : DbContext, IApplicationDbContext
     public DbSet<RewardSettings> RewardSettings => Set<RewardSettings>();
     public DbSet<RedemptionRequest> RedemptionRequests => Set<RedemptionRequest>();
     public DbSet<RedemptionApproval> RedemptionApprovals => Set<RedemptionApproval>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -143,6 +144,8 @@ public class TestDbContext : DbContext, IApplicationDbContext
             b.HasKey(e => e.Id);
             b.HasOne(e => e.Approver).WithMany().HasForeignKey(e => e.ApproverId);
         });
+
+        modelBuilder.Entity<Notification>(b => b.HasKey(e => e.Id));
     }
 
     public static TestDbContext Create()

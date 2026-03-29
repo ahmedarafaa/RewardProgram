@@ -37,4 +37,6 @@ public class UserRepository : IUserRepository
     public Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role) => _userManager.AddToRoleAsync(user, role);
 
     public Task<IList<string>> GetRolesAsync(ApplicationUser user) => _userManager.GetRolesAsync(user);
+
+    public Task<IList<ApplicationUser>> GetUsersInRoleAsync(string roleName) => _userManager.GetUsersInRoleAsync(roleName);
 }
