@@ -17,33 +17,15 @@ public class AdminEditSellerRequestValidator : AbstractValidator<AdminEditSeller
             .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
             .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
 
-        RuleFor(x => x.MobileNumber)
-            .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
-
-        RuleFor(x => x.CustomerCode)
-            .NotEmpty().WithMessage("كود العميل مطلوب")
-            .MaximumLength(50).WithMessage("كود العميل يجب ألا يتجاوز 50 حرف");
-
         RuleFor(x => x.CityId)
             .NotEmpty().WithMessage("المدينة مطلوبة");
 
-        When(x => x.StoreName != null || x.VAT != null || x.CRN != null || x.ShopImage != null, () =>
+        When(x => x.StoreName != null || x.ShopImage != null, () =>
         {
             RuleFor(x => x.StoreName)
                 .NotEmpty().WithMessage("اسم المتجر مطلوب")
                 .MinimumLength(5).WithMessage("اسم المتجر يجب أن يكون 5 أحرف على الأقل")
                 .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
-
-            RuleFor(x => x.VAT)
-                .NotEmpty().WithMessage("الرقم الضريبي مطلوب")
-                .Length(15).WithMessage("الرقم الضريبي يجب أن يتكون من 15 رقم")
-                .Matches(@"^3\d{13}3$").WithMessage("الرقم الضريبي يجب أن يبدأ وينتهي بالرقم 3");
-
-            RuleFor(x => x.CRN)
-                .NotEmpty().WithMessage("رقم السجل التجاري مطلوب")
-                .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
-                .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
 
             RuleFor(x => x.ShortAddress)
                 .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage("العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام")

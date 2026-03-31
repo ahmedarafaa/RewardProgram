@@ -157,6 +157,38 @@ public class AdminProductService : IAdminProductService
         return Result.Success(MapToResponse(product, barcodeStats.Total, barcodeStats.Available));
     }
 
+    public async Task<Result<PaginatedResult<CategoryItem>>> ListCategoriesAsync(
+        AdminCategoryListQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = _context.Products
+            .AsNoTracking()
+            .Where(p => p.Category != null && p.Category != string.Empty)
+            .Select(p => p.Category!)
+            .Distinct();
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var search = query.Search.Trim();
+            dbQuery = dbQuery.Where(c => c.Contains(search));
+        }
+
+        var ordered = dbQuery.OrderBy(c => c);
+
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+        var totalCount = await ordered.CountAsync(ct);
+
+        var categories = await ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var items = categories
+            .Select((name, index) => new CategoryItem((page - 1) * pageSize + index + 1, name))
+            .ToList();
+
+        return Result.Success(new PaginatedResult<CategoryItem>(items, totalCount, page, pageSize));
+    }
+
     private async Task<(int Total, int Available)> GetBarcodeStatsAsync(string productId, CancellationToken ct)
     {
         var stats = await _context.ProductBarcodes

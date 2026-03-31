@@ -683,17 +683,6 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.SalesMan)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
-
-        // Check mobile uniqueness (excluding current user)
-        if (user.MobileNumber != mobile)
-        {
-            var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
-            if (mobileInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
-        }
-
         // Load and verify all new cities
         var newCities = await _context.Cities
             .Where(c => request.CityIds.Contains(c.Id) && c.IsActive && !c.IsDeleted)
@@ -708,9 +697,6 @@ public class AdminUserService : IAdminUserService
         {
             // Update user fields
             user.Name = request.Name;
-            user.MobileNumber = mobile;
-            user.UserName = mobile;
-            user.PhoneNumber = mobile;
 
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -808,16 +794,6 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ZoneManager)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
-
-        if (user.MobileNumber != mobile)
-        {
-            var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
-            if (mobileInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
-        }
-
         // Validate new region
         var newRegion = await _context.Regions
             .FirstOrDefaultAsync(r => r.Id == request.RegionId && r.IsActive && !r.IsDeleted, ct);
@@ -834,9 +810,6 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = mobile;
-            user.UserName = mobile;
-            user.PhoneNumber = mobile;
 
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -894,31 +867,17 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ShopOwner)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
-
-        if (user.MobileNumber != mobile)
-        {
-            var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
-            if (mobileInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
-        }
-
-        // Validate CustomerCode
-        var erpExists = await _context.ErpCustomers
-            .AnyAsync(e => e.CustomerCode == request.CustomerCode, ct);
-        if (!erpExists)
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CustomerCodeNotFound);
-
         // Validate city
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
         if (city == null)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CityNotFound);
 
-        // Load profile
+        // Load profile to get CustomerCode
         var profile = await _context.ShopOwnerProfiles
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
+
+        var customerCode = profile?.CustomerCode ?? string.Empty;
 
         // Handle ShopData updates
         string? newImageUrl = null;
@@ -930,9 +889,9 @@ public class AdminUserService : IAdminUserService
             newImageUrl = imgResult.Value;
         }
 
-        // Validate VAT/CRN/ShortAddress uniqueness (exclude current ShopData)
+        // Validate ShortAddress uniqueness (exclude current ShopData)
         var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
-            _context, request.VAT, request.CRN, request.ShortAddress, request.CustomerCode, ct);
+            _context, null, null, request.ShortAddress, customerCode, ct);
         if (uniqueCheck.IsFailure)
             return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
@@ -942,9 +901,6 @@ public class AdminUserService : IAdminUserService
         {
             // Update user
             user.Name = request.OwnerName;
-            user.MobileNumber = mobile;
-            user.UserName = mobile;
-            user.PhoneNumber = mobile;
 
             // Update city and salesman assignment
             if (user.NationalAddress == null)
@@ -971,21 +927,13 @@ public class AdminUserService : IAdminUserService
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
             }
 
-            // Update profile CustomerCode if changed
-            if (profile != null && profile.CustomerCode != request.CustomerCode)
-            {
-                profile.CustomerCode = request.CustomerCode;
-                profile.UpdatedBy = adminUserId;
-                profile.UpdatedAt = DateTime.UtcNow;
-            }
-
             // Update ShopData
             var shopData = await _context.ShopData
-                .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
+                .FirstOrDefaultAsync(sd => sd.CustomerCode == customerCode, ct);
 
             if (shopData != null)
                 ShopDataValidationHelper.ApplyPartialUpdate(
-                    shopData, request.StoreName, request.VAT, request.CRN, request.ShortAddress,
+                    shopData, request.StoreName, null, null, request.ShortAddress,
                     newImageUrl, request.CityId, request.NationalAddress, adminUserId);
 
             await _context.SaveChangesAsync(ct);
@@ -1015,28 +963,16 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Seller)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
-
-        if (user.MobileNumber != mobile)
-        {
-            var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
-            if (mobileInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
-        }
-
-        var erpExists = await _context.ErpCustomers
-            .AnyAsync(e => e.CustomerCode == request.CustomerCode, ct);
-        if (!erpExists)
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CustomerCodeNotFound);
-
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
         if (city == null)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CityNotFound);
 
+        // Load profile to get CustomerCode
         var profile = await _context.SellerProfiles
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
+
+        var customerCode = profile?.CustomerCode ?? string.Empty;
 
         string? newImageUrl = null;
         if (request.ShopImage != null)
@@ -1047,8 +983,9 @@ public class AdminUserService : IAdminUserService
             newImageUrl = imgResult.Value;
         }
 
+        // Validate ShortAddress uniqueness (exclude current ShopData)
         var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
-            _context, request.VAT, request.CRN, request.ShortAddress, request.CustomerCode, ct);
+            _context, null, null, request.ShortAddress, customerCode, ct);
         if (uniqueCheck.IsFailure)
             return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
 
@@ -1057,9 +994,6 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = mobile;
-            user.UserName = mobile;
-            user.PhoneNumber = mobile;
 
             if (user.NationalAddress == null)
                 user.NationalAddress = new NationalAddress();
@@ -1085,19 +1019,12 @@ public class AdminUserService : IAdminUserService
                 return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
             }
 
-            if (profile != null && profile.CustomerCode != request.CustomerCode)
-            {
-                profile.CustomerCode = request.CustomerCode;
-                profile.UpdatedBy = adminUserId;
-                profile.UpdatedAt = DateTime.UtcNow;
-            }
-
             var shopData = await _context.ShopData
-                .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
+                .FirstOrDefaultAsync(sd => sd.CustomerCode == customerCode, ct);
 
             if (shopData != null)
                 ShopDataValidationHelper.ApplyPartialUpdate(
-                    shopData, request.StoreName, request.VAT, request.CRN, request.ShortAddress,
+                    shopData, request.StoreName, null, null, request.ShortAddress,
                     newImageUrl, request.CityId, request.NationalAddress, adminUserId);
 
             await _context.SaveChangesAsync(ct);
@@ -1127,16 +1054,6 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Technician)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
-
-        if (user.MobileNumber != mobile)
-        {
-            var mobileInUse = await _userRepository.Query()
-                .AnyAsync(u => u.MobileNumber == mobile && u.Id != userId, ct);
-            if (mobileInUse)
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyInUse);
-        }
-
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
         if (city == null)
@@ -1147,9 +1064,6 @@ public class AdminUserService : IAdminUserService
         try
         {
             user.Name = request.Name;
-            user.MobileNumber = mobile;
-            user.UserName = mobile;
-            user.PhoneNumber = mobile;
 
             if (user.NationalAddress == null)
                 user.NationalAddress = new NationalAddress();

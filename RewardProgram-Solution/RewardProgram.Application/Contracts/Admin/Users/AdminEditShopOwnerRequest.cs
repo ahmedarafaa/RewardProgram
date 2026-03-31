@@ -5,12 +5,8 @@ namespace RewardProgram.Application.Contracts.Admin.Users;
 
 public record AdminEditShopOwnerRequest(
     string OwnerName,
-    string MobileNumber,
-    string CustomerCode,
     string CityId,
     string? StoreName,
-    string? VAT,
-    string? CRN,
     string? ShortAddress,
     IFormFile? ShopImage,
     NationalAddressResponse? NationalAddress

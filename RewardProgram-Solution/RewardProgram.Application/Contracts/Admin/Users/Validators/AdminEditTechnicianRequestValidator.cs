@@ -12,10 +12,6 @@ public class AdminEditTechnicianRequestValidator : AbstractValidator<AdminEditTe
             .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
             .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
 
-        RuleFor(x => x.MobileNumber)
-            .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
-
         RuleFor(x => x.CityId)
             .NotEmpty().WithMessage("المدينة مطلوبة");
 

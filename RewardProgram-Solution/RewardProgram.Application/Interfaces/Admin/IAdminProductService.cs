@@ -11,4 +11,5 @@ public interface IAdminProductService
     Task<Result> DeleteProductAsync(string productId, string adminUserId, CancellationToken ct = default);
     Task<Result<PaginatedResult<AdminProductResponse>>> ListProductsAsync(AdminProductListQuery query, CancellationToken ct = default);
     Task<Result<AdminProductResponse>> GetProductAsync(string productId, CancellationToken ct = default);
+    Task<Result<PaginatedResult<CategoryItem>>> ListCategoriesAsync(AdminCategoryListQuery query, CancellationToken ct = default);
 }

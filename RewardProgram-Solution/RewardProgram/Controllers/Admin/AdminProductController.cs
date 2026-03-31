@@ -38,6 +38,14 @@ public class AdminProductController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
+    [HttpGet("categories")]
+    [ProducesResponseType(typeof(PaginatedResult<CategoryItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListCategories([FromQuery] AdminCategoryListQuery query, CancellationToken ct)
+    {
+        var result = await _productService.ListCategoriesAsync(query, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(AdminProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
