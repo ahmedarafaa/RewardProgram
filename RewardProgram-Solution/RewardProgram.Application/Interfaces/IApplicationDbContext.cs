@@ -27,6 +27,8 @@ public interface IApplicationDbContext
     DbSet<RedemptionRequest> RedemptionRequests { get; }
     DbSet<RedemptionApproval> RedemptionApprovals { get; }
     DbSet<Notification> Notifications { get; }
+    DbSet<ContactUsContent> ContactUsContents { get; }
+    DbSet<AboutAppContent> AboutAppContents { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

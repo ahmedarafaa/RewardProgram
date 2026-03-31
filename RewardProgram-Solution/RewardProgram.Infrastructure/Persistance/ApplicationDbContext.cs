@@ -36,6 +36,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RedemptionRequest> RedemptionRequests { get; set; }
     public DbSet<RedemptionApproval> RedemptionApprovals { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<ContactUsContent> ContactUsContents { get; set; }
+    public DbSet<AboutAppContent> AboutAppContents { get; set; }
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

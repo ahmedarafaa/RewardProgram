@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IAdminRewardSettingsService, AdminRewardSettingsService>();
+        services.AddScoped<IAdminContentService, AdminContentService>();
         services.AddScoped<IRedemptionService, RedemptionService>();
         services.AddScoped<IRedemptionApprovalService, RedemptionApprovalService>();
         services.AddScoped<IAdminRedemptionService, AdminRedemptionService>();
