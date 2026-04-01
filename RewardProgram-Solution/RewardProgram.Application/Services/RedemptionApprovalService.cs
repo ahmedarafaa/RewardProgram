@@ -155,7 +155,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             var mobile = redemptionRequest.User.MobileNumber;
             if (!string.IsNullOrEmpty(mobile))
             {
-                const string cashOtpTemplateSid = "HX3a29e8b025e259971190ac0d1ae60ea3";
+                const string cashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
                 var variables = new Dictionary<string, string> { { "1", otp } };
                 await _twilioService.SendWhatsAppMessageAsync(mobile, cashOtpTemplateSid, variables, ct);
             }
