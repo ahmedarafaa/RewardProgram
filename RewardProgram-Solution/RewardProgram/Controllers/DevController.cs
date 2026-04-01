@@ -26,6 +26,7 @@ public class DevController : ControllerBase
 
     [HttpGet("seeded-users")]
     public async Task<IActionResult> GetSeededUsers(
+        [FromQuery] string? id,
         [FromQuery] string? search,
         [FromQuery] UserType? userType,
         [FromQuery] RegistrationStatus? registrationStatus,
@@ -44,6 +45,9 @@ public class DevController : ControllerBase
         var query = _userRepository.Query().AsQueryable();
 
         // Filters
+        if (!string.IsNullOrWhiteSpace(id))
+            query = query.Where(u => u.Id == id);
+
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(u =>
                 u.Name.Contains(search) || u.MobileNumber.Contains(search));
