@@ -13,16 +13,5 @@ public class AdminEditTechnicianRequestValidator : AbstractValidator<AdminEditTe
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"])
             .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
-
-        RuleFor(x => x.CityId)
-            .NotEmpty().WithMessage(L["CityId.NotEmpty"]);
-
-        RuleFor(x => x.PostalCode)
-            .NotEmpty().WithMessage(L["PostalCode.NotEmpty"])
-            .Matches(@"^\d{5}$").WithMessage(L["PostalCode.InvalidFormat"]);
-
-        RuleFor(x => x.District)
-            .NotEmpty().WithMessage(L["District.NotEmpty"])
-            .MaximumLength(100).WithMessage(L["District.MaxLength"]);
     }
 }

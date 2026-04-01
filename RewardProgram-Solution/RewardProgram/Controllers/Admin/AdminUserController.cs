@@ -146,8 +146,7 @@ public class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> EditShopOwner(string id, [FromForm] AdminEditShopOwnerRequest request, CancellationToken ct)
+    public async Task<IActionResult> EditShopOwner(string id, [FromBody] AdminEditShopOwnerRequest request, CancellationToken ct)
     {
         var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _adminUserService.EditShopOwnerAsync(id, request, adminId, ct);
@@ -158,8 +157,7 @@ public class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> EditSeller(string id, [FromForm] AdminEditSellerRequest request, CancellationToken ct)
+    public async Task<IActionResult> EditSeller(string id, [FromBody] AdminEditSellerRequest request, CancellationToken ct)
     {
         var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _adminUserService.EditSellerAsync(id, request, adminId, ct);
@@ -170,7 +168,6 @@ public class AdminUserController : ControllerBase
     [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> EditTechnician(string id, [FromBody] AdminEditTechnicianRequest request, CancellationToken ct)
     {
         var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;

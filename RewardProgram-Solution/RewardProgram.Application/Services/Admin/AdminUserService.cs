@@ -867,90 +867,21 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ShopOwner)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        // Validate city
-        var city = await _context.Cities
-            .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
-        if (city == null)
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CityNotFound);
+        user.Name = request.OwnerName;
 
-        // Load profile to get CustomerCode
-        var profile = await _context.ShopOwnerProfiles
-            .FirstOrDefaultAsync(p => p.UserId == userId, ct);
-
-        var customerCode = profile?.CustomerCode ?? string.Empty;
-
-        // Handle ShopData updates
-        string? newImageUrl = null;
-        if (request.ShopImage != null)
+        var updateResult = await _userRepository.UpdateAsync(user);
+        if (!updateResult.Succeeded)
         {
-            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
-            if (imgResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
-            newImageUrl = imgResult.Value;
-        }
-
-        // Validate ShortAddress uniqueness (exclude current ShopData)
-        var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
-            _context, null, null, request.ShortAddress, customerCode, ct);
-        if (uniqueCheck.IsFailure)
-            return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
-
-        await using var transaction = await _context.BeginTransactionAsync(ct);
-
-        try
-        {
-            // Update user
-            user.Name = request.OwnerName;
-
-            // Update city and salesman assignment
-            if (user.NationalAddress == null)
-                user.NationalAddress = new NationalAddress();
-
-            user.NationalAddress.CityId = request.CityId;
-            user.AssignedSalesManId = city.ApprovalSalesManId;
-
-            if (request.NationalAddress != null)
-            {
-                user.NationalAddress.Street = request.NationalAddress.Street;
-                user.NationalAddress.BuildingNumber = request.NationalAddress.BuildingNumber;
-                user.NationalAddress.PostalCode = request.NationalAddress.PostalCode;
-                user.NationalAddress.SubNumber = request.NationalAddress.SubNumber;
-                user.NationalAddress.District = request.NationalAddress.District ?? string.Empty;
-            }
-
-            var updateResult = await _userRepository.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to update ShopOwner {UserId}: {Errors}",
-                    userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
-            }
-
-            // Update ShopData
-            var shopData = await _context.ShopData
-                .FirstOrDefaultAsync(sd => sd.CustomerCode == customerCode, ct);
-
-            if (shopData != null)
-                ShopDataValidationHelper.ApplyPartialUpdate(
-                    shopData, request.StoreName, null, null, request.ShortAddress,
-                    newImageUrl, request.CityId, request.NationalAddress, adminUserId);
-
-            await _context.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-
-            _logger.LogInformation("Admin {AdminId} updated ShopOwner {UserId}", adminUserId, userId);
-
-            return Result.Success(new AdminAddUserResponse(
-                user.Id, user.Name, user.MobileNumber,
-                UserType.ShopOwner, "تم تعديل صاحب المحل بنجاح"));
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(ct);
-            _logger.LogError(ex, "Admin: Failed to update ShopOwner {UserId}", userId);
+            _logger.LogError("Admin: Failed to update ShopOwner {UserId}: {Errors}",
+                userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
         }
+
+        _logger.LogInformation("Admin {AdminId} updated ShopOwner {UserId}", adminUserId, userId);
+
+        return Result.Success(new AdminAddUserResponse(
+            user.Id, user.Name, user.MobileNumber,
+            UserType.ShopOwner, "تم تعديل صاحب المحل بنجاح"));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditSellerAsync(
@@ -963,85 +894,21 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Seller)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var city = await _context.Cities
-            .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
-        if (city == null)
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CityNotFound);
+        user.Name = request.Name;
 
-        // Load profile to get CustomerCode
-        var profile = await _context.SellerProfiles
-            .FirstOrDefaultAsync(p => p.UserId == userId, ct);
-
-        var customerCode = profile?.CustomerCode ?? string.Empty;
-
-        string? newImageUrl = null;
-        if (request.ShopImage != null)
+        var updateResult = await _userRepository.UpdateAsync(user);
+        if (!updateResult.Succeeded)
         {
-            var imgResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
-            if (imgResult.IsFailure)
-                return Result.Failure<AdminAddUserResponse>(imgResult.Error);
-            newImageUrl = imgResult.Value;
-        }
-
-        // Validate ShortAddress uniqueness (exclude current ShopData)
-        var uniqueCheck = await ShopDataValidationHelper.ValidateUniqueFieldsPartialAsync(
-            _context, null, null, request.ShortAddress, customerCode, ct);
-        if (uniqueCheck.IsFailure)
-            return Result.Failure<AdminAddUserResponse>(uniqueCheck.Error);
-
-        await using var transaction = await _context.BeginTransactionAsync(ct);
-
-        try
-        {
-            user.Name = request.Name;
-
-            if (user.NationalAddress == null)
-                user.NationalAddress = new NationalAddress();
-
-            user.NationalAddress.CityId = request.CityId;
-            user.AssignedSalesManId = city.ApprovalSalesManId;
-
-            if (request.NationalAddress != null)
-            {
-                user.NationalAddress.Street = request.NationalAddress.Street;
-                user.NationalAddress.BuildingNumber = request.NationalAddress.BuildingNumber;
-                user.NationalAddress.PostalCode = request.NationalAddress.PostalCode;
-                user.NationalAddress.SubNumber = request.NationalAddress.SubNumber;
-                user.NationalAddress.District = request.NationalAddress.District ?? string.Empty;
-            }
-
-            var updateResult = await _userRepository.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to update Seller {UserId}: {Errors}",
-                    userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
-            }
-
-            var shopData = await _context.ShopData
-                .FirstOrDefaultAsync(sd => sd.CustomerCode == customerCode, ct);
-
-            if (shopData != null)
-                ShopDataValidationHelper.ApplyPartialUpdate(
-                    shopData, request.StoreName, null, null, request.ShortAddress,
-                    newImageUrl, request.CityId, request.NationalAddress, adminUserId);
-
-            await _context.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-
-            _logger.LogInformation("Admin {AdminId} updated Seller {UserId}", adminUserId, userId);
-
-            return Result.Success(new AdminAddUserResponse(
-                user.Id, user.Name, user.MobileNumber,
-                UserType.Seller, "تم تعديل البائع بنجاح"));
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(ct);
-            _logger.LogError(ex, "Admin: Failed to update Seller {UserId}", userId);
+            _logger.LogError("Admin: Failed to update Seller {UserId}: {Errors}",
+                userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
         }
+
+        _logger.LogInformation("Admin {AdminId} updated Seller {UserId}", adminUserId, userId);
+
+        return Result.Success(new AdminAddUserResponse(
+            user.Id, user.Name, user.MobileNumber,
+            UserType.Seller, "تم تعديل البائع بنجاح"));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditTechnicianAsync(
@@ -1054,49 +921,21 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.Technician)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
-        var city = await _context.Cities
-            .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
-        if (city == null)
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.CityNotFound);
+        user.Name = request.Name;
 
-        await using var transaction = await _context.BeginTransactionAsync(ct);
-
-        try
+        var updateResult = await _userRepository.UpdateAsync(user);
+        if (!updateResult.Succeeded)
         {
-            user.Name = request.Name;
-
-            if (user.NationalAddress == null)
-                user.NationalAddress = new NationalAddress();
-
-            user.NationalAddress.CityId = request.CityId;
-            user.NationalAddress.PostalCode = request.PostalCode;
-            user.NationalAddress.District = request.District;
-            user.AssignedSalesManId = city.ApprovalSalesManId;
-
-            var updateResult = await _userRepository.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                _logger.LogError("Admin: Failed to update Technician {UserId}: {Errors}",
-                    userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
-                await transaction.RollbackAsync(ct);
-                return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
-            }
-
-            await _context.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-
-            _logger.LogInformation("Admin {AdminId} updated Technician {UserId}", adminUserId, userId);
-
-            return Result.Success(new AdminAddUserResponse(
-                user.Id, user.Name, user.MobileNumber,
-                UserType.Technician, "تم تعديل الفني بنجاح"));
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(ct);
-            _logger.LogError(ex, "Admin: Failed to update Technician {UserId}", userId);
+            _logger.LogError("Admin: Failed to update Technician {UserId}: {Errors}",
+                userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
         }
+
+        _logger.LogInformation("Admin {AdminId} updated Technician {UserId}", adminUserId, userId);
+
+        return Result.Success(new AdminAddUserResponse(
+            user.Id, user.Name, user.MobileNumber,
+            UserType.Technician, "تم تعديل الفني بنجاح"));
     }
 
     #endregion

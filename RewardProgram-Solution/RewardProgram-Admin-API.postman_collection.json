@@ -367,21 +367,13 @@
 					"name": "Edit ShopOwner",
 					"request": {
 						"method": "PUT",
-						"header": [],
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
 						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{ "key": "ownerName", "value": "محمد - معدل", "type": "text", "description": "Required — 3+ letters only, no numbers" },
-								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر الرائد المعدل", "type": "text" },
-								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "4 letters + 4 digits" },
-								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
-								{ "key": "nationalAddress.buildingNumber", "value": "1234", "type": "text", "description": "4 digits (1000-9999)" },
-								{ "key": "nationalAddress.street", "value": "شارع الملك فهد", "type": "text" },
-								{ "key": "nationalAddress.postalCode", "value": "12345", "type": "text", "description": "5 digits" },
-								{ "key": "nationalAddress.subNumber", "value": "1234", "type": "text", "description": "4 digits (1000-9999)" },
-								{ "key": "nationalAddress.district", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" }
-							]
+							"mode": "raw",
+							"raw": "{\n  \"ownerName\": \"محمد - معدل\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/shop-owner/:userId",
@@ -395,28 +387,20 @@
 								}
 							]
 						},
-						"description": "Edit a ShopOwner and their ShopData.\n\nImmutable fields (cannot be changed): MobileNumber, CustomerCode, VAT, CRN."
+						"description": "Edit a ShopOwner — only the name can be changed.\n\nOwnerName: 3+ letters only (Arabic/English), no numbers.\n\nAll other fields (MobileNumber, CustomerCode, VAT, CRN, ShopData, Address) are immutable and displayed as read-only."
 					}
 				},
 				{
 					"name": "Edit Seller",
 					"request": {
 						"method": "PUT",
-						"header": [],
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
 						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{ "key": "name", "value": "سعد البائع - معدل", "type": "text", "description": "Required — 3+ letters only, no numbers" },
-								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر البائع المعدل", "type": "text" },
-								{ "key": "shortAddress", "value": "EFGH5678", "type": "text", "description": "4 letters + 4 digits" },
-								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
-								{ "key": "nationalAddress.buildingNumber", "value": "5678", "type": "text", "description": "4 digits (1000-9999)" },
-								{ "key": "nationalAddress.street", "value": "شارع العليا", "type": "text" },
-								{ "key": "nationalAddress.postalCode", "value": "54321", "type": "text", "description": "5 digits" },
-								{ "key": "nationalAddress.subNumber", "value": "4321", "type": "text", "description": "4 digits (1000-9999)" },
-								{ "key": "nationalAddress.district", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" }
-							]
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"سعد البائع - معدل\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/seller/:userId",
@@ -430,7 +414,7 @@
 								}
 							]
 						},
-						"description": "Edit a Seller and their ShopData.\n\nImmutable fields (cannot be changed): MobileNumber, CustomerCode, VAT, CRN."
+						"description": "Edit a Seller — only the name can be changed.\n\nName: 3+ letters only (Arabic/English), no numbers.\n\nAll other fields (MobileNumber, CustomerCode, VAT, CRN, ShopData, Address) are immutable and displayed as read-only."
 					}
 				},
 				{
@@ -438,14 +422,11 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"فهد الفني - معدل\",\n  \"cityId\": \"city-id-2\",\n  \"postalCode\": \"54321\",\n  \"district\": \"حي الملك فهد\"\n}",
+							"raw": "{\n  \"name\": \"فهد الفني - معدل\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -460,7 +441,7 @@
 								}
 							]
 						},
-						"description": "Edit a Technician.\n\nName: 3+ letters only (Arabic/English), no numbers.\nPostalCode: 5 digits.\nMobileNumber is immutable — cannot be changed after creation."
+						"description": "Edit a Technician — only the name can be changed.\n\nName: 3+ letters only (Arabic/English), no numbers.\n\nAll other fields (MobileNumber, CityId, PostalCode, District) are immutable and displayed as read-only."
 					}
 				}
 			]
