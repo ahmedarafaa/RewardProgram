@@ -90,34 +90,38 @@ public class AdminDashboardService : IAdminDashboardService
             .Where(u => u.UserType != UserType.SystemAdmin);
 
         // Count by UserType
-        var countByType = await users
+        var countByTypeRaw = await users
             .GroupBy(u => u.UserType)
-            .Select(g => new UserTypeCount(g.Key, g.Count()))
+            .Select(g => new { Type = g.Key, Count = g.Count() })
             .ToListAsync(ct);
+        var countByType = countByTypeRaw.Select(x => new UserTypeCount(x.Type, x.Count)).ToList();
 
         // Count by RegistrationStatus
-        var countByStatus = await users
+        var countByStatusRaw = await users
             .GroupBy(u => u.RegistrationStatus)
-            .Select(g => new RegistrationStatusCount(g.Key, g.Count()))
+            .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync(ct);
+        var countByStatus = countByStatusRaw.Select(x => new RegistrationStatusCount(x.Status, x.Count)).ToList();
 
         // Count by Region (join through NationalAddress.CityId → City → Region)
-        var countByRegion = await (
+        var countByRegionRaw = await (
             from u in users
             join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
             join r in _context.Regions on c.RegionId equals r.Id
             group u by new { r.Id, r.NameAr, r.NameEn } into g
-            select new RegionUserCount(g.Key.Id, g.Key.NameAr, g.Key.NameEn, g.Count())
+            select new { g.Key.Id, g.Key.NameAr, g.Key.NameEn, Count = g.Count() }
         ).ToListAsync(ct);
+        var countByRegion = countByRegionRaw.Select(x => new RegionUserCount(x.Id, x.NameAr, x.NameEn, x.Count)).ToList();
 
         // Registration trend — last 12 months
         var cutoff = DateTime.UtcNow.AddMonths(-12);
-        var trend = await users
+        var trendRaw = await users
             .Where(u => u.CreatedAt >= cutoff)
             .GroupBy(u => new { u.CreatedAt.Year, u.CreatedAt.Month })
-            .Select(g => new MonthlyCount(g.Key.Year, g.Key.Month, g.Count()))
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
             .OrderBy(x => x.Year).ThenBy(x => x.Month)
             .ToListAsync(ct);
+        var trend = trendRaw.Select(x => new MonthlyCount(x.Year, x.Month, x.Count)).ToList();
 
         return Result.Success(new AdminUserAnalyticsResponse(countByType, countByStatus, countByRegion, trend));
     }
@@ -193,7 +197,7 @@ public class AdminDashboardService : IAdminDashboardService
         var totalBalance = await _context.Wallets.SumAsync(w => (decimal?)w.Balance ?? 0, ct);
 
         // Points earned by region
-        var pointsByRegion = await (
+        var pointsByRegionRaw = await (
             from wt in _context.WalletTransactions
             join w in _context.Wallets on wt.WalletId equals w.Id
             join u in _userRepository.Query() on w.UserId equals u.Id
@@ -201,8 +205,10 @@ public class AdminDashboardService : IAdminDashboardService
             join r in _context.Regions on c.RegionId equals r.Id
             where wt.Type == WalletTransactionType.Earned || wt.Type == WalletTransactionType.InvitationReward
             group wt by new { r.Id, r.NameAr, r.NameEn } into g
-            select new RegionPointsItem(g.Key.Id, g.Key.NameAr, g.Key.NameEn, g.Sum(x => x.Amount))
+            select new { g.Key.Id, g.Key.NameAr, g.Key.NameEn, Total = g.Sum(x => x.Amount) }
         ).ToListAsync(ct);
+        var pointsByRegion = pointsByRegionRaw
+            .Select(x => new RegionPointsItem(x.Id, x.NameAr, x.NameEn, x.Total)).ToList();
 
         // Points earned by representative (SalesMan)
         var pointsByRepRaw = await (
@@ -226,13 +232,14 @@ public class AdminDashboardService : IAdminDashboardService
 
         // Points trend — last 12 months
         var cutoff = DateTime.UtcNow.AddMonths(-12);
-        var pointsTrend = await _context.WalletTransactions
+        var pointsTrendRaw = await _context.WalletTransactions
             .Where(t => (t.Type == WalletTransactionType.Earned || t.Type == WalletTransactionType.InvitationReward)
                      && t.CreatedAt >= cutoff)
             .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
-            .Select(g => new MonthlyDecimalCount(g.Key.Year, g.Key.Month, g.Sum(t => t.Amount)))
+            .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(t => t.Amount) })
             .OrderBy(x => x.Year).ThenBy(x => x.Month)
             .ToListAsync(ct);
+        var pointsTrend = pointsTrendRaw.Select(x => new MonthlyDecimalCount(x.Year, x.Month, x.Total)).ToList();
 
         return Result.Success(new AdminPointsAnalyticsResponse(
             totalEarned, totalRedeemed, totalBalance,
@@ -346,50 +353,48 @@ public class AdminDashboardService : IAdminDashboardService
     {
         var cutoff = DateTime.UtcNow.AddDays(-query.InactiveDays);
 
-        // Users who are approved Seller/Technician but haven't scanned since cutoff
-        var lastScans = _context.ScanRecords
+        // Materialize last scan dates per user (avoids untranslatable GroupBy subquery in left join)
+        var lastScans = await _context.ScanRecords
             .Where(s => s.DeletedAt == null)
             .GroupBy(s => s.UserId)
-            .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) });
+            .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) })
+            .ToDictionaryAsync(x => x.UserId, x => x.LastScan, ct);
 
-        var baseQuery =
-            from u in _userRepository.Query()
-            where (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
+        // Get eligible users
+        var eligibleUsers = await _userRepository.Query()
+            .Where(u => (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
                && u.RegistrationStatus == RegistrationStatus.Approved
-               && !u.IsDisabled
-            join ls in lastScans on u.Id equals ls.UserId into scans
-            from ls in scans.DefaultIfEmpty()
-            where ls == null || ls.LastScan < cutoff
-            select new { u, LastScan = ls != null ? (DateTime?)ls.LastScan : null };
-
-        var totalCount = await baseQuery.CountAsync(ct);
-
-        var rawItems = await baseQuery
-            .OrderBy(x => x.LastScan)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(x => new
-            {
-                x.u.Id,
-                x.u.Name,
-                x.u.MobileNumber,
-                x.u.UserType,
-                x.LastScan,
-                x.u.CreatedAt
-            })
+               && !u.IsDisabled)
+            .Select(u => new { u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt })
             .ToListAsync(ct);
 
+        // Filter inactive in memory
         var now = DateTime.UtcNow;
-        var items = rawItems.Select(x => new InactiveUserItem(
-            x.Id,
-            x.Name,
-            x.MobileNumber,
-            x.UserType,
-            x.LastScan,
-            x.LastScan.HasValue
-                ? (int)(now - x.LastScan.Value).TotalDays
-                : (int)(now - x.CreatedAt).TotalDays
-        )).ToList();
+        var filtered = eligibleUsers
+            .Select(u => new
+            {
+                u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt,
+                LastScan = lastScans.TryGetValue(u.Id, out var ls) ? (DateTime?)ls : null
+            })
+            .Where(x => x.LastScan == null || x.LastScan < cutoff)
+            .OrderBy(x => x.LastScan)
+            .ToList();
+
+        var totalCount = filtered.Count;
+
+        var items = filtered
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(x => new InactiveUserItem(
+                x.Id,
+                x.Name,
+                x.MobileNumber,
+                x.UserType,
+                x.LastScan,
+                x.LastScan.HasValue
+                    ? (int)(now - x.LastScan.Value).TotalDays
+                    : (int)(now - x.CreatedAt).TotalDays
+            )).ToList();
 
         return Result.Success(new PaginatedResult<InactiveUserItem>(
             items, totalCount, query.Page, query.PageSize));
@@ -412,20 +417,24 @@ public class AdminDashboardService : IAdminDashboardService
             ? Math.Round((decimal)(totalGenerated - totalAvailable) / totalGenerated * 100, 1)
             : 0;
 
-        var topProducts = await (
+        var topProductsRaw = await (
             from b in _context.ProductBarcodes.Where(b => b.DeletedAt == null)
             join p in _context.Products.Where(p => p.DeletedAt == null) on b.ProductId equals p.Id
             group b by new { p.Id, p.Name, p.ProductCode } into g
             orderby g.Count() descending
-            select new ProductBarcodeItem(
+            select new
+            {
                 g.Key.Id,
                 g.Key.Name,
                 g.Key.ProductCode,
-                g.Count(),
-                g.Count(x => x.Status != BarcodeStatus.Available),
-                g.Count(x => x.Status == BarcodeStatus.Consumed)
-            )
+                Total = g.Count(),
+                Scanned = g.Count(x => x.Status != BarcodeStatus.Available),
+                Consumed = g.Count(x => x.Status == BarcodeStatus.Consumed)
+            }
         ).Take(20).ToListAsync(ct);
+        var topProducts = topProductsRaw
+            .Select(x => new ProductBarcodeItem(x.Id, x.Name, x.ProductCode, x.Total, x.Scanned, x.Consumed))
+            .ToList();
 
         return Result.Success(new BarcodeAnalyticsResponse(
             totalGenerated, totalAvailable, totalSellerScanned, totalTechScanned, totalConsumed,
@@ -436,15 +445,19 @@ public class AdminDashboardService : IAdminDashboardService
     {
         var requests = _context.RedemptionRequests.AsQueryable();
 
-        var countByStatus = await requests
+        var countByStatusRaw = await requests
             .GroupBy(r => r.Status)
-            .Select(g => new RedemptionStatusCount(g.Key, g.Count(), g.Sum(r => r.SarAmount)))
+            .Select(g => new { Status = g.Key, Count = g.Count(), TotalSar = g.Sum(r => r.SarAmount) })
             .ToListAsync(ct);
+        var countByStatus = countByStatusRaw
+            .Select(x => new RedemptionStatusCount(x.Status, x.Count, x.TotalSar)).ToList();
 
-        var countByMethod = await requests
+        var countByMethodRaw = await requests
             .GroupBy(r => r.Method)
-            .Select(g => new RedemptionMethodCount(g.Key, g.Count(), g.Sum(r => r.SarAmount)))
+            .Select(g => new { Method = g.Key, Count = g.Count(), TotalSar = g.Sum(r => r.SarAmount) })
             .ToListAsync(ct);
+        var countByMethod = countByMethodRaw
+            .Select(x => new RedemptionMethodCount(x.Method, x.Count, x.TotalSar)).ToList();
 
         var totalSarRedeemed = countByStatus
             .Where(x => x.Status == RedemptionRequestStatus.Completed)
@@ -468,12 +481,13 @@ public class AdminDashboardService : IAdminDashboardService
 
         // Redemption trend — last 12 months (completed SAR)
         var cutoff = DateTime.UtcNow.AddMonths(-12);
-        var trend = await requests
+        var trendRaw2 = await requests
             .Where(r => r.Status == RedemptionRequestStatus.Completed && r.CreatedAt >= cutoff)
             .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
-            .Select(g => new MonthlyDecimalCount(g.Key.Year, g.Key.Month, g.Sum(r => r.SarAmount)))
+            .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(r => r.SarAmount) })
             .OrderBy(x => x.Year).ThenBy(x => x.Month)
             .ToListAsync(ct);
+        var trend = trendRaw2.Select(x => new MonthlyDecimalCount(x.Year, x.Month, x.Total)).ToList();
 
         return Result.Success(new RedemptionAnalyticsResponse(
             countByStatus, countByMethod, totalSarRedeemed,
@@ -568,12 +582,14 @@ public class AdminDashboardService : IAdminDashboardService
 
         // Payout trend — last 12 months
         var cutoff = DateTime.UtcNow.AddMonths(-12);
-        var payoutTrend = await _context.RedemptionRequests
+        var payoutTrendRaw = await _context.RedemptionRequests
             .Where(r => r.Status == RedemptionRequestStatus.Completed && r.CreatedAt >= cutoff)
             .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
-            .Select(g => new MonthlyDecimalCount(g.Key.Year, g.Key.Month, g.Sum(r => r.SarAmount)))
+            .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(r => r.SarAmount) })
             .OrderBy(x => x.Year).ThenBy(x => x.Month)
             .ToListAsync(ct);
+        var payoutTrend = payoutTrendRaw
+            .Select(x => new MonthlyDecimalCount(x.Year, x.Month, x.Total)).ToList();
 
         return Result.Success(new RevenueAnalyticsResponse(
             totalSarLiability, totalSarHeld, totalSarPaidOut,
