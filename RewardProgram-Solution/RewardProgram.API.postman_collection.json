@@ -631,6 +631,275 @@
       ]
     },
     {
+      "name": "Content",
+      "description": "Public content endpoints — no authentication required.\n\nReturns admin-managed content pages.",
+      "item": [
+        {
+          "name": "Get Contact Us",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/content/contact-us",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "contact-us"]
+            },
+            "description": "Get Contact Us page content.\n\n**Response:**\n- `phone`: Phone number\n- `email`: Email address\n- `whatsApp`: WhatsApp number\n- `address`: Physical address\n- `workingHours`: Working hours text"
+          },
+          "response": []
+        },
+        {
+          "name": "Get About App",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/content/about-app",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "about-app"]
+            },
+            "description": "Get About App page content.\n\n**Response:**\n- `content`: About app HTML/text content"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notification endpoints.\n\nSupports 9 notification types + admin broadcast.\n\nRequires authentication (any role).",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            },
+            "description": "Get paginated notification list for the current user.\n\n**Response:** PaginatedResult of:\n- `id`: Notification ID\n- `type`: NotificationType enum\n- `title`: Notification title\n- `body`: Notification body\n- `referenceId`: Optional reference (e.g., scan ID, redemption ID)\n- `isRead`: Whether the notification has been read\n- `createdAt`: Timestamp\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            },
+            "description": "Get the count of unread notifications for the current user.\n\n**Response:** integer (unread count)\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", ":id", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Notification ID"
+                }
+              ]
+            },
+            "description": "Mark a single notification as read.\n\nReturns 204 No Content on success, 404 if not found.\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            },
+            "description": "Mark all notifications as read for the current user.\n\nReturns 204 No Content.\n\nRequires authentication."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Redemption",
+      "description": "Points redemption endpoints.\n\nSeller and Technician can request to redeem points for SAR.\nSupports two methods: Cash handover or Bank Transfer.\nRedemption goes through a 3-level approval flow (SalesMan → ZoneManager → SystemAdmin).\n\nRequires Seller or Technician JWT.",
+      "item": [
+        {
+          "name": "Get Available Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/available-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption", "available-balance"]
+            },
+            "description": "Get available balance for redemption (excludes held amounts from pending requests).\n\n**Response:**\n- `totalBalance`: Total point balance\n- `heldBalance`: Points held in pending redemption requests\n- `availableBalance`: Points available to redeem\n- `availableSarBalance`: Available balance in SAR\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Request Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"\",\n  \"bankName\": \"\",\n  \"accountHolderName\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption", "request"]
+            },
+            "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `bankName`, and `accountHolderName` are required.\nFor Cash: bank fields are optional.\n\n**Response:** RedemptionRequestResponse with status, SAR amount, etc.\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Redemption",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption", "active"]
+            },
+            "description": "Get the current active (in-progress) redemption request, if any.\n\n**Response:** RedemptionRequestResponse or 404 if no active request.\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Redemption History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/history?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption", "history"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            },
+            "description": "Get paginated redemption request history.\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Redemption Approvals",
+      "description": "Redemption approval endpoints for SalesMan, ZoneManager, and SystemAdmin.\n\n3-level approval flow:\n1. SalesMan approves → PendingZoneManager\n2. ZoneManager approves → PendingAdmin\n3. SystemAdmin approves → Approved (for BankTransfer) or PendingCashHandover (for Cash)\n\nCash method requires OTP confirmation at final handover.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+      "item": [
+        {
+          "name": "Get Pending Redemptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption-approvals", "pending"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            },
+            "description": "Get pending redemption requests for the current approver's level.\n\nSalesMan sees PendingSalesman requests.\nZoneManager sees PendingZoneManager requests.\nSystemAdmin sees PendingAdmin requests.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption-approvals", "approve"]
+            },
+            "description": "Approve a pending redemption request.\n\nAdvances the request to the next approval stage.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\",\n  \"rejectionReason\": \"سبب الرفض\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption-approvals", "reject"]
+            },
+            "description": "Reject a pending redemption request with a reason.\n\nRefunds the held points back to the user's wallet.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Cash Handover",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/confirm-cash",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redemption-approvals", "confirm-cash"]
+            },
+            "description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method redemptions in PendingCashHandover status.\nThe OTP is sent to the requesting user's WhatsApp.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Dev",
       "description": "Development/staging helper endpoints. Only available in Development and Staging environments.\n\nNo authentication required.",
       "item": [

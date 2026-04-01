@@ -678,6 +678,307 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Content",
+			"description": "Public content endpoints — no authentication required.\n\nReturns admin-managed content pages.",
+			"item": [
+				{
+					"name": "Get Contact Us",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/content/contact-us",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "content", "contact-us"]
+						},
+						"description": "Get Contact Us page content.\n\n**Response:**\n- `phone`: Phone number\n- `email`: Email address\n- `whatsApp`: WhatsApp number\n- `address`: Physical address\n- `workingHours`: Working hours text"
+					}
+				},
+				{
+					"name": "Get About App",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/content/about-app",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "content", "about-app"]
+						},
+						"description": "Get About App page content.\n\n**Response:**\n- `content`: About app HTML/text content"
+					}
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"description": "In-app notification endpoints.\n\nSupports 9 notification types + admin broadcast.\n\nRequires authentication (any role).",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Get paginated notification list.\n\nRequires authentication.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/unread-count",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "unread-count"]
+						},
+						"description": "Get the count of unread notifications.\n\nRequires authentication.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Mark as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/:id/read",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", ":id", "read"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Notification ID"
+								}
+							]
+						},
+						"description": "Mark a single notification as read. Returns 204.\n\nRequires authentication.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/read-all",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "read-all"]
+						},
+						"description": "Mark all notifications as read. Returns 204.\n\nRequires authentication.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Redemption",
+			"description": "Points redemption endpoints.\n\nSeller and Technician can request to redeem points for SAR.\nMethods: Cash handover or Bank Transfer.\n3-level approval flow.\n\nRequires Seller or Technician JWT.",
+			"item": [
+				{
+					"name": "Get Available Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption/available-balance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption", "available-balance"]
+						},
+						"description": "Get available balance for redemption.\n\n**Response:**\n- `totalBalance`: Total point balance\n- `heldBalance`: Points held in pending requests\n- `availableBalance`: Points available to redeem\n- `availableSarBalance`: Available balance in SAR\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Request Redemption",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"\",\n  \"bankName\": \"\",\n  \"accountHolderName\": \"\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption/request",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption", "request"]
+						},
+						"description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints and <= available balance.\n\nFor BankTransfer: iban, bankName, accountHolderName required.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Get Active Redemption",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption", "active"]
+						},
+						"description": "Get the current active redemption request, if any. Returns 404 if none.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Redemption History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption/history?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption", "history"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Get paginated redemption request history.\n\nRequires Seller or Technician JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Redemption Approvals",
+			"description": "Redemption approval endpoints.\n\n3-level approval: SalesMan → ZoneManager → SystemAdmin.\nCash method requires OTP confirmation at final handover.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+			"item": [
+				{
+					"name": "Get Pending Redemptions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption-approvals", "pending"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Get pending redemption requests for the current approver's level.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Approve Redemption",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionRequestId\": \"\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption-approvals/approve",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption-approvals", "approve"]
+						},
+						"description": "Approve a pending redemption request.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Reject Redemption",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionRequestId\": \"\",\n  \"rejectionReason\": \"سبب الرفض\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption-approvals/reject",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption-approvals", "reject"]
+						},
+						"description": "Reject a pending redemption request with a reason.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				},
+				{
+					"name": "Confirm Cash Handover",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionRequestId\": \"\",\n  \"otp\": \"123456\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/redemption-approvals/confirm-cash",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redemption-approvals", "confirm-cash"]
+						},
+						"description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method in PendingCashHandover status.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						}
+					}
+				}
+			]
 		}
 	]
 }

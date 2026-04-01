@@ -515,6 +515,23 @@
 					]
 				},
 				{
+					"name": "List Product Categories",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/products/categories?page=1&pageSize=50",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "products", "categories"],
+							"query": [
+								{ "key": "search", "value": "", "disabled": true, "description": "Search by category name" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "50" }
+							]
+						},
+						"description": "List product categories with pagination.\n\nUsed as a dropdown source for product category selection."
+					}
+				},
+				{
 					"name": "List Products",
 					"request": {
 						"method": "GET",
@@ -724,6 +741,303 @@
 							"path": ["api", "admin", "reward-settings"]
 						},
 						"description": "Update reward settings.\n\n- `pointsToSarRate`: must be > 0\n- `inviterRewardPoints`: points awarded to inviter on approved invitation (>= 0)\n- `inviteeRewardPoints`: points awarded to invitee on approved invitation (>= 0)\n- `minimumRedemptionPoints`: minimum points required to redeem (> 0, default 1000)\n\nExisting wallet transactions keep their original rate (immutable).\nInviter reward is capped at 20 approved invitations regardless of this setting."
+					}
+				}
+			]
+		},
+		{
+			"name": "Content",
+			"description": "Content management for Contact Us and About App pages. Requires SystemAdmin JWT.",
+			"item": [
+				{
+					"name": "Get Contact Us",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/content/contact-us",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "content", "contact-us"]
+						},
+						"description": "Get Contact Us content.\n\n**Response:**\n- `phone`, `email`, `whatsApp`, `address`, `workingHours`"
+					}
+				},
+				{
+					"name": "Update Contact Us",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+966500000000\",\n  \"email\": \"info@raedrewardapp.com\",\n  \"whatsApp\": \"+966500000000\",\n  \"address\": \"الرياض، المملكة العربية السعودية\",\n  \"workingHours\": \"الأحد - الخميس: 8 صباحاً - 5 مساءً\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/content/contact-us",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "content", "contact-us"]
+						},
+						"description": "Update Contact Us page content.\n\nAll fields are required."
+					}
+				},
+				{
+					"name": "Get About App",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/content/about-app",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "content", "about-app"]
+						},
+						"description": "Get About App content.\n\n**Response:**\n- `content`: About app HTML/text content"
+					}
+				},
+				{
+					"name": "Update About App",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"تطبيق الرائد للمكافآت هو برنامج ولاء يتيح للبائعين والفنيين كسب نقاط من خلال مسح الباركود واستبدالها بمكافآت مالية.\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/content/about-app",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "content", "about-app"]
+						},
+						"description": "Update About App page content."
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard & Analytics",
+			"description": "Admin dashboard summary and detailed analytics endpoints. Requires SystemAdmin JWT.",
+			"item": [
+				{
+					"name": "Dashboard Summary",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "dashboard"]
+						},
+						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`"
+					}
+				},
+				{
+					"name": "Analytics — Users",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "users"]
+						},
+						"description": "User analytics: counts by type, registration status, region, and monthly registration trend."
+					}
+				},
+				{
+					"name": "Analytics — Regions",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/regions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "regions"]
+						},
+						"description": "Region analytics: per-region user counts, zone manager, city breakdown."
+					}
+				},
+				{
+					"name": "Analytics — Points",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/points",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "points"]
+						},
+						"description": "Points analytics: total earned/redeemed/balance, by region, by representative, monthly trend."
+					}
+				},
+				{
+					"name": "Analytics — Points Details",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/points/details?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "points", "details"],
+							"query": [
+								{ "key": "userId", "value": "", "disabled": true, "description": "Filter by user ID" },
+								{ "key": "regionId", "value": "", "disabled": true, "description": "Filter by region ID" },
+								{ "key": "dateFrom", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
+								{ "key": "dateTo", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
+								{ "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed, 3=Cancelled, 4=Expired, 5=Refunded, 6=InvitationReward" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "Detailed points/transaction ledger with filters.\n\nReturns paginated transaction details with user info, amounts, SAR, and type."
+					}
+				},
+				{
+					"name": "Analytics — Top Performers",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/top-performers?top=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "top-performers"],
+							"query": [
+								{ "key": "top", "value": "10", "description": "Number of top performers to return (default 10)" }
+							]
+						},
+						"description": "Top performing sellers and technicians by points earned and scan count."
+					}
+				},
+				{
+					"name": "Analytics — Inactive Users",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/inactive-users?inactiveDays=30&page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "inactive-users"],
+							"query": [
+								{ "key": "inactiveDays", "value": "30", "description": "Days since last scan to consider inactive (default 30)" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "List users who haven't scanned in N days.\n\nReturns user info, last scan date, and days since last scan."
+					}
+				},
+				{
+					"name": "Analytics — Barcodes",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/barcodes",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "barcodes"]
+						},
+						"description": "Barcode analytics: counts by status, scan rate, top products by barcode volume."
+					}
+				},
+				{
+					"name": "Analytics — Redemptions",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/redemptions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "redemptions"]
+						},
+						"description": "Redemption analytics: counts by status/method, total SAR redeemed, avg processing days, monthly trend."
+					}
+				},
+				{
+					"name": "Analytics — SalesMan Performance",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/salesman-performance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "salesman-performance"]
+						},
+						"description": "SalesMan performance metrics: assigned/approved/pending user counts, total points, city count."
+					}
+				},
+				{
+					"name": "Analytics — Revenue",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/revenue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "revenue"]
+						},
+						"description": "Revenue analytics: SAR liability, held/paid-out amounts, points outstanding, volume by transaction type, payout trend."
+					}
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"description": "Admin notification management — send notifications to specific users, roles, or broadcast to all. Requires SystemAdmin JWT.",
+			"item": [
+				{
+					"name": "Send Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"targetUserId\": null,\n  \"roleName\": null,\n  \"title\": \"إشعار تجريبي\",\n  \"body\": \"هذا إشعار تجريبي من لوحة التحكم\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/notifications/send",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "notifications", "send"]
+						},
+						"description": "Send notification to users.\n\n**Targeting:**\n- `targetUserId`: Send to specific user (set others to null)\n- `roleName`: Send to all users with this role (e.g. \"Seller\", \"Technician\")\n- Both null: Broadcast to ALL users\n\n**Response:**\n- `sentCount`: Number of notifications created\n\n**Examples:**\n- To one user: `{\"targetUserId\": \"user-id\", \"roleName\": null, ...}`\n- To all Sellers: `{\"targetUserId\": null, \"roleName\": \"Seller\", ...}`\n- Broadcast: `{\"targetUserId\": null, \"roleName\": null, ...}`"
+					}
+				}
+			]
+		},
+		{
+			"name": "Redemptions",
+			"description": "Admin redemption management — list and view redemption request details. Requires SystemAdmin JWT.",
+			"item": [
+				{
+					"name": "List Redemptions",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/redemptions?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "redemptions"],
+							"query": [
+								{ "key": "userId", "value": "", "disabled": true, "description": "Filter by user ID" },
+								{ "key": "method", "value": "1", "disabled": true, "description": "1=Cash, 2=BankTransfer" },
+								{ "key": "status", "value": "1", "disabled": true, "description": "1=PendingSalesman, 2=PendingZoneManager, 3=PendingAdmin, 4=Approved, 5=Rejected, 6=PendingCashHandover, 7=Completed" },
+								{ "key": "fromDate", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
+								{ "key": "toDate", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "List/filter redemption requests with pagination.\n\nShows user name, mobile, method, status, points, SAR amount."
+					}
+				},
+				{
+					"name": "Get Redemption Details",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/redemptions/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "redemptions", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Redemption request ID"
+								}
+							]
+						},
+						"description": "Get full redemption request details including approval history.\n\n**Response includes:**\n- User info, method, status, points, SAR amounts\n- Bank details (for BankTransfer)\n- Cash handover info (for Cash)\n- Rejection reason (if rejected)\n- Full approval trail with approver names and timestamps"
 					}
 				}
 			]
