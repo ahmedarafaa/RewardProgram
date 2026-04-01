@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Enums.UserEnums;
+using static RewardProgram.Application.Helpers.PaginationHelper;
 
 namespace RewardProgram.API.Controllers;
 
@@ -24,36 +25,153 @@ public class DevController : ControllerBase
     }
 
     [HttpGet("seeded-users")]
-    public async Task<IActionResult> GetSeededUsers(CancellationToken ct)
+    public async Task<IActionResult> GetSeededUsers(
+        [FromQuery] string? search,
+        [FromQuery] UserType? userType,
+        [FromQuery] RegistrationStatus? registrationStatus,
+        [FromQuery] string? regionId,
+        [FromQuery] string? cityId,
+        [FromQuery] bool? isDisabled,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
     {
         if (!_environment.IsDevelopment() && !_environment.IsStaging())
             return NotFound();
 
-        var users = await _userRepository.Query()
-            .Where(u => !u.IsDisabled)
+        var (normalizedPage, normalizedPageSize) = Normalize(page, pageSize);
+
+        var query = _userRepository.Query().AsQueryable();
+
+        // Filters
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(u =>
+                u.Name.Contains(search) || u.MobileNumber.Contains(search));
+
+        if (userType.HasValue)
+            query = query.Where(u => u.UserType == userType.Value);
+
+        if (registrationStatus.HasValue)
+            query = query.Where(u => u.RegistrationStatus == registrationStatus.Value);
+
+        if (regionId != null)
+            query = query.Where(u =>
+                u.NationalAddress != null &&
+                _context.Cities
+                    .Where(c => c.RegionId == regionId)
+                    .Select(c => c.Id)
+                    .Contains(u.NationalAddress.CityId));
+
+        if (cityId != null)
+            query = query.Where(u =>
+                u.NationalAddress != null && u.NationalAddress.CityId == cityId);
+
+        if (isDisabled.HasValue)
+            query = query.Where(u => u.IsDisabled == isDisabled.Value);
+
+        var totalCount = await query.CountAsync(ct);
+
+        var users = await query
             .OrderBy(u => u.UserType)
             .ThenBy(u => u.Name)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
             .Select(u => new
             {
+                u.Id,
                 u.Name,
                 u.MobileNumber,
-                Role = u.UserType.ToString(),
-                Status = u.RegistrationStatus.ToString(),
-                ManagedRegion = u.UserType == UserType.ZoneManager
+                UserType = u.UserType.ToString(),
+                RegistrationStatus = u.RegistrationStatus.ToString(),
+                u.IsDisabled,
+                u.CreatedAt,
+
+                // Location
+                CityId = u.NationalAddress != null ? u.NationalAddress.CityId : null,
+                CityName = u.NationalAddress != null
+                    ? _context.Cities
+                        .Where(c => c.Id == u.NationalAddress.CityId)
+                        .Select(c => c.NameAr)
+                        .FirstOrDefault()
+                    : null,
+                RegionId = u.NationalAddress != null
+                    ? _context.Cities
+                        .Where(c => c.Id == u.NationalAddress.CityId)
+                        .Select(c => c.RegionId)
+                        .FirstOrDefault()
+                    : null,
+                RegionName = u.NationalAddress != null
+                    ? _context.Cities
+                        .Where(c => c.Id == u.NationalAddress.CityId)
+                        .Join(_context.Regions, c => c.RegionId, r => r.Id, (c, r) => r.NameAr)
+                        .FirstOrDefault()
+                    : null,
+
+                // Address details
+                Street = u.NationalAddress != null ? u.NationalAddress.Street : null,
+                BuildingNumber = u.NationalAddress != null ? (int?)u.NationalAddress.BuildingNumber : null,
+                PostalCode = u.NationalAddress != null ? u.NationalAddress.PostalCode : null,
+                SubNumber = u.NationalAddress != null ? (int?)u.NationalAddress.SubNumber : null,
+                District = u.NationalAddress != null ? u.NationalAddress.District : null,
+
+                // ShopOwner/Seller — CustomerCode + ShopData
+                CustomerCode = u.UserType == UserType.ShopOwner
+                    ? _context.ShopOwnerProfiles
+                        .Where(p => p.UserId == u.Id)
+                        .Select(p => p.CustomerCode)
+                        .FirstOrDefault()
+                    : u.UserType == UserType.Seller
+                        ? _context.SellerProfiles
+                            .Where(p => p.UserId == u.Id)
+                            .Select(p => p.CustomerCode)
+                            .FirstOrDefault()
+                        : null,
+
+                StoreName = u.UserType == UserType.ShopOwner || u.UserType == UserType.Seller
+                    ? _context.ShopData
+                        .Where(sd => sd.CustomerCode ==
+                            (u.UserType == UserType.ShopOwner
+                                ? _context.ShopOwnerProfiles.Where(p => p.UserId == u.Id).Select(p => p.CustomerCode).FirstOrDefault()
+                                : _context.SellerProfiles.Where(p => p.UserId == u.Id).Select(p => p.CustomerCode).FirstOrDefault()))
+                        .Select(sd => sd.StoreName)
+                        .FirstOrDefault()
+                    : null,
+
+                // ZoneManager — managed region
+                ManagedRegionId = u.UserType == UserType.ZoneManager
+                    ? _context.Regions
+                        .Where(r => r.ZoneManagerId == u.Id)
+                        .Select(r => r.Id)
+                        .FirstOrDefault()
+                    : null,
+                ManagedRegionName = u.UserType == UserType.ZoneManager
                     ? _context.Regions
                         .Where(r => r.ZoneManagerId == u.Id)
                         .Select(r => r.NameAr)
                         .FirstOrDefault()
                     : null,
-                ManagedCities = u.UserType == UserType.SalesMan
+
+                // SalesMan — assigned cities
+                AssignedCities = u.UserType == UserType.SalesMan
                     ? _context.Cities
                         .Where(c => c.ApprovalSalesManId == u.Id)
-                        .Select(c => c.NameAr)
+                        .Select(c => new { c.Id, c.NameAr })
                         .ToList()
-                    : null
+                    : null,
+
+                // Invitation
+                u.InvitationCode,
+                u.InvitedByUserId
             })
             .ToListAsync(ct);
 
-        return Ok(users);
+        return Ok(new
+        {
+            Items = users,
+            TotalCount = totalCount,
+            Page = normalizedPage,
+            PageSize = normalizedPageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)normalizedPageSize)
+        });
     }
 }
