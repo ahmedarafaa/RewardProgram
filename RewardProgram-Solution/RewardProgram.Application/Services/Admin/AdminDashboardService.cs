@@ -290,4 +290,284 @@ public class AdminDashboardService : IAdminDashboardService
         return Result.Success(new PaginatedResult<AdminPointsDetailItemResponse>(
             items, totalCount, query.Page, query.PageSize));
     }
+
+    public async Task<Result<TopPerformersResponse>> GetTopPerformersAsync(int top = 10, CancellationToken ct = default)
+    {
+        // Top sellers by points earned
+        var topSellers = await (
+            from sr in _context.ScanRecords.Where(s => s.DeletedAt == null)
+            join u in _userRepository.Query() on sr.UserId equals u.Id
+            where sr.ScannerRole == Domain.Enums.ScannerRole.Seller
+            group sr by new { u.Id, u.Name, u.MobileNumber } into g
+            orderby g.Sum(x => x.PointsAwarded) descending
+            select new { g.Key.Id, g.Key.Name, g.Key.MobileNumber, Total = g.Sum(x => x.PointsAwarded), Scans = g.Count() }
+        ).Take(top).ToListAsync(ct);
+
+        // Top technicians by points earned
+        var topTechs = await (
+            from sr in _context.ScanRecords.Where(s => s.DeletedAt == null)
+            join u in _userRepository.Query() on sr.UserId equals u.Id
+            where sr.ScannerRole == Domain.Enums.ScannerRole.Technician
+            group sr by new { u.Id, u.Name, u.MobileNumber } into g
+            orderby g.Sum(x => x.PointsAwarded) descending
+            select new { g.Key.Id, g.Key.Name, g.Key.MobileNumber, Total = g.Sum(x => x.PointsAwarded), Scans = g.Count() }
+        ).Take(top).ToListAsync(ct);
+
+        // Get region info for these users
+        var allUserIds = topSellers.Select(x => x.Id).Concat(topTechs.Select(x => x.Id)).Distinct().ToList();
+        var userRegionsList = await (
+            from u in _userRepository.Query()
+            where allUserIds.Contains(u.Id)
+            join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
+            join r in _context.Regions on c.RegionId equals r.Id
+            select new { UserId = u.Id, r.NameAr, r.NameEn }
+        ).ToListAsync(ct);
+        var userRegions = userRegionsList.ToDictionary(x => x.UserId, x => (x.NameAr, x.NameEn));
+
+        var sellerItems = topSellers.Select(x =>
+        {
+            userRegions.TryGetValue(x.Id, out var region);
+            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr, region.NameEn, x.Total, x.Scans);
+        }).ToList();
+
+        var techItems = topTechs.Select(x =>
+        {
+            userRegions.TryGetValue(x.Id, out var region);
+            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr, region.NameEn, x.Total, x.Scans);
+        }).ToList();
+
+        return Result.Success(new TopPerformersResponse(sellerItems, techItems));
+    }
+
+    public async Task<Result<PaginatedResult<InactiveUserItem>>> GetInactiveUsersAsync(
+        InactiveUsersQuery query, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-query.InactiveDays);
+
+        // Users who are approved Seller/Technician but haven't scanned since cutoff
+        var lastScans = _context.ScanRecords
+            .Where(s => s.DeletedAt == null)
+            .GroupBy(s => s.UserId)
+            .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) });
+
+        var baseQuery =
+            from u in _userRepository.Query()
+            where (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
+               && u.RegistrationStatus == RegistrationStatus.Approved
+               && !u.IsDisabled
+            join ls in lastScans on u.Id equals ls.UserId into scans
+            from ls in scans.DefaultIfEmpty()
+            where ls == null || ls.LastScan < cutoff
+            select new { u, LastScan = ls != null ? (DateTime?)ls.LastScan : null };
+
+        var totalCount = await baseQuery.CountAsync(ct);
+
+        var items = await baseQuery
+            .OrderBy(x => x.LastScan)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(x => new InactiveUserItem(
+                x.u.Id,
+                x.u.Name,
+                x.u.MobileNumber,
+                x.u.UserType,
+                x.LastScan,
+                x.LastScan.HasValue
+                    ? (int)(DateTime.UtcNow - x.LastScan.Value).TotalDays
+                    : (int)(DateTime.UtcNow - x.u.CreatedAt).TotalDays
+            ))
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<InactiveUserItem>(
+            items, totalCount, query.Page, query.PageSize));
+    }
+
+    public async Task<Result<BarcodeAnalyticsResponse>> GetBarcodeAnalyticsAsync(CancellationToken ct = default)
+    {
+        var statusCounts = await _context.ProductBarcodes
+            .Where(b => b.DeletedAt == null)
+            .GroupBy(b => b.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var totalGenerated = statusCounts.Sum(x => x.Count);
+        var totalAvailable = statusCounts.FirstOrDefault(x => x.Status == BarcodeStatus.Available)?.Count ?? 0;
+        var totalSellerScanned = statusCounts.FirstOrDefault(x => x.Status == BarcodeStatus.SellerScanned)?.Count ?? 0;
+        var totalTechScanned = statusCounts.FirstOrDefault(x => x.Status == BarcodeStatus.TechnicianScanned)?.Count ?? 0;
+        var totalConsumed = statusCounts.FirstOrDefault(x => x.Status == BarcodeStatus.Consumed)?.Count ?? 0;
+        var scanRate = totalGenerated > 0
+            ? Math.Round((decimal)(totalGenerated - totalAvailable) / totalGenerated * 100, 1)
+            : 0;
+
+        var topProducts = await (
+            from b in _context.ProductBarcodes.Where(b => b.DeletedAt == null)
+            join p in _context.Products.Where(p => p.DeletedAt == null) on b.ProductId equals p.Id
+            group b by new { p.Id, p.Name, p.ProductCode } into g
+            orderby g.Count() descending
+            select new ProductBarcodeItem(
+                g.Key.Id,
+                g.Key.Name,
+                g.Key.ProductCode,
+                g.Count(),
+                g.Count(x => x.Status != BarcodeStatus.Available),
+                g.Count(x => x.Status == BarcodeStatus.Consumed)
+            )
+        ).Take(20).ToListAsync(ct);
+
+        return Result.Success(new BarcodeAnalyticsResponse(
+            totalGenerated, totalAvailable, totalSellerScanned, totalTechScanned, totalConsumed,
+            scanRate, topProducts));
+    }
+
+    public async Task<Result<RedemptionAnalyticsResponse>> GetRedemptionAnalyticsAsync(CancellationToken ct = default)
+    {
+        var requests = _context.RedemptionRequests.AsQueryable();
+
+        var countByStatus = await requests
+            .GroupBy(r => r.Status)
+            .Select(g => new RedemptionStatusCount(g.Key, g.Count(), g.Sum(r => r.SarAmount)))
+            .ToListAsync(ct);
+
+        var countByMethod = await requests
+            .GroupBy(r => r.Method)
+            .Select(g => new RedemptionMethodCount(g.Key, g.Count(), g.Sum(r => r.SarAmount)))
+            .ToListAsync(ct);
+
+        var totalSarRedeemed = countByStatus
+            .Where(x => x.Status == RedemptionRequestStatus.Completed)
+            .Sum(x => x.TotalSar);
+
+        // Average processing time for completed requests
+        var completedRequests = await requests
+            .Where(r => r.Status == RedemptionRequestStatus.Completed && r.UpdatedAt.HasValue)
+            .Select(r => new { r.CreatedAt, r.UpdatedAt })
+            .ToListAsync(ct);
+
+        var avgDays = completedRequests.Count > 0
+            ? Math.Round(completedRequests.Average(r => (r.UpdatedAt!.Value - r.CreatedAt).TotalDays), 1)
+            : 0;
+
+        var pendingCount = countByStatus
+            .Where(x => x.Status != RedemptionRequestStatus.Completed
+                     && x.Status != RedemptionRequestStatus.Rejected
+                     && x.Status != RedemptionRequestStatus.Cancelled)
+            .Sum(x => x.Count);
+
+        // Redemption trend — last 12 months (completed SAR)
+        var cutoff = DateTime.UtcNow.AddMonths(-12);
+        var trend = await requests
+            .Where(r => r.Status == RedemptionRequestStatus.Completed && r.CreatedAt >= cutoff)
+            .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
+            .Select(g => new MonthlyDecimalCount(g.Key.Year, g.Key.Month, g.Sum(r => r.SarAmount)))
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .ToListAsync(ct);
+
+        return Result.Success(new RedemptionAnalyticsResponse(
+            countByStatus, countByMethod, totalSarRedeemed,
+            (decimal)avgDays, pendingCount, trend));
+    }
+
+    public async Task<Result<SalesManPerformanceResponse>> GetSalesManPerformanceAsync(CancellationToken ct = default)
+    {
+        var salesMen = await _userRepository.Query()
+            .Where(u => u.UserType == UserType.SalesMan && !u.IsDisabled)
+            .ToListAsync(ct);
+
+        var salesManIds = salesMen.Select(s => s.Id).ToList();
+
+        // Assigned users grouped by SalesMan and status
+        var assignedStats = await _userRepository.Query()
+            .Where(u => u.AssignedSalesManId != null && salesManIds.Contains(u.AssignedSalesManId))
+            .GroupBy(u => new { u.AssignedSalesManId, u.RegistrationStatus })
+            .Select(g => new { g.Key.AssignedSalesManId, g.Key.RegistrationStatus, Count = g.Count() })
+            .ToListAsync(ct);
+
+        // Points earned per SalesMan's users
+        var pointsBySalesMan = await (
+            from wt in _context.WalletTransactions
+            join w in _context.Wallets on wt.WalletId equals w.Id
+            join u in _userRepository.Query() on w.UserId equals u.Id
+            where u.AssignedSalesManId != null
+               && salesManIds.Contains(u.AssignedSalesManId)
+               && (wt.Type == WalletTransactionType.Earned || wt.Type == WalletTransactionType.InvitationReward)
+            group wt by u.AssignedSalesManId into g
+            select new { SalesManId = g.Key, Total = g.Sum(x => x.Amount) }
+        ).ToDictionaryAsync(x => x.SalesManId!, x => x.Total, ct);
+
+        // City count per SalesMan
+        var cityCounts = await _context.Cities
+            .Where(c => c.ApprovalSalesManId != null && salesManIds.Contains(c.ApprovalSalesManId))
+            .GroupBy(c => c.ApprovalSalesManId)
+            .Select(g => new { SalesManId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SalesManId!, x => x.Count, ct);
+
+        var items = salesMen.Select(sm =>
+        {
+            var stats = assignedStats.Where(x => x.AssignedSalesManId == sm.Id).ToList();
+            var approved = stats.Where(x => x.RegistrationStatus == RegistrationStatus.Approved).Sum(x => x.Count);
+            var pending = stats
+                .Where(x => x.RegistrationStatus == RegistrationStatus.PendingSalesman
+                          || x.RegistrationStatus == RegistrationStatus.PendingZoneManager)
+                .Sum(x => x.Count);
+
+            return new SalesManPerformanceItem(
+                sm.Id,
+                sm.Name,
+                sm.MobileNumber,
+                stats.Sum(x => x.Count),
+                approved,
+                pending,
+                pointsBySalesMan.TryGetValue(sm.Id, out var pts) ? pts : 0,
+                cityCounts.TryGetValue(sm.Id, out var cc) ? cc : 0
+            );
+        }).OrderByDescending(x => x.TotalPointsEarned).ToList();
+
+        return Result.Success(new SalesManPerformanceResponse(items));
+    }
+
+    public async Task<Result<RevenueAnalyticsResponse>> GetRevenueAnalyticsAsync(CancellationToken ct = default)
+    {
+        // SAR balances
+        var walletTotals = await _context.Wallets
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                TotalSarBalance = g.Sum(w => w.SarBalance),
+                TotalSarHeld = g.Sum(w => w.HeldSarBalance),
+                TotalPointsBalance = g.Sum(w => w.Balance)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var totalSarLiability = walletTotals?.TotalSarBalance ?? 0;
+        var totalSarHeld = walletTotals?.TotalSarHeld ?? 0;
+        var totalPointsOutstanding = walletTotals?.TotalPointsBalance ?? 0;
+
+        var totalSarPaidOut = await _context.RedemptionRequests
+            .Where(r => r.Status == RedemptionRequestStatus.Completed)
+            .SumAsync(r => (decimal?)r.SarAmount ?? 0, ct);
+
+        // Volume by transaction type
+        var volumeByType = await _context.WalletTransactions
+            .GroupBy(t => t.Type)
+            .Select(g => new TransactionTypeVolume(
+                g.Key.ToString(),
+                g.Count(),
+                g.Sum(t => t.Amount),
+                g.Sum(t => t.SarAmount)
+            ))
+            .ToListAsync(ct);
+
+        // Payout trend — last 12 months
+        var cutoff = DateTime.UtcNow.AddMonths(-12);
+        var payoutTrend = await _context.RedemptionRequests
+            .Where(r => r.Status == RedemptionRequestStatus.Completed && r.CreatedAt >= cutoff)
+            .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
+            .Select(g => new MonthlyDecimalCount(g.Key.Year, g.Key.Month, g.Sum(r => r.SarAmount)))
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .ToListAsync(ct);
+
+        return Result.Success(new RevenueAnalyticsResponse(
+            totalSarLiability, totalSarHeld, totalSarPaidOut,
+            totalPointsOutstanding, volumeByType, payoutTrend));
+    }
 }

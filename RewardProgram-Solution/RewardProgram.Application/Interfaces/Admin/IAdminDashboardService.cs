@@ -13,4 +13,11 @@ public interface IAdminDashboardService
     Task<Result<AdminPointsAnalyticsResponse>> GetPointsAnalyticsAsync(CancellationToken ct = default);
     Task<Result<PaginatedResult<AdminPointsDetailItemResponse>>> GetPointsDetailsAsync(
         AdminPointsDetailQuery query, CancellationToken ct = default);
+    Task<Result<TopPerformersResponse>> GetTopPerformersAsync(int top = 10, CancellationToken ct = default);
+    Task<Result<PaginatedResult<InactiveUserItem>>> GetInactiveUsersAsync(
+        InactiveUsersQuery query, CancellationToken ct = default);
+    Task<Result<BarcodeAnalyticsResponse>> GetBarcodeAnalyticsAsync(CancellationToken ct = default);
+    Task<Result<RedemptionAnalyticsResponse>> GetRedemptionAnalyticsAsync(CancellationToken ct = default);
+    Task<Result<SalesManPerformanceResponse>> GetSalesManPerformanceAsync(CancellationToken ct = default);
+    Task<Result<RevenueAnalyticsResponse>> GetRevenueAnalyticsAsync(CancellationToken ct = default);
 }

@@ -69,4 +69,59 @@ public class AdminDashboardController : ControllerBase
         var result = await _service.GetPointsDetailsAsync(query, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+
+    [HttpGet("analytics/top-performers")]
+    [ProducesResponseType(typeof(TopPerformersResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTopPerformers(
+        [FromQuery] int top = 10,
+        CancellationToken ct = default)
+    {
+        var result = await _service.GetTopPerformersAsync(top, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/inactive-users")]
+    [ProducesResponseType(typeof(PaginatedResult<InactiveUserItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetInactiveUsers(
+        [FromQuery] int inactiveDays = 30,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new InactiveUsersQuery(inactiveDays, page, pageSize);
+        var result = await _service.GetInactiveUsersAsync(query, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/barcodes")]
+    [ProducesResponseType(typeof(BarcodeAnalyticsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetBarcodeAnalytics(CancellationToken ct)
+    {
+        var result = await _service.GetBarcodeAnalyticsAsync(ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/redemptions")]
+    [ProducesResponseType(typeof(RedemptionAnalyticsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRedemptionAnalytics(CancellationToken ct)
+    {
+        var result = await _service.GetRedemptionAnalyticsAsync(ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/salesman-performance")]
+    [ProducesResponseType(typeof(SalesManPerformanceResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSalesManPerformance(CancellationToken ct)
+    {
+        var result = await _service.GetSalesManPerformanceAsync(ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/revenue")]
+    [ProducesResponseType(typeof(RevenueAnalyticsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRevenueAnalytics(CancellationToken ct)
+    {
+        var result = await _service.GetRevenueAnalyticsAsync(ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
 }
