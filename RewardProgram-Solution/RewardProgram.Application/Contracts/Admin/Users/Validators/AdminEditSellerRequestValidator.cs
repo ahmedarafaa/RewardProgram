@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Users.Validators;
@@ -9,36 +10,36 @@ public class AdminEditSellerRequestValidator : AbstractValidator<AdminEditSeller
     private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
 
-    public AdminEditSellerRequestValidator()
+    public AdminEditSellerRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("الاسم مطلوب")
-            .MinimumLength(3).WithMessage("الاسم يجب أن يكون 3 أحرف على الأقل")
-            .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
-            .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
+            .NotEmpty().WithMessage(L["Name.NotEmpty"])
+            .MinimumLength(3).WithMessage(L["Name.MinLength"])
+            .MaximumLength(100).WithMessage(L["Name.MaxLength"])
+            .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
 
         RuleFor(x => x.CityId)
-            .NotEmpty().WithMessage("المدينة مطلوبة");
+            .NotEmpty().WithMessage(L["CityId.NotEmpty"]);
 
         When(x => x.StoreName != null || x.ShopImage != null, () =>
         {
             RuleFor(x => x.StoreName)
-                .NotEmpty().WithMessage("اسم المتجر مطلوب")
-                .MinimumLength(5).WithMessage("اسم المتجر يجب أن يكون 5 أحرف على الأقل")
-                .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
+                .NotEmpty().WithMessage(L["StoreName.NotEmpty"])
+                .MinimumLength(5).WithMessage(L["StoreName.MinLength"])
+                .MaximumLength(150).WithMessage(L["StoreName.MaxLength"]);
 
             RuleFor(x => x.ShortAddress)
-                .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage("العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام")
+                .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage(L["ShortAddress.InvalidFormat"])
                 .When(x => !string.IsNullOrEmpty(x.ShortAddress));
 
             RuleFor(x => x.ShopImage)
-                .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")
-                .Must(BeValidImageSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت")
+                .Must(BeValidImageType).WithMessage(L["ShopImage.InvalidType"])
+                .Must(BeValidImageSize).WithMessage(L["ShopImage.TooLarge"])
                 .When(x => x.ShopImage != null);
 
             RuleFor(x => x.NationalAddress!)
-                .NotNull().WithMessage("العنوان الوطني مطلوب")
-                .SetValidator(new NationalAddressDtoValidator(), "Default");
+                .NotNull().WithMessage(L["NationalAddress.NotNull"])
+                .SetValidator(new NationalAddressDtoValidator(L), "Default");
         });
     }
 

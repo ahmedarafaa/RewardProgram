@@ -1,23 +1,25 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Admin.Users;
+using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Users.Validators;
 
 public class AdminAddSalesManRequestValidator : AbstractValidator<AdminAddSalesManRequest>
 {
-    public AdminAddSalesManRequestValidator()
+    public AdminAddSalesManRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("الاسم مطلوب")
-            .MinimumLength(3).WithMessage("الاسم يجب أن يكون 3 أحرف على الأقل")
-            .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
-            .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
+            .NotEmpty().WithMessage(L["Name.NotEmpty"])
+            .MinimumLength(3).WithMessage(L["Name.MinLength"])
+            .MaximumLength(100).WithMessage(L["Name.MaxLength"])
+            .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
 
         RuleFor(x => x.MobileNumber)
-            .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
+            .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
+            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage(L["MobileNumber.InvalidFormat"]);
 
         RuleFor(x => x.CityIds)
-            .NotEmpty().WithMessage("يجب تحديد مدينة واحدة على الأقل");
+            .NotEmpty().WithMessage(L["CityIds.NotEmpty"]);
     }
 }

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- Shared: Name -->
+  <data name="Name.NotEmpty"><value>Name is required</value></data>
+  <data name="Name.MinLength"><value>Name must be at least 3 characters</value></data>
+  <data name="Name.MaxLength"><value>Name must not exceed 100 characters</value></data>
+  <data name="Name.LettersOnly"><value>Name must contain only letters</value></data>
+
+  <!-- Shared: Mobile -->
+  <data name="MobileNumber.NotEmpty"><value>Mobile number is required</value></data>
+  <data name="MobileNumber.InvalidFormat"><value>Mobile number must start with 05 and be 10 digits, or start with + followed by country code</value></data>
+
+  <!-- Shared: Location -->
+  <data name="CityId.NotEmpty"><value>City is required</value></data>
+  <data name="RegionId.NotEmpty"><value>Region is required</value></data>
+  <data name="CityIds.NotEmpty"><value>At least one city must be selected</value></data>
+
+  <!-- Shared: CustomerCode -->
+  <data name="CustomerCode.NotEmpty"><value>Customer code is required</value></data>
+  <data name="CustomerCode.MaxLength"><value>Customer code must not exceed 50 characters</value></data>
+
+  <!-- Shared: Shop -->
+  <data name="StoreName.NotEmpty"><value>Store name is required</value></data>
+  <data name="StoreName.MinLength"><value>Store name must be at least 5 characters</value></data>
+  <data name="StoreName.MaxLength"><value>Store name must not exceed 150 characters</value></data>
+  <data name="VAT.NotEmpty"><value>VAT number is required</value></data>
+  <data name="VAT.Length"><value>VAT number must be 15 digits</value></data>
+  <data name="VAT.InvalidFormat"><value>VAT number must start and end with 3</value></data>
+  <data name="CRN.NotEmpty"><value>Commercial registration number is required</value></data>
+  <data name="CRN.Length"><value>Commercial registration number must be 10 digits</value></data>
+  <data name="CRN.DigitsOnly"><value>Commercial registration number must contain only digits</value></data>
+  <data name="ShortAddress.NotEmpty"><value>Short address is required</value></data>
+  <data name="ShortAddress.InvalidFormat"><value>Short address must be 4 letters followed by 4 digits</value></data>
+  <data name="ShopImage.NotNull"><value>Shop image is required</value></data>
+  <data name="ShopImage.InvalidType"><value>Shop image must be in JPG or PNG format</value></data>
+  <data name="ShopImage.TooLarge"><value>Image size must not exceed 5 MB</value></data>
+  <data name="NationalAddress.NotNull"><value>National address is required</value></data>
+
+  <!-- Shared: PostalCode/District -->
+  <data name="PostalCode.NotEmpty"><value>Postal code is required</value></data>
+  <data name="PostalCode.InvalidFormat"><value>Postal code must be 5 digits</value></data>
+  <data name="District.NotEmpty"><value>District is required</value></data>
+  <data name="District.MaxLength"><value>District must not exceed 100 characters</value></data>
+
+  <!-- Shared: OTP/Auth -->
+  <data name="PinId.NotEmpty"><value>Verification request ID is required</value></data>
+  <data name="Otp.NotEmpty"><value>Verification code is required</value></data>
+  <data name="Otp.Length"><value>Verification code must be 6 digits</value></data>
+  <data name="Otp.DigitsOnly"><value>Verification code must contain only digits</value></data>
+  <data name="RefreshToken.NotEmpty"><value>Token is required</value></data>
+  <data name="UserId.NotEmpty"><value>User ID is required</value></data>
+  <data name="Reason.NotEmpty"><value>Rejection reason is required</value></data>
+  <data name="Reason.MaxLength"><value>Rejection reason must not exceed 500 characters</value></data>
+
+  <!-- Product -->
+  <data name="Product.Name.NotEmpty"><value>Product name is required</value></data>
+  <data name="Product.Name.MaxLength"><value>Product name must not exceed 200 characters</value></data>
+  <data name="Product.Code.NotEmpty"><value>Product code is required</value></data>
+  <data name="Product.Code.MaxLength"><value>Product code must not exceed 50 characters</value></data>
+  <data name="Product.PointValue.GreaterThanZero"><value>Point value must be greater than zero</value></data>
+  <data name="Product.Price.GreaterThanOrEqualZero"><value>Price must be zero or more</value></data>
+  <data name="Product.Category.MaxLength"><value>Category must not exceed 100 characters</value></data>
+
+  <!-- Barcode -->
+  <data name="Barcode.Code.NotEmpty"><value>Barcode code is required</value></data>
+  <data name="Barcode.Code.Length"><value>Barcode code must be 12 characters</value></data>
+  <data name="Barcode.ProductId.NotEmpty"><value>Product ID is required</value></data>
+  <data name="Barcode.Quantity.Range"><value>Quantity must be between 1 and 1,000</value></data>
+
+  <!-- NationalAddress -->
+  <data name="Address.BuildingNumber.Range"><value>Building number must be 4 digits</value></data>
+  <data name="Address.Street.NotEmpty"><value>Street is required</value></data>
+  <data name="Address.Street.MinLength"><value>Street must be at least 3 characters</value></data>
+  <data name="Address.Street.MaxLength"><value>Street must not exceed 100 characters</value></data>
+  <data name="Address.PostalCode.NotEmpty"><value>Postal code is required</value></data>
+  <data name="Address.PostalCode.InvalidFormat"><value>Postal code must be 5 digits</value></data>
+  <data name="Address.SubNumber.Range"><value>Sub number must be 4 digits</value></data>
+  <data name="Address.District.MaxLength"><value>District must not exceed 100 characters</value></data>
+
+  <!-- Redemption -->
+  <data name="Redemption.Method.Invalid"><value>Invalid redemption method</value></data>
+  <data name="Redemption.Points.Minimum"><value>Minimum redemption is 1,000 points</value></data>
+  <data name="Redemption.Iban.NotEmpty"><value>IBAN is required</value></data>
+  <data name="Redemption.Iban.InvalidFormat"><value>IBAN must start with SA followed by 22 digits</value></data>
+  <data name="Redemption.BankName.NotEmpty"><value>Bank name is required</value></data>
+  <data name="Redemption.BankName.MaxLength"><value>Bank name must not exceed 200 characters</value></data>
+  <data name="Redemption.AccountHolder.NotEmpty"><value>Account holder name is required</value></data>
+  <data name="Redemption.AccountHolder.MaxLength"><value>Account holder name must not exceed 200 characters</value></data>
+
+  <!-- RewardSettings -->
+  <data name="RewardSettings.Rate.GreaterThanZero"><value>Conversion rate must be greater than zero</value></data>
+  <data name="RewardSettings.InviterPoints.GreaterThanOrEqualZero"><value>Inviter reward points must be zero or more</value></data>
+  <data name="RewardSettings.InviteePoints.GreaterThanOrEqualZero"><value>Invitee reward points must be zero or more</value></data>
+  <data name="RewardSettings.MinRedemption.GreaterThanZero"><value>Minimum redemption must be greater than zero</value></data>
+
+  <!-- Notification -->
+  <data name="Notification.Title.NotEmpty"><value>Notification title is required</value></data>
+  <data name="Notification.Title.MaxLength"><value>Notification title must not exceed 200 characters</value></data>
+  <data name="Notification.Body.NotEmpty"><value>Notification body is required</value></data>
+  <data name="Notification.Body.MaxLength"><value>Notification body must not exceed 1,000 characters</value></data>
+
+  <!-- Content -->
+  <data name="Content.Phone.NotEmpty"><value>Phone number is required</value></data>
+  <data name="Content.Phone.MaxLength"><value>Phone number must not exceed 20 characters</value></data>
+  <data name="Content.Email.NotEmpty"><value>Email is required</value></data>
+  <data name="Content.Email.Invalid"><value>Invalid email address</value></data>
+  <data name="Content.Email.MaxLength"><value>Email must not exceed 200 characters</value></data>
+  <data name="Content.WhatsApp.NotEmpty"><value>WhatsApp number is required</value></data>
+  <data name="Content.WhatsApp.MaxLength"><value>WhatsApp number must not exceed 20 characters</value></data>
+  <data name="Content.Address.NotEmpty"><value>Address is required</value></data>
+  <data name="Content.Address.MaxLength"><value>Address must not exceed 500 characters</value></data>
+  <data name="Content.WorkingHours.NotEmpty"><value>Working hours is required</value></data>
+  <data name="Content.WorkingHours.MaxLength"><value>Working hours must not exceed 200 characters</value></data>
+  <data name="Content.Body.NotEmpty"><value>Content is required</value></data>
+</root>

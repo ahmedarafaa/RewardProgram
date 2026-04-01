@@ -50,6 +50,15 @@ namespace RewardProgram
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCors();
+
+            var supportedCultures = new[] { "ar", "en" };
+            app.UseRequestLocalization(options =>
+            {
+                options.SetDefaultCulture("ar")
+                       .AddSupportedCultures(supportedCultures)
+                       .AddSupportedUICultures(supportedCultures);
+            });
+
             app.UseAuthentication();
             app.UseAuthorization();
 

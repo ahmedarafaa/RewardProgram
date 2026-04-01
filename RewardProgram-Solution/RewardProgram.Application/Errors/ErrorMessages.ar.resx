@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- Admin Errors -->
+  <data name="Admin.MobileAlreadyExists"><value>رقم الجوال مسجل مسبقاً</value></data>
+  <data name="Admin.CityNotFound"><value>المدينة غير موجودة</value></data>
+  <data name="Admin.SomeCitiesNotFound"><value>بعض المدن المحددة غير موجودة أو غير مفعلة</value></data>
+  <data name="Admin.RegionNotFound"><value>المنطقة غير موجودة</value></data>
+  <data name="Admin.RegionAlreadyHasZoneManager"><value>المنطقة لديها مدير منطقة بالفعل</value></data>
+  <data name="Admin.CustomerCodeNotFound"><value>كود العميل غير موجود في النظام</value></data>
+  <data name="Admin.ShopDataRequired"><value>بيانات المحل مطلوبة — لا توجد بيانات سابقة لهذا الكود</value></data>
+  <data name="Admin.CreateUserFailed"><value>فشل إنشاء الحساب</value></data>
+  <data name="Admin.NoApprovalSalesMan"><value>لا يوجد مندوب مبيعات معتمد لهذه المدينة</value></data>
+  <data name="Admin.UserNotFound"><value>المستخدم غير موجود</value></data>
+  <data name="Admin.UserIsSystemAdmin"><value>لا يمكن تعديل حساب مدير النظام</value></data>
+  <data name="Admin.UserTypeMismatch"><value>نوع المستخدم غير متطابق</value></data>
+  <data name="Admin.MobileAlreadyInUse"><value>رقم الجوال مستخدم من قبل مستخدم آخر</value></data>
+  <data name="Admin.UpdateUserFailed"><value>فشل تحديث بيانات المستخدم</value></data>
+  <data name="Admin.CustomerCodeAlreadyOwned"><value>كود العميل مسجل لصاحب محل آخر</value></data>
+
+  <!-- Auth Errors -->
+  <data name="Auth.MobileAlreadyRegistered"><value>رقم الجوال مسجل مسبقاً</value></data>
+  <data name="Auth.RegistrationDataNotFound"><value>بيانات التسجيل غير موجودة، يرجى إعادة التسجيل</value></data>
+  <data name="Auth.CreateUserFailed"><value>فشل إنشاء الحساب</value></data>
+  <data name="Auth.UserNotFound"><value>المستخدم غير موجود</value></data>
+  <data name="Auth.UserNotApproved"><value>حسابك قيد المراجعة</value></data>
+  <data name="Auth.UserRejected"><value>تم رفض طلب التسجيل</value></data>
+  <data name="Auth.UserDisabled"><value>الحساب معطل، يرجى التواصل مع الإدارة</value></data>
+  <data name="Auth.CityNotFound"><value>المدينة غير موجودة</value></data>
+  <data name="Auth.NoApprovalSalesMan"><value>لا يوجد مندوب مبيعات معتمد لهذه المدينة</value></data>
+  <data name="Auth.CustomerCodeNotFound"><value>كود العميل غير موجود في النظام</value></data>
+  <data name="Auth.ShopDataRequired"><value>بيانات المحل مطلوبة (اسم المتجر، الرقم الضريبي، السجل التجاري، صورة المحل، العنوان)</value></data>
+  <data name="Auth.MobileMismatch"><value>رقم الجوال لا يتطابق مع رمز التحقق</value></data>
+  <data name="Auth.CustomerCodeAlreadyOwned"><value>كود العميل مسجل لصاحب محل آخر</value></data>
+  <data name="Auth.OtpNotFound"><value>رمز التحقق غير موجود</value></data>
+  <data name="Auth.OtpExpired"><value>انتهت صلاحية رمز التحقق</value></data>
+  <data name="Auth.OtpInvalid"><value>رمز التحقق غير صحيح</value></data>
+  <data name="Auth.OtpAlreadyUsed"><value>رمز التحقق مستخدم مسبقاً</value></data>
+  <data name="Auth.OtpSendFailed"><value>فشل إرسال رمز التحقق</value></data>
+  <data name="Auth.TooManyOtpRequests"><value>محاولات كثيرة، يرجى المحاولة لاحقاً</value></data>
+  <data name="Auth.OtpResendTooSoon"><value>يرجى الانتظار 30 ثانية قبل إعادة إرسال رمز التحقق</value></data>
+  <data name="Auth.MaxVerificationAttempts"><value>تم تجاوز الحد الأقصى لمحاولات التحقق</value></data>
+  <data name="Auth.InvalidRefreshToken"><value>التوكن غير صالح</value></data>
+  <data name="Auth.RefreshTokenExpired"><value>انتهت صلاحية التوكن</value></data>
+  <data name="Auth.RefreshTokenRevoked"><value>التوكن ملغي</value></data>
+
+  <!-- Approval Errors -->
+  <data name="Approval.UserNotPendingApproval"><value>المستخدم ليس بانتظار الموافقة</value></data>
+  <data name="Approval.NotAuthorizedToApprove"><value>غير مصرح لك بالموافقة على هذا الطلب</value></data>
+  <data name="Approval.NoZoneManagerForRegion"><value>لا يوجد مدير منطقة للمنطقة المحددة</value></data>
+
+  <!-- Barcode Errors -->
+  <data name="Barcode.NotFound"><value>الباركود غير موجود</value></data>
+  <data name="Barcode.AlreadyScanned"><value>تم مسح هذا الباركود مسبقاً من قبل نفس الدور</value></data>
+  <data name="Barcode.Consumed"><value>الباركود مستهلك بالكامل</value></data>
+  <data name="Barcode.InvalidQuantity"><value>الكمية يجب أن تكون بين 1 و 10000</value></data>
+  <data name="Barcode.ConcurrencyConflict"><value>حدث تعارض أثناء المعالجة، يرجى المحاولة مرة أخرى</value></data>
+  <data name="Barcode.CollisionRetryExhausted"><value>فشل إنشاء أكواد فريدة، يرجى المحاولة مرة أخرى</value></data>
+
+  <!-- Scan Errors -->
+  <data name="Scan.NotFound"><value>سجل المسح غير موجود</value></data>
+  <data name="Scan.AlreadyCancelled"><value>تم إلغاء هذا المسح مسبقاً</value></data>
+  <data name="Scan.CannotCancelFirstScan"><value>لا يمكن إلغاء المسح الأول بعد اكتمال المسح الثاني — قم بإلغاء المسح الثاني أولاً</value></data>
+  <data name="Scan.UnauthorizedRole"><value>لا يحق لك مسح الباركود — مخصص للبائعين والفنيين فقط</value></data>
+  <data name="Scan.UserNotApproved"><value>الحساب غير مفعل أو غير معتمد</value></data>
+
+  <!-- File Errors -->
+  <data name="File.ImageUploadFailed"><value>فشل رفع الصورة</value></data>
+  <data name="File.InvalidImageType"><value>صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG أو WEBP</value></data>
+  <data name="File.ImageTooLarge"><value>حجم الصورة كبير جداً، الحد الأقصى 5 ميجابايت</value></data>
+
+  <!-- Invitation Errors -->
+  <data name="Invitation.InvalidCode"><value>رمز الدعوة غير صالح</value></data>
+  <data name="Invitation.SelfInvitation"><value>لا يمكنك استخدام رمز الدعوة الخاص بك</value></data>
+  <data name="Invitation.InviterNotApproved"><value>صاحب الدعوة غير معتمد</value></data>
+
+  <!-- Lookup Errors -->
+  <data name="Lookup.RegionNotFound"><value>المنطقة غير موجودة</value></data>
+  <data name="Lookup.CityNotFound"><value>المدينة غير موجودة</value></data>
+  <data name="Lookup.CustomerCodeNotFound"><value>كود العميل غير موجود</value></data>
+
+  <!-- Notification Errors -->
+  <data name="Notification.NotFound"><value>الإشعار غير موجود</value></data>
+  <data name="Notification.NotOwned"><value>لا يمكنك الوصول لهذا الإشعار</value></data>
+
+  <!-- Product Errors -->
+  <data name="Product.NotFound"><value>المنتج غير موجود</value></data>
+  <data name="Product.CodeAlreadyExists"><value>كود المنتج مسجل مسبقاً</value></data>
+  <data name="Product.HasBarcodes"><value>لا يمكن حذف منتج مرتبط بباركودات</value></data>
+
+  <!-- Redemption Errors -->
+  <data name="Redemption.InsufficientBalance"><value>الرصيد المتاح غير كافٍ للاسترداد</value></data>
+  <data name="Redemption.BelowMinimum"><value>الحد الأدنى للاسترداد 1000 نقطة</value></data>
+  <data name="Redemption.NotIntegerSar"><value>مبلغ الريال يجب أن يكون عدد صحيح</value></data>
+  <data name="Redemption.AlreadyHasPendingRequest"><value>لديك طلب استرداد قائم بالفعل</value></data>
+  <data name="Redemption.RequestNotFound"><value>طلب الاسترداد غير موجود</value></data>
+  <data name="Redemption.NotPendingApproval"><value>الطلب ليس في حالة انتظار الموافقة</value></data>
+  <data name="Redemption.NotAuthorizedToApprove"><value>لا يحق لك الموافقة على هذا الطلب</value></data>
+  <data name="Redemption.InvalidOtp"><value>رمز التحقق غير صحيح</value></data>
+  <data name="Redemption.OtpExpired"><value>رمز التحقق منتهي الصلاحية</value></data>
+  <data name="Redemption.NotInCashHandoverState"><value>الطلب ليس في حالة تسليم نقدي</value></data>
+  <data name="Redemption.UserNotApproved"><value>الحساب غير مفعل أو غير معتمد</value></data>
+
+  <!-- ShopData Errors -->
+  <data name="ShopData.VatAlreadyExists"><value>الرقم الضريبي مسجل مسبقاً</value></data>
+  <data name="ShopData.CrnAlreadyExists"><value>رقم السجل التجاري مسجل مسبقاً</value></data>
+  <data name="ShopData.ShortAddressAlreadyExists"><value>العنوان المختصر مسجل مسبقاً</value></data>
+
+  <!-- Wallet Errors -->
+  <data name="Wallet.NotFound"><value>المحفظة غير موجودة</value></data>
+  <data name="Wallet.InsufficientBalance"><value>رصيد النقاط غير كافٍ</value></data>
+</root>

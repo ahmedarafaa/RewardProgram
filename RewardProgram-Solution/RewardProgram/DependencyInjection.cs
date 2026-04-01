@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddControllers();
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
+        services.AddLocalization();
 
         // CORS
         var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];

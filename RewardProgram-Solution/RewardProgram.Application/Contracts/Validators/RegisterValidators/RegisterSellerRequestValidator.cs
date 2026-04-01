@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 namespace RewardProgram.Application.Contracts.Validators.RegisterValidators;
@@ -9,61 +10,61 @@ public class RegisterSellerRequestValidator : AbstractValidator<RegisterSellerRe
     private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
 
-    public RegisterSellerRequestValidator()
+    public RegisterSellerRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.PinId)
-            .NotEmpty().WithMessage("معرف رمز التحقق مطلوب");
+            .NotEmpty().WithMessage(L["PinId.NotEmpty"]);
 
         RuleFor(x => x.Otp)
-            .NotEmpty().WithMessage("رمز التحقق مطلوب");
+            .NotEmpty().WithMessage(L["Otp.NotEmpty"]);
 
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("الاسم مطلوب")
-            .MinimumLength(3).WithMessage("الاسم يجب أن يكون 3 أحرف على الأقل")
-            .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
-            .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
+            .NotEmpty().WithMessage(L["Name.NotEmpty"])
+            .MinimumLength(3).WithMessage(L["Name.MinLength"])
+            .MaximumLength(100).WithMessage(L["Name.MaxLength"])
+            .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
 
         RuleFor(x => x.MobileNumber)
-            .NotEmpty().WithMessage("رقم الجوال مطلوب")
-            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة");
+            .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
+            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage(L["MobileNumber.InvalidFormat"]);
 
         RuleFor(x => x.CustomerCode)
-            .NotEmpty().WithMessage("كود العميل مطلوب")
-            .MaximumLength(50).WithMessage("كود العميل يجب ألا يتجاوز 50 حرف");
+            .NotEmpty().WithMessage(L["CustomerCode.NotEmpty"])
+            .MaximumLength(50).WithMessage(L["CustomerCode.MaxLength"]);
 
         // Conditional shop data rules — only required when ShopData doesn't exist (validated in service)
         When(x => x.StoreName != null || x.VAT != null || x.CRN != null || x.ShopImage != null, () =>
         {
             RuleFor(x => x.StoreName)
-                .NotEmpty().WithMessage("اسم المتجر مطلوب")
-                .MinimumLength(5).WithMessage("اسم المتجر يجب أن يكون 5 أحرف على الأقل")
-                .MaximumLength(150).WithMessage("اسم المتجر يجب ألا يتجاوز 150 حرف");
+                .NotEmpty().WithMessage(L["StoreName.NotEmpty"])
+                .MinimumLength(5).WithMessage(L["StoreName.MinLength"])
+                .MaximumLength(150).WithMessage(L["StoreName.MaxLength"]);
 
             RuleFor(x => x.VAT)
-                .NotEmpty().WithMessage("الرقم الضريبي مطلوب")
-                .Length(15).WithMessage("الرقم الضريبي يجب أن يتكون من 15 رقم")
-                .Matches(@"^3\d{13}3$").WithMessage("الرقم الضريبي يجب أن يبدأ وينتهي بالرقم 3");
+                .NotEmpty().WithMessage(L["VAT.NotEmpty"])
+                .Length(15).WithMessage(L["VAT.Length"])
+                .Matches(@"^3\d{13}3$").WithMessage(L["VAT.InvalidFormat"]);
 
             RuleFor(x => x.CRN)
-                .NotEmpty().WithMessage("رقم السجل التجاري مطلوب")
-                .Length(10).WithMessage("رقم السجل التجاري يجب أن يتكون من 10 أرقام")
-                .Matches(@"^\d{10}$").WithMessage("رقم السجل التجاري يجب أن يتكون من أرقام فقط");
+                .NotEmpty().WithMessage(L["CRN.NotEmpty"])
+                .Length(10).WithMessage(L["CRN.Length"])
+                .Matches(@"^\d{10}$").WithMessage(L["CRN.InvalidFormat"]);
 
             RuleFor(x => x.ShortAddress)
-                .NotEmpty().WithMessage("العنوان المختصر مطلوب")
-                .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage("العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام");
+                .NotEmpty().WithMessage(L["ShortAddress.NotEmpty"])
+                .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage(L["ShortAddress.InvalidFormat"]);
 
             RuleFor(x => x.ShopImage)
-                .NotNull().WithMessage("صورة المحل مطلوبة")
-                .Must(BeValidImageType).WithMessage("صورة المحل يجب أن تكون بصيغة JPG أو PNG")
-                .Must(BeValidImageSize).WithMessage("حجم الصورة يجب ألا يتجاوز 5 ميجابايت");
+                .NotNull().WithMessage(L["ShopImage.NotNull"])
+                .Must(BeValidImageType).WithMessage(L["ShopImage.InvalidType"])
+                .Must(BeValidImageSize).WithMessage(L["ShopImage.TooLarge"]);
 
             RuleFor(x => x.CityId)
-                .NotEmpty().WithMessage("المدينة مطلوبة");
+                .NotEmpty().WithMessage(L["CityId.NotEmpty"]);
 
             RuleFor(x => x.NationalAddress!)
-                .NotNull().WithMessage("العنوان الوطني مطلوب")
-                .SetValidator(new NationalAddressDtoValidator(), "Default");
+                .NotNull().WithMessage(L["NationalAddress.NotNull"])
+                .SetValidator(new NationalAddressDtoValidator(L), "Default");
         });
     }
 

@@ -1,12 +1,14 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
+using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Content.Validators;
 
 public class UpdateAboutAppRequestValidator : AbstractValidator<UpdateAboutAppRequest>
 {
-    public UpdateAboutAppRequestValidator()
+    public UpdateAboutAppRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Content)
-            .NotEmpty().WithMessage("المحتوى مطلوب");
+            .NotEmpty().WithMessage(L["Content.Body.NotEmpty"]);
     }
 }

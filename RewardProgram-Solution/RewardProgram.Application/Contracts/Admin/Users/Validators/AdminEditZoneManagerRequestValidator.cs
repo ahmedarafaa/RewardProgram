@@ -1,18 +1,20 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
+using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Users.Validators;
 
 public class AdminEditZoneManagerRequestValidator : AbstractValidator<AdminEditZoneManagerRequest>
 {
-    public AdminEditZoneManagerRequestValidator()
+    public AdminEditZoneManagerRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("الاسم مطلوب")
-            .MinimumLength(3).WithMessage("الاسم يجب أن يكون 3 أحرف على الأقل")
-            .MaximumLength(100).WithMessage("الاسم يجب ألا يتجاوز 100 حرف")
-            .Matches(@"^[\p{L}\s]+$").WithMessage("الاسم يجب أن يحتوي على أحرف فقط");
+            .NotEmpty().WithMessage(L["Name.NotEmpty"])
+            .MinimumLength(3).WithMessage(L["Name.MinLength"])
+            .MaximumLength(100).WithMessage(L["Name.MaxLength"])
+            .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
 
         RuleFor(x => x.RegionId)
-            .NotEmpty().WithMessage("المنطقة مطلوبة");
+            .NotEmpty().WithMessage(L["RegionId.NotEmpty"]);
     }
 }

@@ -1,17 +1,19 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
+using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Notifications.Validators;
 
 public class AdminSendNotificationRequestValidator : AbstractValidator<AdminSendNotificationRequest>
 {
-    public AdminSendNotificationRequestValidator()
+    public AdminSendNotificationRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Title)
-            .NotEmpty().WithMessage("عنوان الإشعار مطلوب")
-            .MaximumLength(200).WithMessage("عنوان الإشعار يجب ألا يتجاوز 200 حرف");
+            .NotEmpty().WithMessage(L["Notification.Title.NotEmpty"])
+            .MaximumLength(200).WithMessage(L["Notification.Title.MaxLength"]);
 
         RuleFor(x => x.Body)
-            .NotEmpty().WithMessage("نص الإشعار مطلوب")
-            .MaximumLength(1000).WithMessage("نص الإشعار يجب ألا يتجاوز 1000 حرف");
+            .NotEmpty().WithMessage(L["Notification.Body.NotEmpty"])
+            .MaximumLength(1000).WithMessage(L["Notification.Body.MaxLength"]);
     }
 }

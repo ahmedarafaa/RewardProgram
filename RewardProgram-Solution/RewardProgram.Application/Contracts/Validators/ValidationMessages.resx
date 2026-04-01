@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- Shared: Name -->
+  <data name="Name.NotEmpty"><value>الاسم مطلوب</value></data>
+  <data name="Name.MinLength"><value>الاسم يجب أن يكون 3 أحرف على الأقل</value></data>
+  <data name="Name.MaxLength"><value>الاسم يجب ألا يتجاوز 100 حرف</value></data>
+  <data name="Name.LettersOnly"><value>الاسم يجب أن يحتوي على أحرف فقط</value></data>
+
+  <!-- Shared: Mobile -->
+  <data name="MobileNumber.NotEmpty"><value>رقم الجوال مطلوب</value></data>
+  <data name="MobileNumber.InvalidFormat"><value>رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة</value></data>
+
+  <!-- Shared: Location -->
+  <data name="CityId.NotEmpty"><value>المدينة مطلوبة</value></data>
+  <data name="RegionId.NotEmpty"><value>المنطقة مطلوبة</value></data>
+  <data name="CityIds.NotEmpty"><value>يجب تحديد مدينة واحدة على الأقل</value></data>
+
+  <!-- Shared: CustomerCode -->
+  <data name="CustomerCode.NotEmpty"><value>كود العميل مطلوب</value></data>
+  <data name="CustomerCode.MaxLength"><value>كود العميل يجب ألا يتجاوز 50 حرف</value></data>
+
+  <!-- Shared: Shop -->
+  <data name="StoreName.NotEmpty"><value>اسم المتجر مطلوب</value></data>
+  <data name="StoreName.MinLength"><value>اسم المتجر يجب أن يكون 5 أحرف على الأقل</value></data>
+  <data name="StoreName.MaxLength"><value>اسم المتجر يجب ألا يتجاوز 150 حرف</value></data>
+  <data name="VAT.NotEmpty"><value>الرقم الضريبي مطلوب</value></data>
+  <data name="VAT.Length"><value>الرقم الضريبي يجب أن يتكون من 15 رقم</value></data>
+  <data name="VAT.InvalidFormat"><value>الرقم الضريبي يجب أن يبدأ وينتهي بالرقم 3</value></data>
+  <data name="CRN.NotEmpty"><value>رقم السجل التجاري مطلوب</value></data>
+  <data name="CRN.Length"><value>رقم السجل التجاري يجب أن يتكون من 10 أرقام</value></data>
+  <data name="CRN.DigitsOnly"><value>رقم السجل التجاري يجب أن يتكون من أرقام فقط</value></data>
+  <data name="ShortAddress.NotEmpty"><value>العنوان المختصر مطلوب</value></data>
+  <data name="ShortAddress.InvalidFormat"><value>العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام</value></data>
+  <data name="ShopImage.NotNull"><value>صورة المحل مطلوبة</value></data>
+  <data name="ShopImage.InvalidType"><value>صورة المحل يجب أن تكون بصيغة JPG أو PNG</value></data>
+  <data name="ShopImage.TooLarge"><value>حجم الصورة يجب ألا يتجاوز 5 ميجابايت</value></data>
+  <data name="NationalAddress.NotNull"><value>العنوان الوطني مطلوب</value></data>
+
+  <!-- Shared: PostalCode/District -->
+  <data name="PostalCode.NotEmpty"><value>الرمز البريدي مطلوب</value></data>
+  <data name="PostalCode.InvalidFormat"><value>الرمز البريدي يجب أن يتكون من 5 أرقام</value></data>
+  <data name="District.NotEmpty"><value>الحي مطلوب</value></data>
+  <data name="District.MaxLength"><value>الحي يجب ألا يتجاوز 100 حرف</value></data>
+
+  <!-- Shared: OTP/Auth -->
+  <data name="PinId.NotEmpty"><value>معرف رمز التحقق مطلوب</value></data>
+  <data name="Otp.NotEmpty"><value>رمز التحقق مطلوب</value></data>
+  <data name="Otp.Length"><value>رمز التحقق يجب أن يتكون من 6 أرقام</value></data>
+  <data name="Otp.DigitsOnly"><value>رمز التحقق يجب أن يتكون من أرقام فقط</value></data>
+  <data name="RefreshToken.NotEmpty"><value>التوكن مطلوب</value></data>
+  <data name="UserId.NotEmpty"><value>معرف المستخدم مطلوب</value></data>
+  <data name="Reason.NotEmpty"><value>سبب الرفض مطلوب</value></data>
+  <data name="Reason.MaxLength"><value>سبب الرفض يجب ألا يتجاوز 500 حرف</value></data>
+
+  <!-- Product -->
+  <data name="Product.Name.NotEmpty"><value>اسم المنتج مطلوب</value></data>
+  <data name="Product.Name.MaxLength"><value>اسم المنتج يجب ألا يتجاوز 200 حرف</value></data>
+  <data name="Product.Code.NotEmpty"><value>كود المنتج مطلوب</value></data>
+  <data name="Product.Code.MaxLength"><value>كود المنتج يجب ألا يتجاوز 50 حرف</value></data>
+  <data name="Product.PointValue.GreaterThanZero"><value>قيمة النقاط يجب أن تكون أكبر من صفر</value></data>
+  <data name="Product.Price.GreaterThanOrEqualZero"><value>السعر يجب أن يكون صفر أو أكثر</value></data>
+  <data name="Product.Category.MaxLength"><value>المجموعة يجب ألا تتجاوز 100 حرف</value></data>
+
+  <!-- Barcode -->
+  <data name="Barcode.Code.NotEmpty"><value>كود الباركود مطلوب</value></data>
+  <data name="Barcode.Code.Length"><value>كود الباركود يجب أن يكون 12 حرف</value></data>
+  <data name="Barcode.ProductId.NotEmpty"><value>معرف المنتج مطلوب</value></data>
+  <data name="Barcode.Quantity.Range"><value>الكمية يجب أن تكون بين 1 و 1000</value></data>
+
+  <!-- NationalAddress -->
+  <data name="Address.BuildingNumber.Range"><value>رقم المبنى يجب أن يتكون من 4 أرقام</value></data>
+  <data name="Address.Street.NotEmpty"><value>الشارع مطلوب</value></data>
+  <data name="Address.Street.MinLength"><value>الشارع يجب أن يتكون من 3 أحرف على الأقل</value></data>
+  <data name="Address.Street.MaxLength"><value>الشارع يجب ألا يتجاوز 100 حرف</value></data>
+  <data name="Address.PostalCode.NotEmpty"><value>الرمز البريدي مطلوب</value></data>
+  <data name="Address.PostalCode.InvalidFormat"><value>الرمز البريدي يجب أن يتكون من 5 أرقام</value></data>
+  <data name="Address.SubNumber.Range"><value>الرقم الفرعي يجب أن يتكون من 4 أرقام</value></data>
+  <data name="Address.District.MaxLength"><value>الحي يجب ألا يتجاوز 100 حرف</value></data>
+
+  <!-- Redemption -->
+  <data name="Redemption.Method.Invalid"><value>طريقة الاسترداد غير صالحة</value></data>
+  <data name="Redemption.Points.Minimum"><value>الحد الأدنى للاسترداد 1000 نقطة</value></data>
+  <data name="Redemption.Iban.NotEmpty"><value>رقم الآيبان مطلوب</value></data>
+  <data name="Redemption.Iban.InvalidFormat"><value>رقم الآيبان يجب أن يبدأ بـ SA متبوعاً بـ 22 رقم</value></data>
+  <data name="Redemption.BankName.NotEmpty"><value>اسم البنك مطلوب</value></data>
+  <data name="Redemption.BankName.MaxLength"><value>اسم البنك يجب ألا يتجاوز 200 حرف</value></data>
+  <data name="Redemption.AccountHolder.NotEmpty"><value>اسم صاحب الحساب مطلوب</value></data>
+  <data name="Redemption.AccountHolder.MaxLength"><value>اسم صاحب الحساب يجب ألا يتجاوز 200 حرف</value></data>
+
+  <!-- RewardSettings -->
+  <data name="RewardSettings.Rate.GreaterThanZero"><value>معدل التحويل يجب أن يكون أكبر من صفر</value></data>
+  <data name="RewardSettings.InviterPoints.GreaterThanOrEqualZero"><value>نقاط مكافأة الداعي يجب أن تكون صفر أو أكثر</value></data>
+  <data name="RewardSettings.InviteePoints.GreaterThanOrEqualZero"><value>نقاط مكافأة المدعو يجب أن تكون صفر أو أكثر</value></data>
+  <data name="RewardSettings.MinRedemption.GreaterThanZero"><value>الحد الأدنى للاستبدال يجب أن يكون أكبر من صفر</value></data>
+
+  <!-- Notification -->
+  <data name="Notification.Title.NotEmpty"><value>عنوان الإشعار مطلوب</value></data>
+  <data name="Notification.Title.MaxLength"><value>عنوان الإشعار يجب ألا يتجاوز 200 حرف</value></data>
+  <data name="Notification.Body.NotEmpty"><value>نص الإشعار مطلوب</value></data>
+  <data name="Notification.Body.MaxLength"><value>نص الإشعار يجب ألا يتجاوز 1000 حرف</value></data>
+
+  <!-- Content -->
+  <data name="Content.Phone.NotEmpty"><value>رقم الهاتف مطلوب</value></data>
+  <data name="Content.Phone.MaxLength"><value>رقم الهاتف يجب ألا يتجاوز 20 حرف</value></data>
+  <data name="Content.Email.NotEmpty"><value>البريد الإلكتروني مطلوب</value></data>
+  <data name="Content.Email.Invalid"><value>البريد الإلكتروني غير صالح</value></data>
+  <data name="Content.Email.MaxLength"><value>البريد الإلكتروني يجب ألا يتجاوز 200 حرف</value></data>
+  <data name="Content.WhatsApp.NotEmpty"><value>رقم الواتساب مطلوب</value></data>
+  <data name="Content.WhatsApp.MaxLength"><value>رقم الواتساب يجب ألا يتجاوز 20 حرف</value></data>
+  <data name="Content.Address.NotEmpty"><value>العنوان مطلوب</value></data>
+  <data name="Content.Address.MaxLength"><value>العنوان يجب ألا يتجاوز 500 حرف</value></data>
+  <data name="Content.WorkingHours.NotEmpty"><value>ساعات العمل مطلوبة</value></data>
+  <data name="Content.WorkingHours.MaxLength"><value>ساعات العمل يجب ألا تتجاوز 200 حرف</value></data>
+  <data name="Content.Body.NotEmpty"><value>المحتوى مطلوب</value></data>
+</root>

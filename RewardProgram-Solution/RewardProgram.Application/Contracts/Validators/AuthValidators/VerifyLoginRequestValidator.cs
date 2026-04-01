@@ -1,18 +1,19 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Auth;
 
 namespace RewardProgram.Application.Contracts.Validators.AuthValidators;
 
 public class VerifyLoginRequestValidator : AbstractValidator<LoginVerifyRequest>
 {
-    public VerifyLoginRequestValidator()
+    public VerifyLoginRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.PinId)
-            .NotEmpty().WithMessage("معرف الطلب مطلوب");
+            .NotEmpty().WithMessage(L["PinId.NotEmpty"]);
 
         RuleFor(x => x.Otp)
-            .NotEmpty().WithMessage("رمز التحقق مطلوب")
-            .Length(6).WithMessage("رمز التحقق يجب أن يتكون من 6 أرقام")
-            .Matches(@"^\d{6}$").WithMessage("رمز التحقق يجب أن يتكون من أرقام فقط");
+            .NotEmpty().WithMessage(L["Otp.NotEmpty"])
+            .Length(6).WithMessage(L["Otp.Length"])
+            .Matches(@"^\d{6}$").WithMessage(L["Otp.DigitsOnly"]);
     }
 }

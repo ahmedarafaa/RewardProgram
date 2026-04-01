@@ -1,30 +1,32 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
+using RewardProgram.Application.Contracts.Validators;
 
 namespace RewardProgram.Application.Contracts.Admin.Content.Validators;
 
 public class UpdateContactUsRequestValidator : AbstractValidator<UpdateContactUsRequest>
 {
-    public UpdateContactUsRequestValidator()
+    public UpdateContactUsRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
         RuleFor(x => x.Phone)
-            .NotEmpty().WithMessage("رقم الهاتف مطلوب")
-            .MaximumLength(20).WithMessage("رقم الهاتف يجب ألا يتجاوز 20 حرف");
+            .NotEmpty().WithMessage(L["Content.Phone.NotEmpty"])
+            .MaximumLength(20).WithMessage(L["Content.Phone.MaxLength"]);
 
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("البريد الإلكتروني مطلوب")
-            .EmailAddress().WithMessage("البريد الإلكتروني غير صالح")
-            .MaximumLength(200).WithMessage("البريد الإلكتروني يجب ألا يتجاوز 200 حرف");
+            .NotEmpty().WithMessage(L["Content.Email.NotEmpty"])
+            .EmailAddress().WithMessage(L["Content.Email.InvalidFormat"])
+            .MaximumLength(200).WithMessage(L["Content.Email.MaxLength"]);
 
         RuleFor(x => x.WhatsApp)
-            .NotEmpty().WithMessage("رقم الواتساب مطلوب")
-            .MaximumLength(20).WithMessage("رقم الواتساب يجب ألا يتجاوز 20 حرف");
+            .NotEmpty().WithMessage(L["Content.WhatsApp.NotEmpty"])
+            .MaximumLength(20).WithMessage(L["Content.WhatsApp.MaxLength"]);
 
         RuleFor(x => x.Address)
-            .NotEmpty().WithMessage("العنوان مطلوب")
-            .MaximumLength(500).WithMessage("العنوان يجب ألا يتجاوز 500 حرف");
+            .NotEmpty().WithMessage(L["Content.Address.NotEmpty"])
+            .MaximumLength(500).WithMessage(L["Content.Address.MaxLength"]);
 
         RuleFor(x => x.WorkingHours)
-            .NotEmpty().WithMessage("ساعات العمل مطلوبة")
-            .MaximumLength(200).WithMessage("ساعات العمل يجب ألا تتجاوز 200 حرف");
+            .NotEmpty().WithMessage(L["Content.WorkingHours.NotEmpty"])
+            .MaximumLength(200).WithMessage(L["Content.WorkingHours.MaxLength"]);
     }
 }
