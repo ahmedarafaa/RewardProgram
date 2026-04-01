@@ -196,10 +196,8 @@ public class AdminDashboardService : IAdminDashboardService
         var pointsByRegion = await (
             from wt in _context.WalletTransactions
             join w in _context.Wallets on wt.WalletId equals w.Id
-            join c in _context.Cities on
-                (from u in _userRepository.Query()
-                 where u.Id == w.UserId
-                 select u.NationalAddress!.CityId).FirstOrDefault() equals c.Id
+            join u in _userRepository.Query() on w.UserId equals u.Id
+            join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
             join r in _context.Regions on c.RegionId equals r.Id
             where wt.Type == WalletTransactionType.Earned || wt.Type == WalletTransactionType.InvitationReward
             group wt by new { r.Id, r.NameAr, r.NameEn } into g
@@ -207,20 +205,24 @@ public class AdminDashboardService : IAdminDashboardService
         ).ToListAsync(ct);
 
         // Points earned by representative (SalesMan)
-        var pointsByRep = await (
+        var pointsByRepRaw = await (
             from wt in _context.WalletTransactions
             join w in _context.Wallets on wt.WalletId equals w.Id
             join u in _userRepository.Query() on w.UserId equals u.Id
             join sm in _userRepository.Query() on u.AssignedSalesManId equals sm.Id
             where wt.Type == WalletTransactionType.Earned || wt.Type == WalletTransactionType.InvitationReward
-            group new { wt, u } by new { sm.Id, sm.Name } into g
-            select new RepresentativePointsItem(
-                g.Key.Id,
-                g.Key.Name,
-                g.Sum(x => x.wt.Amount),
-                g.Select(x => x.u.Id).Distinct().Count()
-            )
+            select new { SalesManId = sm.Id, SalesManName = sm.Name, UserId = u.Id, wt.Amount }
         ).ToListAsync(ct);
+
+        var pointsByRep = pointsByRepRaw
+            .GroupBy(x => new { x.SalesManId, x.SalesManName })
+            .Select(g => new RepresentativePointsItem(
+                g.Key.SalesManId,
+                g.Key.SalesManName,
+                g.Sum(x => x.Amount),
+                g.Select(x => x.UserId).Distinct().Count()
+            ))
+            .ToList();
 
         // Points trend — last 12 months
         var cutoff = DateTime.UtcNow.AddMonths(-12);
@@ -362,21 +364,32 @@ public class AdminDashboardService : IAdminDashboardService
 
         var totalCount = await baseQuery.CountAsync(ct);
 
-        var items = await baseQuery
+        var rawItems = await baseQuery
             .OrderBy(x => x.LastScan)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(x => new InactiveUserItem(
+            .Select(x => new
+            {
                 x.u.Id,
                 x.u.Name,
                 x.u.MobileNumber,
                 x.u.UserType,
                 x.LastScan,
-                x.LastScan.HasValue
-                    ? (int)(DateTime.UtcNow - x.LastScan.Value).TotalDays
-                    : (int)(DateTime.UtcNow - x.u.CreatedAt).TotalDays
-            ))
+                x.u.CreatedAt
+            })
             .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+        var items = rawItems.Select(x => new InactiveUserItem(
+            x.Id,
+            x.Name,
+            x.MobileNumber,
+            x.UserType,
+            x.LastScan,
+            x.LastScan.HasValue
+                ? (int)(now - x.LastScan.Value).TotalDays
+                : (int)(now - x.CreatedAt).TotalDays
+        )).ToList();
 
         return Result.Success(new PaginatedResult<InactiveUserItem>(
             items, totalCount, query.Page, query.PageSize));
@@ -528,34 +541,30 @@ public class AdminDashboardService : IAdminDashboardService
     public async Task<Result<RevenueAnalyticsResponse>> GetRevenueAnalyticsAsync(CancellationToken ct = default)
     {
         // SAR balances
-        var walletTotals = await _context.Wallets
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                TotalSarBalance = g.Sum(w => w.SarBalance),
-                TotalSarHeld = g.Sum(w => w.HeldSarBalance),
-                TotalPointsBalance = g.Sum(w => w.Balance)
-            })
-            .FirstOrDefaultAsync(ct);
-
-        var totalSarLiability = walletTotals?.TotalSarBalance ?? 0;
-        var totalSarHeld = walletTotals?.TotalSarHeld ?? 0;
-        var totalPointsOutstanding = walletTotals?.TotalPointsBalance ?? 0;
+        var wallets = _context.Wallets.AsQueryable();
+        var totalSarLiability = await wallets.SumAsync(w => (decimal?)w.SarBalance ?? 0, ct);
+        var totalSarHeld = await wallets.SumAsync(w => (decimal?)w.HeldSarBalance ?? 0, ct);
+        var totalPointsOutstanding = await wallets.SumAsync(w => (decimal?)w.Balance ?? 0, ct);
 
         var totalSarPaidOut = await _context.RedemptionRequests
             .Where(r => r.Status == RedemptionRequestStatus.Completed)
             .SumAsync(r => (decimal?)r.SarAmount ?? 0, ct);
 
         // Volume by transaction type
-        var volumeByType = await _context.WalletTransactions
+        var volumeByTypeRaw = await _context.WalletTransactions
             .GroupBy(t => t.Type)
-            .Select(g => new TransactionTypeVolume(
-                g.Key.ToString(),
-                g.Count(),
-                g.Sum(t => t.Amount),
-                g.Sum(t => t.SarAmount)
-            ))
+            .Select(g => new
+            {
+                Type = g.Key,
+                Count = g.Count(),
+                TotalPoints = g.Sum(t => t.Amount),
+                TotalSar = g.Sum(t => t.SarAmount)
+            })
             .ToListAsync(ct);
+
+        var volumeByType = volumeByTypeRaw
+            .Select(g => new TransactionTypeVolume(g.Type.ToString(), g.Count, g.TotalPoints, g.TotalSar))
+            .ToList();
 
         // Payout trend — last 12 months
         var cutoff = DateTime.UtcNow.AddMonths(-12);
