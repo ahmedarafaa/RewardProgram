@@ -34,7 +34,21 @@
       "Bash(sqlcmd:*)",
       "Bash(taskkill:*)",
       "Bash(test:*)",
-      "Bash(cd M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution:*)"
+      "Bash(cd M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution:*)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Contracts\" -path \"*/Wallet/*\" -name \"*.cs\" 2>/dev/null | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Contracts\\\\Admin\\\\Products\" -name \"*.cs\" 2>/dev/null | grep -v Validator | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Contracts\\\\Admin\\\\RewardSettings\" -name \"*.cs\" 2>/dev/null | grep -v Validator | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Errors\" -name \"*.cs\" 2>/dev/null | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Helpers\" -name \"*.cs\" 2>/dev/null | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Contracts\\\\Admin\" -path \"*/Barcodes/*\" -name \"*.cs\" 2>/dev/null | grep -v Validator | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Contracts\\\\Admin\\\\Scans\" -name \"*.cs\" 2>/dev/null | sort)",
+      "Bash(find \"M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution\\\\RewardProgram.Application\\\\Interfaces\\\\Admin\" -name \"*.cs\" 2>/dev/null | sort)",
+      "Bash(dotnet nuget:*)",
+      "Bash(cd \"M:/DS/AL-Raed RewardProgram/RewardProgram-Solution\" && dotnet test tests/RewardProgram.Application.Tests/RewardProgram.Application.Tests.csproj --verbosity normal 2>&1 | grep -E \"^\\(Test Run|Total|  +Passed|  +Failed\\)\")",
+      "Bash(dotnet user-secrets:*)",
+      "Bash(curl:*)",
+      "Bash(grep -r \"ContentSid\\\\|template.*[Ss]id\\\\|WhatsApp.*template\" 'M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution' --include=*.cs --include=*.json)",
+      "Bash(dotnet test:*)"
     ]
   }
 }
