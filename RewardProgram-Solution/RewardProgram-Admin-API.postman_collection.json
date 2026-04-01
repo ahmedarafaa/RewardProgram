@@ -315,7 +315,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}",
+							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -330,7 +330,7 @@
 								}
 							]
 						},
-						"description": "Edit a SalesMan and reassign cities.\n\nName: 3+ letters only (Arabic/English), no numbers."
+						"description": "Edit a SalesMan and reassign cities.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable — cannot be changed after creation."
 					}
 				},
 				{
@@ -345,7 +345,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-2\"\n}",
+							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"regionId\": \"region-id-2\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -360,7 +360,7 @@
 								}
 							]
 						},
-						"description": "Edit a ZoneManager and reassign region.\n\nName: 3+ letters only (Arabic/English), no numbers."
+						"description": "Edit a ZoneManager and reassign region.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable — cannot be changed after creation."
 					}
 				},
 				{
@@ -372,12 +372,8 @@
 							"mode": "formdata",
 							"formdata": [
 								{ "key": "ownerName", "value": "محمد - معدل", "type": "text", "description": "Required — 3+ letters only, no numbers" },
-								{ "key": "mobileNumber", "value": "0512345680", "type": "text" },
-								{ "key": "customerCode", "value": "10001", "type": "text" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
 								{ "key": "storeName", "value": "متجر الرائد المعدل", "type": "text" },
-								{ "key": "vat", "value": "300000000000003", "type": "text" },
-								{ "key": "crn", "value": "1234567890", "type": "text" },
 								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "4 letters + 4 digits" },
 								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
 								{ "key": "nationalAddress.buildingNumber", "value": "1234", "type": "text", "description": "4 digits (1000-9999)" },
@@ -399,7 +395,7 @@
 								}
 							]
 						},
-						"description": "Edit a ShopOwner and their ShopData."
+						"description": "Edit a ShopOwner and their ShopData.\n\nImmutable fields (cannot be changed): MobileNumber, CustomerCode, VAT, CRN."
 					}
 				},
 				{
@@ -411,12 +407,8 @@
 							"mode": "formdata",
 							"formdata": [
 								{ "key": "name", "value": "سعد البائع - معدل", "type": "text", "description": "Required — 3+ letters only, no numbers" },
-								{ "key": "mobileNumber", "value": "0512345681", "type": "text" },
-								{ "key": "customerCode", "value": "10002", "type": "text" },
 								{ "key": "cityId", "value": "city-id-1", "type": "text" },
 								{ "key": "storeName", "value": "متجر البائع المعدل", "type": "text" },
-								{ "key": "vat", "value": "300000000000013", "type": "text" },
-								{ "key": "crn", "value": "1234567891", "type": "text" },
 								{ "key": "shortAddress", "value": "EFGH5678", "type": "text", "description": "4 letters + 4 digits" },
 								{ "key": "shopImage", "type": "file", "src": "", "disabled": true, "description": "Optional — only send to update image" },
 								{ "key": "nationalAddress.buildingNumber", "value": "5678", "type": "text", "description": "4 digits (1000-9999)" },
@@ -438,7 +430,7 @@
 								}
 							]
 						},
-						"description": "Edit a Seller and their ShopData."
+						"description": "Edit a Seller and their ShopData.\n\nImmutable fields (cannot be changed): MobileNumber, CustomerCode, VAT, CRN."
 					}
 				},
 				{
@@ -453,7 +445,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"فهد الفني - معدل\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-2\",\n  \"postalCode\": \"54321\",\n  \"district\": \"حي الملك فهد\"\n}",
+							"raw": "{\n  \"name\": \"فهد الفني - معدل\",\n  \"cityId\": \"city-id-2\",\n  \"postalCode\": \"54321\",\n  \"district\": \"حي الملك فهد\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
@@ -468,7 +460,7 @@
 								}
 							]
 						},
-						"description": "Edit a Technician.\n\nName: 3+ letters only (Arabic/English), no numbers.\nPostalCode: 5 digits."
+						"description": "Edit a Technician.\n\nName: 3+ letters only (Arabic/English), no numbers.\nPostalCode: 5 digits.\nMobileNumber is immutable — cannot be changed after creation."
 					}
 				}
 			]
