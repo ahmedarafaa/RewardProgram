@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
@@ -16,6 +18,8 @@ namespace RewardProgram.Application.Services;
 
 public class RedemptionApprovalService : IRedemptionApprovalService
 {
+    private const int MaxOtpAttempts = 5;
+
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
@@ -148,8 +152,9 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         if (toStatus == RedemptionRequestStatus.AdminApproved && redemptionRequest.Method == RedemptionMethod.Cash)
         {
             var otp = GenerateOtp();
-            redemptionRequest.CashOtp = otp;
+            redemptionRequest.CashOtpHash = HashOtp(otp);
             redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.AddDays(14);
+            redemptionRequest.CashOtpAttempts = 0;
 
             // Send OTP via WhatsApp
             var mobile = redemptionRequest.User.MobileNumber;
@@ -194,6 +199,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         RejectRedemptionRequest request, string approverId, CancellationToken ct = default)
     {
         var redemptionRequest = await _context.RedemptionRequests
+            .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == request.RedemptionRequestId, ct);
 
         if (redemptionRequest is null)
@@ -263,9 +269,17 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             return Result.Failure(RedemptionErrors.OtpExpired);
         }
 
-        // Validate OTP
-        if (redemptionRequest.CashOtp != request.Otp)
+        // Check brute-force limit
+        if (redemptionRequest.CashOtpAttempts >= MaxOtpAttempts)
+            return Result.Failure(RedemptionErrors.OtpMaxAttemptsExceeded);
+
+        // Validate OTP (hash comparison)
+        if (redemptionRequest.CashOtpHash != HashOtp(request.Otp))
+        {
+            redemptionRequest.CashOtpAttempts++;
+            await _context.SaveChangesAsync(ct);
             return Result.Failure(RedemptionErrors.InvalidOtp);
+        }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
@@ -305,13 +319,56 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
         var roles = await _userRepository.GetRolesAsync(approver);
 
-        return redemptionRequest.Status switch
+        // Role check
+        var hasRole = redemptionRequest.Status switch
         {
-            RedemptionRequestStatus.PendingSalesMan when roles.Contains(UserRoles.SalesMan) => Result.Success(),
-            RedemptionRequestStatus.PendingZoneManager when roles.Contains(UserRoles.ZoneManager) => Result.Success(),
-            RedemptionRequestStatus.PendingAdmin when roles.Contains(UserRoles.SystemAdmin) => Result.Success(),
-            _ => Result.Failure(RedemptionErrors.NotAuthorizedToApprove)
+            RedemptionRequestStatus.PendingSalesMan when roles.Contains(UserRoles.SalesMan) => true,
+            RedemptionRequestStatus.PendingZoneManager when roles.Contains(UserRoles.ZoneManager) => true,
+            RedemptionRequestStatus.PendingAdmin when roles.Contains(UserRoles.SystemAdmin) => true,
+            _ => false
         };
+
+        if (!hasRole)
+            return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+
+        // Geographic check — SalesMan must be assigned to user's city, ZoneManager to user's region
+        if (redemptionRequest.Status == RedemptionRequestStatus.PendingSalesMan)
+        {
+            var user = redemptionRequest.User
+                ?? await _userRepository.FindByIdAsync(redemptionRequest.UserId, ct);
+
+            var userCityId = user?.NationalAddress?.CityId;
+            if (userCityId is null)
+                return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+
+            var isAssigned = await _context.Cities
+                .AnyAsync(c => c.Id == userCityId && c.ApprovalSalesManId == approverId, ct);
+
+            if (!isAssigned)
+                return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+        }
+        else if (redemptionRequest.Status == RedemptionRequestStatus.PendingZoneManager)
+        {
+            var user = redemptionRequest.User
+                ?? await _userRepository.FindByIdAsync(redemptionRequest.UserId, ct);
+
+            var userCityId = user?.NationalAddress?.CityId;
+            if (userCityId is null)
+                return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+
+            var userRegionId = await _context.Cities
+                .Where(c => c.Id == userCityId)
+                .Select(c => c.RegionId)
+                .FirstOrDefaultAsync(ct);
+
+            var isAssigned = userRegionId is not null && await _context.Regions
+                .AnyAsync(r => r.Id == userRegionId && r.ZoneManagerId == approverId, ct);
+
+            if (!isAssigned)
+                return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+        }
+
+        return Result.Success();
     }
 
     private static RedemptionRequestStatus GetNextApprovalStatus(RedemptionRequestStatus current) => current switch
@@ -389,5 +446,11 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     private static string GenerateOtp()
     {
         return Random.Shared.Next(100000, 999999).ToString();
+    }
+
+    private static string HashOtp(string otp)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(otp));
+        return Convert.ToHexStringLower(bytes);
     }
 }

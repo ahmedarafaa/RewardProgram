@@ -11,6 +11,7 @@ using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
+using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services.Admin;
 
@@ -226,10 +227,20 @@ public class AdminBarcodeService : IAdminBarcodeService
             decimal totalPointsReversed = 0;
             decimal totalSarReversed = 0;
 
-            // 4. Reverse each wallet transaction
+            // 4. Reverse each wallet transaction — check balance is sufficient
             foreach (var wt in walletTransactions)
             {
                 var wallet = await _context.Wallets.FirstAsync(w => w.Id == wt.WalletId, ct);
+
+                // Available = Balance - HeldBalance. Reversal needs available >= earned amount.
+                var availableBalance = wallet.Balance - wallet.HeldBalance;
+                if (availableBalance < wt.Amount)
+                {
+                    await transaction.RollbackAsync(ct);
+                    return Result.Failure<AdminCancelScanResponse>(
+                        RedemptionErrors.CannotCancelScanWithInsufficientBalance);
+                }
+
                 wallet.Balance -= wt.Amount;
                 wallet.SarBalance -= wt.SarAmount;
                 totalPointsReversed += wt.Amount;

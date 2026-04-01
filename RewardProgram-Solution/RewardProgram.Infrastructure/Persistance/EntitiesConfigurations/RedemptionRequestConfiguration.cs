@@ -45,8 +45,12 @@ public class RedemptionRequestConfiguration : IEntityTypeConfiguration<Redemptio
             .HasMaxLength(200);
 
         // Cash handover fields
-        builder.Property(x => x.CashOtp)
-            .HasMaxLength(6);
+        builder.Property(x => x.CashOtpHash)
+            .HasMaxLength(64);
+
+        builder.Property(x => x.CashOtpAttempts)
+            .IsRequired()
+            .HasDefaultValue(0);
 
         builder.Property(x => x.CashHandoverById)
             .HasMaxLength(450);

@@ -36,4 +36,10 @@ public static class RedemptionErrors
 
     public static readonly Error UserNotApproved =
         new("Redemption.UserNotApproved", "الحساب غير مفعل أو غير معتمد", 403);
+
+    public static readonly Error OtpMaxAttemptsExceeded =
+        new("Redemption.OtpMaxAttemptsExceeded", "تم تجاوز الحد الأقصى لمحاولات رمز التحقق", 429);
+
+    public static readonly Error CannotCancelScanWithInsufficientBalance =
+        new("Redemption.CannotCancelScanWithInsufficientBalance", "لا يمكن إلغاء المسح — الرصيد المتاح غير كافٍ (قد تكون النقاط مسترداة أو محتجزة)", 400);
 }

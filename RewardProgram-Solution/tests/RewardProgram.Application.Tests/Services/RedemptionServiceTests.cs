@@ -435,11 +435,8 @@ public class RedemptionServiceTests : IDisposable
 
         wallet.Balance.Should().Be(0); // 300 - 300 expired
 
-        // BUG: Current code uses first tx rate (10) for all: 300/10 = 30
-        // Correct would be: 200/10 + 100/20 = 20 + 5 = 25
-        // This test documents the CURRENT (buggy) behavior:
-        wallet.SarBalance.Should().Be(5); // 35 - 30 (using rate 10 for all)
-        // If fixed, should be: 35 - 25 = 10
+        // Each tx uses its own SAR rate: 200/10 + 100/20 = 20 + 5 = 25
+        wallet.SarBalance.Should().Be(10); // 35 - 25 = 10
     }
 
     // ── GetAvailableBalance ──

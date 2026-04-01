@@ -49,10 +49,31 @@ public class RedemptionApprovalServiceTests : IDisposable
         _userRepo.GetRolesAsync(user).Returns(new List<string> { role });
     }
 
+    private async Task SeedGeographyAsync(string salesManId = "sm-1", string zoneManagerId = "zm-1")
+    {
+        if (!await _context.Regions.AnyAsync(r => r.Id == "region-1"))
+        {
+            _context.Regions.Add(new Region
+            {
+                Id = "region-1", NameAr = "منطقة", NameEn = "Region",
+                IsActive = true, ZoneManagerId = zoneManagerId
+            });
+            _context.Cities.Add(new City
+            {
+                Id = "city-1", NameAr = "مدينة", NameEn = "City",
+                RegionId = "region-1", IsActive = true, ApprovalSalesManId = salesManId
+            });
+            await _context.SaveChangesAsync();
+        }
+    }
+
     private async Task<(Wallet wallet, RedemptionRequest request)> SeedPendingRedemption(
         string userId, RedemptionRequestStatus status, RedemptionMethod method = RedemptionMethod.BankTransfer,
         decimal points = 1000, decimal sarRate = 10m, int earnedTxCount = 3)
     {
+        // Seed geography for approver authorization
+        await SeedGeographyAsync();
+
         // Create user entity for navigation
         var userEntity = new ApplicationUser
         {
@@ -224,8 +245,8 @@ public class RedemptionApprovalServiceTests : IDisposable
 
         var updated = await _context.RedemptionRequests.FindAsync(request.Id);
         updated!.Status.Should().Be(RedemptionRequestStatus.AdminApproved); // NOT Completed
-        updated.CashOtp.Should().NotBeNullOrEmpty();
-        updated.CashOtp!.Length.Should().Be(6);
+        updated.CashOtpHash.Should().NotBeNullOrEmpty();
+        updated.CashOtpHash!.Length.Should().Be(64); // SHA256 hex
         updated.CashOtpExpiresAt.Should().BeAfter(DateTime.UtcNow.AddDays(13));
 
         // WhatsApp OTP should have been sent
@@ -444,7 +465,7 @@ public class RedemptionApprovalServiceTests : IDisposable
             UserId = userId, Method = RedemptionMethod.Cash,
             Status = RedemptionRequestStatus.AdminApproved,
             PointsAmount = 1000, SarRate = 10m, SarAmount = 100,
-            CashOtp = "123456",
+            CashOtpHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
             CashOtpExpiresAt = DateTime.UtcNow.AddDays(7)
         };
         _context.RedemptionRequests.Add(request);
@@ -474,7 +495,7 @@ public class RedemptionApprovalServiceTests : IDisposable
             UserId = "user-1", Method = RedemptionMethod.Cash,
             Status = RedemptionRequestStatus.AdminApproved,
             PointsAmount = 1000, SarRate = 10m, SarAmount = 100,
-            CashOtp = "123456",
+            CashOtpHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
             CashOtpExpiresAt = DateTime.UtcNow.AddDays(7)
         };
         _context.RedemptionRequests.Add(request);
@@ -503,7 +524,7 @@ public class RedemptionApprovalServiceTests : IDisposable
             UserId = "user-1", Method = RedemptionMethod.Cash,
             Status = RedemptionRequestStatus.AdminApproved,
             PointsAmount = 1000, SarRate = 10m, SarAmount = 100,
-            CashOtp = "123456",
+            CashOtpHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
             CashOtpExpiresAt = DateTime.UtcNow.AddDays(-1) // expired
         };
         _context.RedemptionRequests.Add(request);

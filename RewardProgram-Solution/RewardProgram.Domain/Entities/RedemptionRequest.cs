@@ -18,8 +18,9 @@ public class RedemptionRequest : TrackableEntity
     public string? AccountHolderName { get; set; }
 
     // Cash handover fields
-    public string? CashOtp { get; set; }
+    public string? CashOtpHash { get; set; }
     public DateTime? CashOtpExpiresAt { get; set; }
+    public int CashOtpAttempts { get; set; }
     public string? CashHandoverById { get; set; }
     public DateTime? CashHandoverAt { get; set; }
 

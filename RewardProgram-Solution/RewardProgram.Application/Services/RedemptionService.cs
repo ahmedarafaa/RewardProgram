@@ -43,44 +43,54 @@ public class RedemptionService : IRedemptionService
         if (request.PointsAmount < 1000)
             return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.BelowMinimum);
 
-        // 3. Check no pending request
+        // 3. Get SAR rate
+        var settings = await _context.RewardSettings.FirstOrDefaultAsync(ct);
+        var sarRate = settings?.PointsToSarRate ?? 10m;
+        var sarAmount = request.PointsAmount / sarRate;
+
+        // 4. Check SAR is integer
+        if (sarAmount != Math.Floor(sarAmount))
+            return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.NotIntegerSar);
+
+        // 5. Determine first approval level
+        var city = await GetUserCityAsync(user);
+        var status = city?.ApprovalSalesManId is not null
+            ? RedemptionRequestStatus.PendingSalesMan
+            : RedemptionRequestStatus.PendingZoneManager;
+
+        // 6. Begin transaction — all checks that guard against concurrent requests must be inside
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
+        // 7. Check no pending request (inside transaction to prevent race condition)
         var hasPending = await _context.RedemptionRequests
             .AnyAsync(r => r.UserId == userId && r.Status != RedemptionRequestStatus.Completed
                 && r.Status != RedemptionRequestStatus.Rejected
                 && r.Status != RedemptionRequestStatus.Cancelled, ct);
 
         if (hasPending)
+        {
+            await transaction.RollbackAsync(ct);
             return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.AlreadyHasPendingRequest);
+        }
 
-        // 4. Get SAR rate
-        var settings = await _context.RewardSettings.FirstOrDefaultAsync(ct);
-        var sarRate = settings?.PointsToSarRate ?? 10m;
-        var sarAmount = request.PointsAmount / sarRate;
-
-        // 5. Check SAR is integer
-        if (sarAmount != Math.Floor(sarAmount))
-            return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.NotIntegerSar);
-
-        // 6. Check available balance (expire old points first)
+        // 8. Check available balance (inside transaction to prevent double-hold)
         var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, ct);
         if (wallet is null)
+        {
+            await transaction.RollbackAsync(ct);
             return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.InsufficientBalance);
+        }
 
         await ExpireOldPointsAsync(wallet, ct);
 
         var availableBalance = wallet.Balance - wallet.HeldBalance;
         if (availableBalance < request.PointsAmount)
+        {
+            await transaction.RollbackAsync(ct);
             return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.InsufficientBalance);
+        }
 
-        // 7. Determine first approval level
-        var city = await GetUserCityAsync(user);
-        var status = city?.ApprovalSalesManId is not null
-            ? RedemptionRequestStatus.PendingSalesMan
-            : RedemptionRequestStatus.PendingZoneManager;
-
-        // 8. Create request & lock points
-        await using var transaction = await _context.BeginTransactionAsync(ct);
-
+        // 9. Create request & lock points
         var redemptionRequest = new RedemptionRequest
         {
             UserId = userId,
@@ -184,29 +194,41 @@ public class RedemptionService : IRedemptionService
         if (expiredTransactions.Count == 0)
             return;
 
+        // Only expire up to the available (non-held) balance to protect held points
+        var maxExpirable = wallet.Balance - wallet.HeldBalance;
+        if (maxExpirable <= 0)
+            return;
+
         decimal totalExpired = 0;
+        decimal totalSarExpired = 0;
 
         foreach (var tx in expiredTransactions)
         {
-            totalExpired += tx.RemainingAmount;
+            if (totalExpired >= maxExpirable)
+                break;
+
+            var expireAmount = Math.Min(tx.RemainingAmount, maxExpirable - totalExpired);
+            var sarExpireAmount = expireAmount / tx.SarRate;
+
+            totalExpired += expireAmount;
+            totalSarExpired += sarExpireAmount;
 
             await _context.WalletTransactions.AddAsync(new WalletTransaction
             {
                 WalletId = wallet.Id,
-                Amount = -tx.RemainingAmount,
+                Amount = -expireAmount,
                 Type = WalletTransactionType.Expired,
                 ReferenceId = tx.Id,
                 Description = "نقاط منتهية الصلاحية",
                 SarRate = tx.SarRate,
-                SarAmount = -(tx.RemainingAmount / tx.SarRate)
+                SarAmount = -sarExpireAmount
             }, ct);
 
-            tx.RemainingAmount = 0;
+            tx.RemainingAmount -= expireAmount;
         }
 
         wallet.Balance -= totalExpired;
-        var sarRate = expiredTransactions.First().SarRate;
-        wallet.SarBalance -= totalExpired / sarRate;
+        wallet.SarBalance -= totalSarExpired;
 
         await _context.SaveChangesAsync(ct);
 
