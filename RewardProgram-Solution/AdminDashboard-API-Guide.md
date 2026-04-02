@@ -15,46 +15,55 @@ Authorization: Bearer <token>
 ### UserType
 | Value | Name |
 |-------|------|
-| 0 | ShopOwner |
-| 1 | Seller |
-| 2 | Technician |
-| 3 | SalesMan |
-| 4 | ZoneManager |
-| 5 | SystemAdmin |
+| 1 | ShopOwner |
+| 2 | Seller |
+| 3 | Technician |
+| 4 | SalesMan |
+| 5 | ZoneManager |
+| 6 | SystemAdmin |
 
 ### RegistrationStatus
 | Value | Name |
 |-------|------|
-| 0 | Pending |
-| 1 | Approved |
-| 2 | Rejected |
+| 1 | PendingSalesman |
+| 2 | PendingZoneManager |
+| 3 | Approved |
+| 4 | Rejected |
 
 ### WalletTransactionType
 | Value | Name |
 |-------|------|
-| 0 | Scan |
-| 1 | Redemption |
-| 2 | Expiry |
-| 3 | Refund |
-| 4 | Adjustment |
-| 5 | CancelScan |
+| 1 | Earned |
+| 2 | Redeemed |
+| 3 | Cancelled |
+| 4 | Expired |
+| 5 | Refunded |
 | 6 | InvitationReward |
 
 ### RedemptionRequestStatus
 | Value | Name |
 |-------|------|
-| 0 | PendingSalesMan |
-| 1 | PendingZoneManager |
-| 2 | Approved |
-| 3 | Rejected |
-| 4 | Completed |
-| 5 | Cancelled |
+| 1 | PendingSalesMan |
+| 2 | PendingZoneManager |
+| 3 | PendingAdmin |
+| 4 | AdminApproved |
+| 5 | Completed |
+| 6 | Rejected |
+| 7 | Cancelled |
 
 ### RedemptionMethod
 | Value | Name |
 |-------|------|
-| 0 | Cash |
 | 1 | BankTransfer |
+| 2 | Cash |
+
+### BarcodeStatus
+| Value | Name |
+|-------|------|
+| 1 | Available |
+| 2 | SellerScanned |
+| 3 | TechnicianScanned |
+| 4 | Consumed |
 
 ---
 
@@ -85,8 +94,8 @@ No authentication required.
     "id": "admin-001",
     "name": "System Admin",
     "mobileNumber": "966500000000",
-    "userType": 5,
-    "registrationStatus": 1
+    "userType": 6,
+    "registrationStatus": 3
   }
 }
 ```
@@ -134,16 +143,17 @@ No authentication required.
 ```json
 {
   "countByUserType": [
-    { "userType": 0, "count": 45 },
-    { "userType": 1, "count": 128 },
-    { "userType": 2, "count": 87 },
-    { "userType": 3, "count": 8 },
-    { "userType": 4, "count": 4 }
+    { "userType": 1, "count": 45 },
+    { "userType": 2, "count": 128 },
+    { "userType": 3, "count": 87 },
+    { "userType": 4, "count": 8 },
+    { "userType": 5, "count": 4 }
   ],
   "countByRegistrationStatus": [
-    { "status": 0, "count": 12 },
-    { "status": 1, "count": 248 },
-    { "status": 2, "count": 6 }
+    { "status": 1, "count": 12 },
+    { "status": 2, "count": 8 },
+    { "status": 3, "count": 248 },
+    { "status": 4, "count": 6 }
   ],
   "countByRegion": [
     {
@@ -273,11 +283,11 @@ No authentication required.
 | regionId | string | No | - | Filter by region ID |
 | dateFrom | DateTime | No | - | Start date (e.g. `2026-01-01`) |
 | dateTo | DateTime | No | - | End date (e.g. `2026-04-01`) |
-| type | int | No | - | WalletTransactionType enum value |
+| type | int | No | - | WalletTransactionType enum value (1-6) |
 | page | int | No | 1 | Page number |
 | pageSize | int | No | 20 | Items per page |
 
-**Example:** `/api/admin/analytics/points/details?regionId=reg-riyadh&type=0&page=1&pageSize=10`
+**Example:** `/api/admin/analytics/points/details?regionId=reg-riyadh&type=1&page=1&pageSize=10`
 
 ### Response `200 OK`
 
@@ -291,7 +301,7 @@ No authentication required.
       "userMobile": "9665********",
       "amount": 150.0,
       "sarAmount": 15.00,
-      "type": 0,
+      "type": 1,
       "description": "Scan barcode ABC123",
       "createdAt": "2026-03-28T14:30:00"
     },
@@ -302,7 +312,7 @@ No authentication required.
       "userMobile": "9665********",
       "amount": -1000.0,
       "sarAmount": -100.00,
-      "type": 1,
+      "type": 2,
       "description": "Cash redemption",
       "createdAt": "2026-03-27T09:15:00"
     }
@@ -393,7 +403,7 @@ No authentication required.
       "userId": "usr-i01",
       "userName": "سعد الدوسري",
       "mobileNumber": "966507654321",
-      "userType": 1,
+      "userType": 2,
       "lastScanDate": "2026-02-15T10:30:00",
       "daysSinceLastScan": 46
     },
@@ -401,7 +411,7 @@ No authentication required.
       "userId": "usr-i02",
       "userName": "ياسر القحطاني",
       "mobileNumber": "966501112222",
-      "userType": 2,
+      "userType": 3,
       "lastScanDate": null,
       "daysSinceLastScan": 90
     }
@@ -467,16 +477,17 @@ No authentication required.
 ```json
 {
   "countByStatus": [
-    { "status": 0, "count": 3, "totalSar": 1500.00 },
-    { "status": 1, "count": 2, "totalSar": 800.00 },
-    { "status": 2, "count": 15, "totalSar": 4200.00 },
-    { "status": 3, "count": 4, "totalSar": 0.00 },
-    { "status": 4, "count": 10, "totalSar": 3500.00 },
-    { "status": 5, "count": 1, "totalSar": 0.00 }
+    { "status": 1, "count": 3, "totalSar": 1500.00 },
+    { "status": 2, "count": 2, "totalSar": 800.00 },
+    { "status": 3, "count": 5, "totalSar": 1200.00 },
+    { "status": 4, "count": 15, "totalSar": 4200.00 },
+    { "status": 5, "count": 10, "totalSar": 3500.00 },
+    { "status": 6, "count": 4, "totalSar": 0.00 },
+    { "status": 7, "count": 1, "totalSar": 0.00 }
   ],
   "countByMethod": [
-    { "method": 0, "count": 20, "totalSar": 6000.00 },
-    { "method": 1, "count": 15, "totalSar": 4000.00 }
+    { "method": 1, "count": 15, "totalSar": 4000.00 },
+    { "method": 2, "count": 20, "totalSar": 6000.00 }
   ],
   "totalSarRedeemed": 8500.00,
   "averageProcessingDays": 3.5,
@@ -540,10 +551,11 @@ No authentication required.
   "totalSarPaidOut": 8500.00,
   "totalPointsOutstanding": 169300.0,
   "volumeByType": [
-    { "type": "Scan", "count": 1876, "totalPoints": 254300.0, "totalSar": 25430.00 },
-    { "type": "Redemption", "count": 35, "totalPoints": 85000.0, "totalSar": 8500.00 },
-    { "type": "Expiry", "count": 12, "totalPoints": 5200.0, "totalSar": 520.00 },
-    { "type": "Refund", "count": 4, "totalPoints": 3000.0, "totalSar": 300.00 },
+    { "type": "Earned", "count": 1876, "totalPoints": 254300.0, "totalSar": 25430.00 },
+    { "type": "Redeemed", "count": 35, "totalPoints": 85000.0, "totalSar": 8500.00 },
+    { "type": "Cancelled", "count": 8, "totalPoints": 1200.0, "totalSar": 120.00 },
+    { "type": "Expired", "count": 12, "totalPoints": 5200.0, "totalSar": 520.00 },
+    { "type": "Refunded", "count": 4, "totalPoints": 3000.0, "totalSar": 300.00 },
     { "type": "InvitationReward", "count": 20, "totalPoints": 2000.0, "totalSar": 200.00 }
   ],
   "payoutTrend": [
