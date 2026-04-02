@@ -268,6 +268,36 @@ PendingSalesMan -> PendingZoneManager -> PendingAdmin -> AdminApproved/Completed
 
 ### What's Working Well
 
+---
+
+## Part 4: Fixes Applied (Commit `1ae98a4`)
+
+| # | Issue | Solution | File |
+|---|-------|----------|------|
+| C1 | JWT key exposed in appsettings.json | Replaced with `REPLACE_WITH_SECURE_KEY_IN_ENVIRONMENT` placeholder. Must set real key via environment variable or secrets manager per environment. | `appsettings.json` |
+| C2 | Twilio credentials exposed in appsettings.Development.json | Replaced AccountSid, AuthToken, VerifyServiceSid with placeholders. Must set real values via environment variable or user-secrets per environment. | `appsettings.Development.json` |
+| H1 | NationalAddress null-forgiving in analytics joins crashes if user has no CityId | Added `where u.NationalAddress != null && u.NationalAddress.CityId != null` guard before all City/Region joins in: GetUserAnalytics (countByRegion), GetPointsAnalytics (pointsByRegion), GetTopPerformers (userRegions), GetPointsDetails (region filter). | `AdminDashboardService.cs` |
+| H2 | TopPerformers region lookup returns null tuple when user has no region | Added `?? string.Empty` null-coalescing on `region.NameAr` and `region.NameEn` for both seller and technician item mappings. | `AdminDashboardService.cs` |
+| H3 | InactiveUsers loads ALL eligible users into memory then filters | Inverted logic: build `activeUserIds` HashSet from lastScans >= cutoff, then filter at DB level with `!activeUserIds.Contains(u.Id)`. Only inactive users are loaded. | `AdminDashboardService.cs` |
+| H4 | Edit ShopOwner/Seller/Technician missing transaction | **Not fixed (not needed)** — these methods only update user name via single `_userRepository.UpdateAsync()` call (Identity UserManager), which is atomic. No multi-entity operation requiring transaction. | N/A |
+| H5 | SalesMan city unassignment orphans users | **Deferred** — requires design decision on whether to auto-reassign users or require new SalesMan first. Low impact during UAT with admin control. | N/A |
+| H6 | Concurrent refresh token duplicate | **Deferred** — low probability during UAT. Production fix: wrap revoke+generate in single transaction. | N/A |
+| H7 | OTP records never cleaned up | **Deferred** — no immediate impact. Production fix: add background job to purge expired OTPs older than 30 days. | N/A |
+| H8 | Wallet creation race condition | **Already handled** — `WalletConfiguration` already has `builder.HasIndex(x => x.UserId).IsUnique()` + `DbUpdateException` catch in ScanService returns ConcurrencyConflict. | `WalletConfiguration.cs` |
+| H9 | Invitation notification sent even when inviter reward was NOT credited (double-count) | Replaced re-query with `inviterRewarded` boolean flag set inside credit block. Notification only sent when `inviterRewarded == true`. | `InvitationService.cs` |
+| H10 | Concurrent same-role scan on same barcode | **Already handled** — `ScanRecordConfiguration` already has `builder.HasIndex(x => new { x.BarcodeId, x.ScannerRole }).IsUnique()` + `DbUpdateException` catch. | `ScanRecordConfiguration.cs` |
+
+### Summary
+- **6 issues fixed** in code (C1, C2, H1, H2, H3, H9)
+- **2 issues already handled** by existing DB constraints (H8, H10)
+- **1 issue not applicable** after code review (H4)
+- **3 issues deferred** to post-UAT (H5, H6, H7)
+- **Build:** 0 errors, **Tests:** 108/108 passing
+
+---
+
+### What's Working Well
+
 - Clean Architecture properly layered
 - Result pattern for error handling (no exception-driven control flow)
 - Transaction boundaries on critical financial operations
