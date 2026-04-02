@@ -615,15 +615,14 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
-        // Revoke old token and persist
+        // Revoke old token
         token.RevokedOn = DateTime.UtcNow;
 
         // Clean up expired/revoked tokens to prevent unbounded growth
         user.RefreshTokens.RemoveAll(t => t.Token != refreshToken && (!t.IsActive || t.IsExpired));
 
-        await _userRepository.UpdateAsync(user);
-
-        // Generate new auth response
+        // Generate new auth response (adds new token to user.RefreshTokens)
+        // Single UpdateAsync call persists both revocation and new token atomically
         var authResponse = await _tokenService.GenerateAuthResponseAsync(user);
 
         _logger.LogInformation("Token refreshed for UserId: {UserId}", user.Id);

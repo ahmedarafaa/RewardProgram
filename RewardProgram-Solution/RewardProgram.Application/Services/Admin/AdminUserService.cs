@@ -733,10 +733,17 @@ public class AdminUserService : IAdminUserService
                 city.UpdatedAt = DateTime.UtcNow;
             }
 
-            // Reassign users in removed cities: clear AssignedSalesManId
+            // Reassign users in removed cities to the city's other SalesMan if one exists
             if (removedCities.Count > 0)
             {
                 var removedCityIds = removedCities.Select(c => c.Id).ToList();
+
+                // Find cities that have another SalesMan assigned (set by a previous admin action)
+                // After clearing above, removedCities.ApprovalSalesManId is null, so query DB for any other assignment
+                var cityReplacements = await _context.Cities
+                    .Where(c => removedCityIds.Contains(c.Id) && c.ApprovalSalesManId != null && c.ApprovalSalesManId != userId)
+                    .ToDictionaryAsync(c => c.Id, c => c.ApprovalSalesManId, ct);
+
                 var usersInRemovedCities = await _userRepository.Query()
                     .Where(u => u.AssignedSalesManId == userId
                         && u.NationalAddress != null
@@ -745,8 +752,16 @@ public class AdminUserService : IAdminUserService
 
                 foreach (var u in usersInRemovedCities)
                 {
-                    u.AssignedSalesManId = null;
+                    var cityId = u.NationalAddress?.CityId;
+                    u.AssignedSalesManId = cityId != null && cityReplacements.TryGetValue(cityId, out var newSmId)
+                        ? newSmId
+                        : null;
                 }
+
+                var orphanedCount = usersInRemovedCities.Count(u => u.AssignedSalesManId == null);
+                if (orphanedCount > 0)
+                    _logger.LogWarning("SalesMan {SalesManId} removed from cities — {Count} users now have no assigned SalesMan",
+                        userId, orphanedCount);
             }
 
             // Reassign users in added cities: set AssignedSalesManId
