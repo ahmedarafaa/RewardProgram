@@ -106,6 +106,7 @@ public class AdminDashboardService : IAdminDashboardService
         // Count by Region (join through NationalAddress.CityId → City → Region)
         var countByRegionRaw = await (
             from u in users
+            where u.NationalAddress != null && u.NationalAddress.CityId != null
             join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
             join r in _context.Regions on c.RegionId equals r.Id
             group u by new { r.Id, r.NameAr, r.NameEn } into g
@@ -201,6 +202,7 @@ public class AdminDashboardService : IAdminDashboardService
             from wt in _context.WalletTransactions
             join w in _context.Wallets on wt.WalletId equals w.Id
             join u in _userRepository.Query() on w.UserId equals u.Id
+            where u.NationalAddress != null && u.NationalAddress.CityId != null
             join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
             join r in _context.Regions on c.RegionId equals r.Id
             where wt.Type == WalletTransactionType.Earned || wt.Type == WalletTransactionType.InvitationReward
@@ -265,7 +267,8 @@ public class AdminDashboardService : IAdminDashboardService
                 .Where(c => c.RegionId == query.RegionId)
                 .Select(c => c.Id);
 
-            baseQuery = baseQuery.Where(x => cityIdsInRegion.Contains(x.u.NationalAddress!.CityId!));
+            baseQuery = baseQuery.Where(x => x.u.NationalAddress != null
+                && cityIdsInRegion.Contains(x.u.NationalAddress.CityId!));
         }
 
         if (query.DateFrom.HasValue)
@@ -327,6 +330,7 @@ public class AdminDashboardService : IAdminDashboardService
         var userRegionsList = await (
             from u in _userRepository.Query()
             where allUserIds.Contains(u.Id)
+               && u.NationalAddress != null && u.NationalAddress.CityId != null
             join c in _context.Cities on u.NationalAddress!.CityId equals c.Id
             join r in _context.Regions on c.RegionId equals r.Id
             select new { UserId = u.Id, r.NameAr, r.NameEn }
@@ -336,13 +340,13 @@ public class AdminDashboardService : IAdminDashboardService
         var sellerItems = topSellers.Select(x =>
         {
             userRegions.TryGetValue(x.Id, out var region);
-            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr, region.NameEn, x.Total, x.Scans);
+            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr ?? string.Empty, region.NameEn ?? string.Empty, x.Total, x.Scans);
         }).ToList();
 
         var techItems = topTechs.Select(x =>
         {
             userRegions.TryGetValue(x.Id, out var region);
-            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr, region.NameEn, x.Total, x.Scans);
+            return new TopPerformerItem(x.Id, x.Name, x.MobileNumber, region.NameAr ?? string.Empty, region.NameEn ?? string.Empty, x.Total, x.Scans);
         }).ToList();
 
         return Result.Success(new TopPerformersResponse(sellerItems, techItems));
@@ -360,23 +364,29 @@ public class AdminDashboardService : IAdminDashboardService
             .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) })
             .ToDictionaryAsync(x => x.UserId, x => x.LastScan, ct);
 
-        // Get eligible users
+        // Get only users whose last scan is before cutoff (or never scanned)
+        var activeUserIds = lastScans
+            .Where(kv => kv.Value >= cutoff)
+            .Select(kv => kv.Key)
+            .ToHashSet();
+
+        var now = DateTime.UtcNow;
+
         var eligibleUsers = await _userRepository.Query()
             .Where(u => (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
                && u.RegistrationStatus == RegistrationStatus.Approved
-               && !u.IsDisabled)
+               && !u.IsDisabled
+               && !activeUserIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt })
             .ToListAsync(ct);
 
-        // Filter inactive in memory
-        var now = DateTime.UtcNow;
+        // Enrich with last scan date and sort
         var filtered = eligibleUsers
             .Select(u => new
             {
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt,
                 LastScan = lastScans.TryGetValue(u.Id, out var ls) ? (DateTime?)ls : null
             })
-            .Where(x => x.LastScan == null || x.LastScan < cutoff)
             .OrderBy(x => x.LastScan)
             .ToList();
 

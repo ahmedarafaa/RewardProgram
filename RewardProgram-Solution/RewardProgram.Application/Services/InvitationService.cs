@@ -124,9 +124,11 @@ public class InvitationService : IInvitationService
             }
 
             // Credit inviter only if under 20 rewarded invitations
+            var inviterRewardCount = 0;
+            var inviterRewarded = false;
             if (inviterPoints > 0)
             {
-                var inviterRewardCount = await _context.WalletTransactions
+                inviterRewardCount = await _context.WalletTransactions
                     .CountAsync(t => t.Wallet.UserId == inviter.Id
                         && t.Type == WalletTransactionType.InvitationReward, ct);
 
@@ -148,6 +150,8 @@ public class InvitationService : IInvitationService
                         SarAmount = inviterSarAmount,
                         RemainingAmount = inviterPoints
                     }, ct);
+
+                    inviterRewarded = true;
 
                     _logger.LogInformation(
                         "Invitation reward: {Points} points credited to inviter {InviterId} (reward #{Count})",
@@ -171,18 +175,11 @@ public class InvitationService : IInvitationService
                     "مكافأة تسجيل", $"حصلت على {inviteePoints} نقطة مكافأة تسجيل عبر دعوة", ct: ct);
             }
 
-            // Notify inviter
-            if (inviterPoints > 0)
+            // Notify inviter (only if reward was actually credited)
+            if (inviterRewarded)
             {
-                var inviterRewardCount = await _context.WalletTransactions
-                    .CountAsync(t => t.Wallet.UserId == inviter.Id
-                        && t.Type == WalletTransactionType.InvitationReward, ct);
-
-                if (inviterRewardCount <= MaxRewardedInvitations)
-                {
-                    await _notificationService.CreateAsync(inviter.Id, NotificationType.InvitationReward,
-                        "مكافأة دعوة", $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}", ct: ct);
-                }
+                await _notificationService.CreateAsync(inviter.Id, NotificationType.InvitationReward,
+                    "مكافأة دعوة", $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}", ct: ct);
             }
         }
         catch (Exception ex)
