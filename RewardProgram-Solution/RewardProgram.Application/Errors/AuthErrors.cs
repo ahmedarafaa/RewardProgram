@@ -87,6 +87,16 @@ public static readonly Error RegistrationDataNotFound =
 
     #endregion
 
+    #region Verification Token Errors
+
+    public static readonly Error VerificationTokenInvalid =
+        new("Auth.VerificationTokenInvalid", "رمز التحقق غير صالح", 400);
+
+    public static readonly Error VerificationTokenExpired =
+        new("Auth.VerificationTokenExpired", "انتهت صلاحية رمز التحقق، يرجى إعادة التحقق", 400);
+
+    #endregion
+
     #region Token Errors
 
     public static readonly Error InvalidRefreshToken =

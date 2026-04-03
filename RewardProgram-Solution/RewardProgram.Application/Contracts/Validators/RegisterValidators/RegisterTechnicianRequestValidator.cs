@@ -8,11 +8,8 @@ public class RegisterTechnicianRequestValidator : AbstractValidator<RegisterTech
 {
     public RegisterTechnicianRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
-        RuleFor(x => x.PinId)
-            .NotEmpty().WithMessage(L["PinId.NotEmpty"]);
-
-        RuleFor(x => x.Otp)
-            .NotEmpty().WithMessage(L["Otp.NotEmpty"]);
+        RuleFor(x => x.VerificationToken)
+            .NotEmpty().WithMessage(L["VerificationToken.NotEmpty"]);
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage(L["Name.NotEmpty"])

@@ -47,6 +47,19 @@ public class AuthController : ControllerBase
             : result.ToProblem();
     }
 
+    [HttpPost("verify-registration-otp")]
+    [ProducesResponseType(typeof(VerifyRegistrationOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> VerifyRegistrationOtp([FromBody] VerifyRegistrationOtpRequest request, CancellationToken ct)
+    {
+        var result = await _authService.VerifyRegistrationOtpAsync(request, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
     #endregion
 
     #region Registration

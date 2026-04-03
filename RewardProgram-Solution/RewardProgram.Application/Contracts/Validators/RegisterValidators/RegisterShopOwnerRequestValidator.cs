@@ -12,11 +12,8 @@ public class RegisterShopOwnerRequestValidator : AbstractValidator<RegisterShopO
 
     public RegisterShopOwnerRequestValidator(IStringLocalizer<ValidationMessages> L)
     {
-        RuleFor(x => x.PinId)
-            .NotEmpty().WithMessage(L["PinId.NotEmpty"]);
-
-        RuleFor(x => x.Otp)
-            .NotEmpty().WithMessage(L["Otp.NotEmpty"]);
+        RuleFor(x => x.VerificationToken)
+            .NotEmpty().WithMessage(L["VerificationToken.NotEmpty"]);
 
         RuleFor(x => x.CustomerCode)
             .NotEmpty().WithMessage(L["CustomerCode.NotEmpty"])

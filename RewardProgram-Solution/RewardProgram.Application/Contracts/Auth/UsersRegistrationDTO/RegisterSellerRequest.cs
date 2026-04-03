@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Http;
 namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterSellerRequest(
-    string PinId,
-    string Otp,
+    string VerificationToken,
     string Name,
     string MobileNumber,
     string CustomerCode,

@@ -1,8 +1,7 @@
 namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterTechnicianRequest(
-   string PinId,
-   string Otp,
+   string VerificationToken,
    string Name,
    string MobileNumber,
    string CityId,

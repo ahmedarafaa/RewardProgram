@@ -4,8 +4,7 @@ namespace RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
 
 public record RegisterShopOwnerRequest
 (
-    string PinId,
-    string Otp,
+    string VerificationToken,
     string CustomerCode,
     string OwnerName,
     string MobileNumber,

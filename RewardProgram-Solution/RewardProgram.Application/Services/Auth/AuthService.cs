@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NanoidDotNet;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
@@ -23,6 +24,7 @@ public class AuthService : IAuthService
     private readonly IFileStorageService _fileStorageService;
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthService> _logger;
+    private readonly VerificationTokenOptions _verificationTokenOptions;
 
     public AuthService(
         IApplicationDbContext context,
@@ -30,7 +32,8 @@ public class AuthService : IAuthService
         IOtpService otpService,
         IFileStorageService fileStorageService,
         ITokenService tokenService,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        IOptions<VerificationTokenOptions> verificationTokenOptions)
     {
         _context = context;
         _userRepository = userRepository;
@@ -38,6 +41,7 @@ public class AuthService : IAuthService
         _fileStorageService = fileStorageService;
         _tokenService = tokenService;
         _logger = logger;
+        _verificationTokenOptions = verificationTokenOptions.Value;
     }
 
     #region Registration — OTP-First Flow
@@ -65,11 +69,49 @@ public class AuthService : IAuthService
         ));
     }
 
-    public async Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
+    public async Task<Result<VerifyRegistrationOtpResponse>> VerifyRegistrationOtpAsync(
+        VerifyRegistrationOtpRequest request, CancellationToken ct = default)
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        // 1. Validate all fields BEFORE consuming OTP (so user can retry without re-requesting OTP)
+        // Check mobile not already registered
+        if (await _userRepository.MobileExistsAsync(mobile, ct))
+            return Result.Failure<VerifyRegistrationOtpResponse>(AuthErrors.MobileAlreadyRegistered);
+
+        // Verify OTP with Twilio (consumes the OTP)
+        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
+        if (verifyResult.IsFailure)
+            return Result.Failure<VerifyRegistrationOtpResponse>(verifyResult.Error);
+
+        if (verifyResult.Value.MobileNumber != mobile)
+            return Result.Failure<VerifyRegistrationOtpResponse>(AuthErrors.MobileMismatch);
+
+        // Generate signed verification token
+        var token = RegistrationVerificationToken.Generate(
+            mobile, _verificationTokenOptions.HmacKey, _verificationTokenOptions.ExpiryMinutes);
+
+        _logger.LogInformation(
+            "Registration OTP verified. Mobile: {Mobile}",
+            MobileNumberHelper.Mask(mobile));
+
+        return Result.Success(new VerifyRegistrationOtpResponse(
+            VerificationToken: token,
+            MaskedMobileNumber: MobileNumberHelper.Mask(mobile)
+        ));
+    }
+
+    public async Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
+    {
+        // 1. Validate verification token and extract mobile
+        var tokenResult = RegistrationVerificationToken.Validate(
+            request.VerificationToken, _verificationTokenOptions.HmacKey);
+        if (tokenResult.IsFailure)
+            return Result.Failure<RegisterResponse>(tokenResult.Error);
+
+        var mobile = tokenResult.Value;
+
+        if (mobile != MobileNumberHelper.Normalize(request.MobileNumber))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
@@ -125,19 +167,7 @@ public class AuthService : IAuthService
         if (inviteResult.IsFailure)
             return Result.Failure<RegisterResponse>(inviteResult.Error);
 
-        // 2. All validation passed — NOW consume OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
-
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
-
-        // 4. Create user in transaction
+        // 2. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -246,9 +276,16 @@ public class AuthService : IAuthService
 
     public async Task<Result<RegisterResponse>> RegisterSellerAsync(RegisterSellerRequest request, CancellationToken ct = default)
     {
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+        // 1. Validate verification token and extract mobile
+        var tokenResult = RegistrationVerificationToken.Validate(
+            request.VerificationToken, _verificationTokenOptions.HmacKey);
+        if (tokenResult.IsFailure)
+            return Result.Failure<RegisterResponse>(tokenResult.Error);
 
-        // 1. Validate all fields BEFORE consuming OTP
+        var mobile = tokenResult.Value;
+
+        if (mobile != MobileNumberHelper.Normalize(request.MobileNumber))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
@@ -313,19 +350,7 @@ public class AuthService : IAuthService
         if (inviteResult.IsFailure)
             return Result.Failure<RegisterResponse>(inviteResult.Error);
 
-        // 2. All validation passed — NOW consume OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
-
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
-
-        // 4. Create user in transaction
+        // 2. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -430,9 +455,16 @@ public class AuthService : IAuthService
 
     public async Task<Result<RegisterResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request, CancellationToken ct = default)
     {
-        var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
+        // 1. Validate verification token and extract mobile
+        var tokenResult = RegistrationVerificationToken.Validate(
+            request.VerificationToken, _verificationTokenOptions.HmacKey);
+        if (tokenResult.IsFailure)
+            return Result.Failure<RegisterResponse>(tokenResult.Error);
 
-        // 1. Validate all fields BEFORE consuming OTP
+        var mobile = tokenResult.Value;
+
+        if (mobile != MobileNumberHelper.Normalize(request.MobileNumber))
+            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
         if (await _userRepository.MobileExistsAsync(mobile, ct))
@@ -453,19 +485,7 @@ public class AuthService : IAuthService
         if (inviteResult.IsFailure)
             return Result.Failure<RegisterResponse>(inviteResult.Error);
 
-        // 2. All validation passed — NOW consume OTP
-        var verifyResult = await _otpService.VerifyAsync(request.PinId, request.Otp, ct);
-        if (verifyResult.IsFailure)
-            return Result.Failure<RegisterResponse>(verifyResult.Error);
-
-        if (verifyResult.Value.MobileNumber != mobile)
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
-
-        // 3. Re-check mobile uniqueness (race condition protection after OTP consumed)
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
-
-        // 4. Create user in transaction
+        // 2. Create user in transaction
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try

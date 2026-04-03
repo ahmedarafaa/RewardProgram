@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RewardProgram.Application.Contracts.Validators;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Auth;
@@ -66,6 +67,14 @@ public static class DependencyInjection
 
         // Configure Twilio Options
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
+
+        // Configure Verification Token Options (reuses JWT key for HMAC signing)
+        var jwtKey = configuration.GetSection(JwtOptions.SectionName)["Key"]!;
+        services.Configure<VerificationTokenOptions>(o =>
+        {
+            o.HmacKey = jwtKey;
+            o.ExpiryMinutes = 10;
+        });
 
         // Register Services
         services.AddScoped<IUserRepository, UserRepository>();
