@@ -24,6 +24,11 @@
       "key": "pinId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "verificationToken",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -50,17 +55,30 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"mobileNumber\": \"0555000001\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/send-otp",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "send-otp"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "send-otp"
+                  ]
                 },
                 "description": "Send registration OTP. Checks mobile uniqueness.\n\nAuto-saves `pinId` from response."
               },
@@ -84,114 +102,34 @@
               ]
             },
             {
-              "name": "Register Shop Owner",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    { "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
-                    { "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP" },
-                    { "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
-                    { "key": "OwnerName", "value": "صاحب المتجر التجريبي", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
-                    { "key": "MobileNumber", "value": "0555000001", "type": "text" },
-                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text", "description": "City GUID from Lookups" },
-                    { "key": "StoreName", "value": "متجر التجربة", "type": "text", "description": "Required — 5-150 chars" },
-                    { "key": "VAT", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
-                    { "key": "CRN", "value": "1010000000", "type": "text", "description": "Required — 10-digit Commercial Registration Number" },
-                    { "key": "ShortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 4 letters + 4 digits" },
-                    { "key": "ShopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
-                    { "key": "NationalAddress.BuildingNumber", "value": "1234", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.Street", "value": "شارع الملك فهد", "type": "text", "description": "Required — max 100 chars" },
-                    { "key": "NationalAddress.PostalCode", "value": "12345", "type": "text", "description": "Required — 5 digits" },
-                    { "key": "NationalAddress.SubNumber", "value": "6789", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.District", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" },
-                    { "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/shop-owner",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "shop-owner"]
-                },
-                "description": "Register a new shop owner. Uses form-data for file upload.\n\nShopOwner ALWAYS provides all shop data fields.\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\nOnly one ShopOwner per CustomerCode allowed.\n\nRequires pinId + OTP from Send OTP step. OTP verified inline."
-              },
-              "response": []
-            },
-            {
-              "name": "Register Seller",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    { "key": "PinId", "value": "{{pinId}}", "type": "text", "description": "From Send OTP response" },
-                    { "key": "Otp", "value": "123456", "type": "text", "description": "6-digit OTP" },
-                    { "key": "Name", "value": "بائع تجريبي", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
-                    { "key": "MobileNumber", "value": "0555000002", "type": "text" },
-                    { "key": "CustomerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table" },
-                    { "key": "StoreName", "value": "متجر البائع", "type": "text", "description": "Required if first registration for this CustomerCode" },
-                    { "key": "VAT", "value": "300000000000003", "type": "text" },
-                    { "key": "CRN", "value": "1010000000", "type": "text" },
-                    { "key": "ShortAddress", "value": "EFGH5678", "type": "text", "description": "4 letters + 4 digits" },
-                    { "key": "ShopImage", "type": "file", "src": "", "description": "Optional shop image — JPG/PNG, max 5MB" },
-                    { "key": "CityId", "value": "CITY_ID_HERE", "type": "text", "description": "City GUID from Lookups" },
-                    { "key": "NationalAddress.Street", "value": "شارع العليا", "type": "text", "description": "Required — max 100 chars" },
-                    { "key": "NationalAddress.BuildingNumber", "value": "5678", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.PostalCode", "value": "11111", "type": "text", "description": "Required — 5 digits" },
-                    { "key": "NationalAddress.SubNumber", "value": "4321", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-                    { "key": "NationalAddress.District", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" },
-                    { "key": "InvitationCode", "value": "", "type": "text", "disabled": true, "description": "Optional — 8-char invitation code from an existing user's invite link" }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/seller",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "seller"]
-                },
-                "description": "Register a new seller. Uses form-data for file upload.\n\nFirst Seller for a CustomerCode provides shop data. Subsequent Sellers skip shop data.\n\nRequires pinId + OTP from Send OTP step."
-              },
-              "response": []
-            },
-            {
-              "name": "Register Technician",
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/auth/register/technician",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "register", "technician"]
-                },
-                "description": "Register a new technician.\n\nName: 3+ letters only, no numbers.\nPostalCode: 5 digits.\n\nRequires pinId + OTP from Send OTP step."
-              },
-              "response": []
-            },
-            {
               "name": "Resend OTP",
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"mobileNumber\": \"0555000001\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/resend-otp",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "resend-otp"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "resend-otp"
+                  ]
                 },
                 "description": "Resend OTP to a mobile number. Auto-saves new pinId."
               },
@@ -212,6 +150,333 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Verify Registration OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    if (json.verificationToken) {",
+                      "        pm.collectionVariables.set('verificationToken', json.verificationToken);",
+                      "        console.log('verificationToken saved');",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"mobileNumber\": \"0555000001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/verify-registration-otp",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "verify-registration-otp"
+                  ]
+                },
+                "description": "Verify OTP received via WhatsApp. Consumes the OTP and returns a signed verification token (10-min expiry) to use in registration.\n\nAuto-saves `verificationToken` from response.\n\nFlow: send-otp → verify-registration-otp → register"
+              }
+            },
+            {
+              "name": "Register Shop Owner",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "VerificationToken",
+                      "value": "{{verificationToken}}",
+                      "type": "text",
+                      "description": "From Verify Registration OTP response"
+                    },
+                    {
+                      "key": "CustomerCode",
+                      "value": "10001",
+                      "type": "text",
+                      "description": "Must exist in ErpCustomer table"
+                    },
+                    {
+                      "key": "OwnerName",
+                      "value": "صاحب المتجر التجريبي",
+                      "type": "text",
+                      "description": "Required — 3+ letters only (Arabic/English), no numbers"
+                    },
+                    {
+                      "key": "MobileNumber",
+                      "value": "0555000001",
+                      "type": "text"
+                    },
+                    {
+                      "key": "CityId",
+                      "value": "CITY_ID_HERE",
+                      "type": "text",
+                      "description": "City GUID from Lookups"
+                    },
+                    {
+                      "key": "StoreName",
+                      "value": "متجر التجربة",
+                      "type": "text",
+                      "description": "Required — 5-150 chars"
+                    },
+                    {
+                      "key": "VAT",
+                      "value": "300000000000003",
+                      "type": "text",
+                      "description": "Required — 15-digit VAT (starts & ends with 3)"
+                    },
+                    {
+                      "key": "CRN",
+                      "value": "1010000000",
+                      "type": "text",
+                      "description": "Required — 10-digit Commercial Registration Number"
+                    },
+                    {
+                      "key": "ShortAddress",
+                      "value": "ABCD1234",
+                      "type": "text",
+                      "description": "Required — 4 letters + 4 digits"
+                    },
+                    {
+                      "key": "ShopImage",
+                      "type": "file",
+                      "src": "",
+                      "description": "Required — JPG/PNG, max 5MB"
+                    },
+                    {
+                      "key": "NationalAddress.BuildingNumber",
+                      "value": "1234",
+                      "type": "text",
+                      "description": "Required — 4 digits (1000-9999)"
+                    },
+                    {
+                      "key": "NationalAddress.Street",
+                      "value": "شارع الملك فهد",
+                      "type": "text",
+                      "description": "Required — max 100 chars"
+                    },
+                    {
+                      "key": "NationalAddress.PostalCode",
+                      "value": "12345",
+                      "type": "text",
+                      "description": "Required — 5 digits"
+                    },
+                    {
+                      "key": "NationalAddress.SubNumber",
+                      "value": "6789",
+                      "type": "text",
+                      "description": "Required — 4 digits (1000-9999)"
+                    },
+                    {
+                      "key": "NationalAddress.District",
+                      "value": "حي النزهة",
+                      "type": "text",
+                      "description": "Optional — max 100 chars"
+                    },
+                    {
+                      "key": "InvitationCode",
+                      "value": "",
+                      "type": "text",
+                      "disabled": true,
+                      "description": "Optional — 8-char invitation code from an existing user's invite link"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/shop-owner",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "shop-owner"
+                  ]
+                },
+                "description": "Register a new shop owner. Uses form-data for file upload.\n\nShopOwner ALWAYS provides all shop data fields.\nIf ShopData was previously created by a Seller, the ShopOwner's data overwrites it.\nOnly one ShopOwner per CustomerCode allowed.\n\nRequires verificationToken from Verify Registration OTP step."
+              },
+              "response": []
+            },
+            {
+              "name": "Register Seller",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "VerificationToken",
+                      "value": "{{verificationToken}}",
+                      "type": "text",
+                      "description": "From Verify Registration OTP response"
+                    },
+                    {
+                      "key": "Name",
+                      "value": "بائع تجريبي",
+                      "type": "text",
+                      "description": "Required — 3+ letters only (Arabic/English), no numbers"
+                    },
+                    {
+                      "key": "MobileNumber",
+                      "value": "0555000002",
+                      "type": "text"
+                    },
+                    {
+                      "key": "CustomerCode",
+                      "value": "10001",
+                      "type": "text",
+                      "description": "Must exist in ErpCustomer table"
+                    },
+                    {
+                      "key": "StoreName",
+                      "value": "متجر البائع",
+                      "type": "text",
+                      "description": "Required if first registration for this CustomerCode"
+                    },
+                    {
+                      "key": "VAT",
+                      "value": "300000000000003",
+                      "type": "text"
+                    },
+                    {
+                      "key": "CRN",
+                      "value": "1010000000",
+                      "type": "text"
+                    },
+                    {
+                      "key": "ShortAddress",
+                      "value": "EFGH5678",
+                      "type": "text",
+                      "description": "4 letters + 4 digits"
+                    },
+                    {
+                      "key": "ShopImage",
+                      "type": "file",
+                      "src": "",
+                      "description": "Optional shop image — JPG/PNG, max 5MB"
+                    },
+                    {
+                      "key": "CityId",
+                      "value": "CITY_ID_HERE",
+                      "type": "text",
+                      "description": "City GUID from Lookups"
+                    },
+                    {
+                      "key": "NationalAddress.Street",
+                      "value": "شارع العليا",
+                      "type": "text",
+                      "description": "Required — max 100 chars"
+                    },
+                    {
+                      "key": "NationalAddress.BuildingNumber",
+                      "value": "5678",
+                      "type": "text",
+                      "description": "Required — 4 digits (1000-9999)"
+                    },
+                    {
+                      "key": "NationalAddress.PostalCode",
+                      "value": "11111",
+                      "type": "text",
+                      "description": "Required — 5 digits"
+                    },
+                    {
+                      "key": "NationalAddress.SubNumber",
+                      "value": "4321",
+                      "type": "text",
+                      "description": "Required — 4 digits (1000-9999)"
+                    },
+                    {
+                      "key": "NationalAddress.District",
+                      "value": "حي الورود",
+                      "type": "text",
+                      "description": "Optional — max 100 chars"
+                    },
+                    {
+                      "key": "InvitationCode",
+                      "value": "",
+                      "type": "text",
+                      "disabled": true,
+                      "description": "Optional — 8-char invitation code from an existing user's invite link"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/seller",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "seller"
+                  ]
+                },
+                "description": "Register a new seller. Uses form-data for file upload.\n\nFirst Seller for a CustomerCode provides shop data. Subsequent Sellers skip shop data.\n\nRequires verificationToken from Verify Registration OTP step."
+              },
+              "response": []
+            },
+            {
+              "name": "Register Technician",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"CITY_ID_HERE\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register/technician",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "technician"
+                  ]
+                },
+                "description": "Register a new technician.\n\nName: 3+ letters only, no numbers.\nPostalCode: 5 digits.\n\nRequires verificationToken from Verify Registration OTP step."
+              },
+              "response": []
             }
           ]
         },
@@ -223,17 +488,30 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"mobileNumber\": \"0500000001\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/login",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "login"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
                 },
                 "description": "Initiate login by sending OTP to mobile.\n\nSeeded users: SystemAdmin 0500000001, ZoneManager 0500000002, SalesMan 0500000010."
               },
@@ -260,17 +538,31 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/login/verify",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "login", "verify"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login",
+                    "verify"
+                  ]
                 },
                 "description": "Verify login with OTP. Auto-saves token and refreshToken."
               },
@@ -305,17 +597,30 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/refresh-token",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "refresh-token"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "refresh-token"
+                  ]
                 },
                 "description": "Refresh an expired JWT token. Requires authentication."
               },
@@ -345,17 +650,30 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/revoke-token",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "revoke-token"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "revoke-token"
+                  ]
                 },
                 "description": "Revoke refresh token (logout). Requires authentication."
               },
@@ -376,11 +694,23 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/approvals/pending?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "approvals", "pending"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "pending"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get pending registration requests. Requires SalesMan/ZoneManager JWT."
@@ -392,17 +722,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"USER_ID_HERE\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/approvals/approve",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "approvals", "approve"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "approve"
+              ]
             },
             "description": "Approve a pending user registration.\n\nSalesMan: PendingSalesman → PendingZoneManager.\nZoneManager: PendingZoneManager → Approved (triggers invitation rewards if invited).\n\nRequires SalesMan or ZoneManager JWT."
           },
@@ -413,17 +756,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"reason\": \"بيانات غير مكتملة\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/approvals/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "approvals", "reject"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "reject"
+              ]
             }
           },
           "response": []
@@ -441,8 +797,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/lookup/regions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "regions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "lookup",
+                "regions"
+              ]
             },
             "description": "Returns all active regions."
           },
@@ -455,8 +817,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/lookup/regions/:regionId/cities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "regions", ":regionId", "cities"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "lookup",
+                "regions",
+                ":regionId",
+                "cities"
+              ],
               "variable": [
                 {
                   "key": "regionId",
@@ -476,8 +846,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/lookup/cities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "cities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "lookup",
+                "cities"
+              ]
             },
             "description": "Returns all 140 active cities."
           },
@@ -490,8 +866,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/lookup/customer/:customerCode/shop-data-status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "lookup", "customer", ":customerCode", "shop-data-status"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "lookup",
+                "customer",
+                ":customerCode",
+                "shop-data-status"
+              ],
               "variable": [
                 {
                   "key": "customerCode",
@@ -515,17 +899,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"barcodeCode\": \"ABCDEFGHIJKL\",\n  \"latitude\": 24.7136,\n  \"longitude\": 46.6753\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
             },
             "description": "Scan a barcode to earn points.\n\nBarcodeCode must be exactly 12 characters (NanoID).\nLatitude/Longitude are optional — sent by frontend if GPS is available.\nSeller and Technician each scan once per barcode.\nWhen both roles scan → barcode becomes Consumed.\n\nRequires Seller or Technician JWT."
           },
@@ -538,11 +934,23 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/scan/history?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "scan", "history"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan",
+                "history"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get paginated scan history for the current user.\n\nRequires Seller or Technician JWT."
@@ -562,8 +970,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/wallet/balance",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "wallet", "balance"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "balance"
+              ]
             },
             "description": "Get current point balance and SAR balance.\n\nRequires Seller or Technician JWT."
           },
@@ -576,12 +990,29 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/wallet/transactions?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "wallet", "transactions"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "transactions"
+              ],
               "query": [
-                { "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed, 3=Cancelled (optional filter)" },
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "type",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "1=Earned, 2=Redeemed, 3=Cancelled (optional filter)"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get paginated wallet transactions with SAR amounts.\n\nRequires Seller or Technician JWT."
@@ -601,8 +1032,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/dashboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "dashboard"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ]
             },
             "description": "Get the mobile app home screen data.\n\n**Response:**\n- `userName`: Display name\n- `points`: Current point balance\n- `sarBalance`: Current SAR balance\n- `minimumRedemptionPoints`: Admin-configured minimum (default 1000)\n- `pointsToRedeem`: Points remaining to reach minimum\n- `canRedeem`: Whether user has enough points to redeem\n- `recentTransactions`: Last 10 wallet transactions\n\nRequires ShopOwner, Seller, or Technician JWT."
           },
@@ -621,8 +1057,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/invitation",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "invitation"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invitation"
+              ]
             },
             "description": "Get your invitation code, QR code (base64 BMP), shareable link, and invitation stats.\n\nLazy-generates the invitation code on first call if missing.\n\n**Response:**\n- `invitationCode`: 8-char alphanumeric code\n- `shareLink`: Full URL for sharing\n- `qrCodeBase64`: Base64-encoded BMP image of the QR code\n- `totalInvitations`: Total users who registered with your code\n- `approvedInvitations`: How many of those were approved\n- `totalPointsEarned`: Total points earned from invitation rewards\n\nRequires ShopOwner, Seller, or Technician JWT."
           },
@@ -637,13 +1078,21 @@
         {
           "name": "Get Contact Us",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/content/contact-us",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "contact-us"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "content",
+                "contact-us"
+              ]
             },
             "description": "Get Contact Us page content.\n\n**Response:**\n- `phone`: Phone number\n- `email`: Email address\n- `whatsApp`: WhatsApp number\n- `address`: Physical address\n- `workingHours`: Working hours text"
           },
@@ -652,13 +1101,21 @@
         {
           "name": "Get About App",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/content/about-app",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "about-app"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "content",
+                "about-app"
+              ]
             },
             "description": "Get About App page content.\n\n**Response:**\n- `content`: About app HTML/text content"
           },
@@ -677,11 +1134,22 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/notifications?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "notifications"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get paginated notification list for the current user.\n\n**Response:** PaginatedResult of:\n- `id`: Notification ID\n- `type`: NotificationType enum\n- `title`: Notification title\n- `body`: Notification body\n- `referenceId`: Optional reference (e.g., scan ID, redemption ID)\n- `isRead`: Whether the notification has been read\n- `createdAt`: Timestamp\n\nRequires authentication."
@@ -695,8 +1163,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/notifications/unread-count",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "notifications", "unread-count"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
             },
             "description": "Get the count of unread notifications for the current user.\n\n**Response:** integer (unread count)\n\nRequires authentication."
           },
@@ -709,8 +1183,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/notifications/:id/read",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "notifications", ":id", "read"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id",
+                "read"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -730,8 +1211,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/notifications/read-all",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "notifications", "read-all"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
             },
             "description": "Mark all notifications as read for the current user.\n\nReturns 204 No Content.\n\nRequires authentication."
           },
@@ -750,8 +1237,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/redemption/available-balance",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption", "available-balance"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "available-balance"
+              ]
             },
             "description": "Get available balance for redemption (excludes held amounts from pending requests).\n\n**Response:**\n- `totalBalance`: Total point balance\n- `heldBalance`: Points held in pending redemption requests\n- `availableBalance`: Points available to redeem\n- `availableSarBalance`: Available balance in SAR\n\nRequires Seller or Technician JWT."
           },
@@ -762,17 +1255,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"\",\n  \"bankName\": \"\",\n  \"accountHolderName\": \"\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/redemption/request",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption", "request"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "request"
+              ]
             },
             "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `bankName`, and `accountHolderName` are required.\nFor Cash: bank fields are optional.\n\n**Response:** RedemptionRequestResponse with status, SAR amount, etc.\n\nRequires Seller or Technician JWT."
           },
@@ -785,8 +1291,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/redemption/active",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption", "active"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "active"
+              ]
             },
             "description": "Get the current active (in-progress) redemption request, if any.\n\n**Response:** RedemptionRequestResponse or 404 if no active request.\n\nRequires Seller or Technician JWT."
           },
@@ -799,11 +1311,23 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/redemption/history?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption", "history"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "history"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get paginated redemption request history.\n\nRequires Seller or Technician JWT."
@@ -823,11 +1347,23 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption-approvals", "pending"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "pending"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
               ]
             },
             "description": "Get pending redemption requests for the current approver's level.\n\nSalesMan sees PendingSalesman requests.\nZoneManager sees PendingZoneManager requests.\nSystemAdmin sees PendingAdmin requests.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
@@ -839,17 +1375,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/redemption-approvals/approve",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption-approvals", "approve"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "approve"
+              ]
             },
             "description": "Approve a pending redemption request.\n\nAdvances the request to the next approval stage.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
           },
@@ -860,17 +1409,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\",\n  \"rejectionReason\": \"سبب الرفض\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/redemption-approvals/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption-approvals", "reject"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "reject"
+              ]
             },
             "description": "Reject a pending redemption request with a reason.\n\nRefunds the held points back to the user's wallet.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
           },
@@ -881,17 +1443,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"redemptionRequestId\": \"REDEMPTION_ID_HERE\",\n  \"otp\": \"123456\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/redemption-approvals/confirm-cash",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "redemption-approvals", "confirm-cash"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "confirm-cash"
+              ]
             },
             "description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method redemptions in PendingCashHandover status.\nThe OTP is sent to the requesting user's WhatsApp.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
           },
@@ -906,23 +1481,72 @@
         {
           "name": "Get Seeded Users",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/dev/seeded-users?page=1&pageSize=50",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "dev", "seeded-users"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dev",
+                "seeded-users"
+              ],
               "query": [
-                { "key": "id", "value": "", "disabled": true, "description": "Filter by user ID (exact match)" },
-                { "key": "search", "value": "", "disabled": true, "description": "Search by name or mobile" },
-                { "key": "userType", "value": "1", "disabled": true, "description": "0=ShopOwner, 1=Seller, 2=Technician, 3=SalesMan, 4=ZoneManager, 5=SystemAdmin" },
-                { "key": "registrationStatus", "value": "3", "disabled": true, "description": "0=PendingSalesman, 1=PendingZoneManager, 2=Approved, 3=Rejected" },
-                { "key": "regionId", "value": "", "disabled": true, "description": "Filter by region GUID" },
-                { "key": "cityId", "value": "", "disabled": true, "description": "Filter by city GUID" },
-                { "key": "isDisabled", "value": "false", "disabled": true, "description": "Filter by active/disabled" },
-                { "key": "page", "value": "1" },
-                { "key": "pageSize", "value": "50" }
+                {
+                  "key": "id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID (exact match)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search by name or mobile"
+                },
+                {
+                  "key": "userType",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "0=ShopOwner, 1=Seller, 2=Technician, 3=SalesMan, 4=ZoneManager, 5=SystemAdmin"
+                },
+                {
+                  "key": "registrationStatus",
+                  "value": "3",
+                  "disabled": true,
+                  "description": "0=PendingSalesman, 1=PendingZoneManager, 2=Approved, 3=Rejected"
+                },
+                {
+                  "key": "regionId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by region GUID"
+                },
+                {
+                  "key": "cityId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by city GUID"
+                },
+                {
+                  "key": "isDisabled",
+                  "value": "false",
+                  "disabled": true,
+                  "description": "Filter by active/disabled"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                }
               ]
             },
             "description": "List all users with full details, filters, and pagination.\n\nReturns 404 in Production.\n\n**Response:** PaginatedResult of:\n- `id`, `name`, `mobileNumber`, `userType`, `registrationStatus`, `isDisabled`, `createdAt`\n- `cityId`, `cityName`, `regionId`, `regionName` — location\n- `street`, `buildingNumber`, `postalCode`, `subNumber`, `district` — address\n- `customerCode`, `storeName` — ShopOwner/Seller only\n- `managedRegionId`, `managedRegionName` — ZoneManager only\n- `assignedCities` — SalesMan only (array of {id, nameAr})\n- `invitationCode`, `invitedByUserId` — invitation info"
