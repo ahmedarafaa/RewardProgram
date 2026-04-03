@@ -30,7 +30,14 @@ public static class DataSeeder
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
-        await SeedDemoAnalyticsDataAsync(context, userManager, users, logger);
+        try
+        {
+            await SeedDemoAnalyticsDataAsync(context, userManager, users, logger);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to seed demo analytics data — app will continue without it");
+        }
     }
 
     #region Roles
