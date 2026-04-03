@@ -754,6 +754,9 @@ public static class DataSeeder
 
         logger.LogInformation("Seeding demo analytics data...");
 
+        // Ensure mobile counter won't conflict with existing seeded users (31 staff users)
+        _mobileCounter = 100;
+
         // --- Load lookup data ---
         var riyadhCity = await context.Cities.FirstAsync(c => c.NameEn == "Riyadh");
         var jeddahCity = await context.Cities.FirstAsync(c => c.NameEn == "Jeddah");
