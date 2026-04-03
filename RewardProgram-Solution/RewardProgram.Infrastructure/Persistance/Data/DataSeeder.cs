@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
+using RewardProgram.Domain.Enums;
 using RewardProgram.Domain.Enums.UserEnums;
 using RewardProgram.Application.Helpers;
 
@@ -29,6 +30,7 @@ public static class DataSeeder
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
+        await SeedDemoAnalyticsDataAsync(context, userManager, users, logger);
     }
 
     #region Roles
@@ -725,6 +727,473 @@ public static class DataSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded default RewardSettings (PointsToSarRate: 10)");
+    }
+
+    #endregion
+
+    #region Demo Analytics Data
+
+    private static async Task SeedDemoAnalyticsDataAsync(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        Dictionary<string, ApplicationUser> users,
+        ILogger logger)
+    {
+        if (await context.Wallets.AnyAsync())
+        {
+            logger.LogInformation("Demo analytics data already seeded, skipping");
+            return;
+        }
+
+        logger.LogInformation("Seeding demo analytics data...");
+
+        // --- Load lookup data ---
+        var riyadhCity = await context.Cities.FirstAsync(c => c.NameEn == "Riyadh");
+        var jeddahCity = await context.Cities.FirstAsync(c => c.NameEn == "Jeddah");
+        var dammamCity = await context.Cities.FirstAsync(c => c.NameEn == "Dammam");
+        var buraydahCity = await context.Cities.FirstAsync(c => c.NameEn == "Buraydah");
+        var abhaCity = await context.Cities.FirstAsync(c => c.NameEn == "Abha");
+        var tabukCity = await context.Cities.FirstAsync(c => c.NameEn == "Tabuk");
+
+        var erpCodes = await context.ErpCustomers
+            .OrderBy(e => e.CustomerCode)
+            .Take(10)
+            .Select(e => e.CustomerCode)
+            .ToListAsync();
+
+        var products = await context.Products
+            .OrderByDescending(p => p.PointValue)
+            .Take(8)
+            .ToListAsync();
+
+        var settings = await context.RewardSettings.FirstAsync();
+        var sarRate = settings.PointsToSarRate;
+
+        // Lookup existing users by name
+        users.TryGetValue("محمود حجازي", out var smRiyadh1);
+        users.TryGetValue("احمد سمير", out var smRiyadh2);
+        users.TryGetValue("محمد اياد", out var smJeddah);
+        users.TryGetValue("محمد خميس", out var smDammam);
+        users.TryGetValue("وليد السكري", out var smQassim);
+        users.TryGetValue("محمد خطاب", out var smSouth);
+        users.TryGetValue("محمد حسام", out var smTabuk);
+        users.TryGetValue("فرحان ممدوح", out var zmRiyadh);
+        users.TryGetValue("مدير النظام", out var admin);
+
+        // --- 1. Create demo mobile users ---
+        var demoUsers = new (string Name, UserType Type, string Role, string SalesManId, string CityId, string? CustomerCode)[]
+        {
+            ("بائع الرياض", UserType.Seller, UserRoles.Seller, smRiyadh1!.Id, riyadhCity.Id, erpCodes[0]),
+            ("بائع الرياض ٢", UserType.Seller, UserRoles.Seller, smRiyadh2!.Id, riyadhCity.Id, erpCodes[1]),
+            ("بائع جدة", UserType.Seller, UserRoles.Seller, smJeddah!.Id, jeddahCity.Id, erpCodes[2]),
+            ("بائع الدمام", UserType.Seller, UserRoles.Seller, smDammam!.Id, dammamCity.Id, erpCodes[3]),
+            ("بائع بريدة", UserType.Seller, UserRoles.Seller, smQassim!.Id, buraydahCity.Id, erpCodes[4]),
+            ("بائع أبها", UserType.Seller, UserRoles.Seller, smSouth!.Id, abhaCity.Id, erpCodes[5]),
+            ("فني الرياض", UserType.Technician, UserRoles.Technician, smRiyadh1.Id, riyadhCity.Id, null),
+            ("فني الرياض ٢", UserType.Technician, UserRoles.Technician, smRiyadh2.Id, riyadhCity.Id, null),
+            ("فني جدة", UserType.Technician, UserRoles.Technician, smJeddah.Id, jeddahCity.Id, null),
+            ("فني الدمام", UserType.Technician, UserRoles.Technician, smDammam.Id, dammamCity.Id, null),
+            ("فني تبوك", UserType.Technician, UserRoles.Technician, smTabuk!.Id, tabukCity.Id, null),
+            ("صاحب محل الرياض", UserType.ShopOwner, UserRoles.ShopOwner, smRiyadh1.Id, riyadhCity.Id, erpCodes[6]),
+            ("صاحب محل جدة", UserType.ShopOwner, UserRoles.ShopOwner, smJeddah.Id, jeddahCity.Id, erpCodes[7]),
+        };
+
+        var createdUsers = new Dictionary<string, ApplicationUser>();
+
+        foreach (var (name, type, role, smId, cityId, custCode) in demoUsers)
+        {
+            await CreateUser(userManager, createdUsers, logger, name, type, [role]);
+
+            if (!createdUsers.TryGetValue(name, out var user)) continue;
+
+            // Set AssignedSalesManId and NationalAddress
+            user.AssignedSalesManId = smId;
+            user.NationalAddress = new NationalAddress
+            {
+                CityId = cityId,
+                Street = "شارع التحلية",
+                BuildingNumber = 1234,
+                PostalCode = "12345",
+                SubNumber = 1000,
+                District = "العليا"
+            };
+
+            await userManager.UpdateAsync(user);
+        }
+
+        // Set invitation link: seller1 invited seller2
+        var seller1 = createdUsers["بائع الرياض"];
+        var seller2 = createdUsers["بائع الرياض ٢"];
+        seller1.InvitationCode = "DEMO1234";
+        seller2.InvitedByUserId = seller1.Id;
+        await userManager.UpdateAsync(seller1);
+        await userManager.UpdateAsync(seller2);
+
+        // Create profiles
+        foreach (var (name, _, _, _, _, custCode) in demoUsers)
+        {
+            if (!createdUsers.TryGetValue(name, out var user)) continue;
+
+            if (user.UserType == UserType.Seller && custCode != null)
+                context.SellerProfiles.Add(new SellerProfile { UserId = user.Id, CustomerCode = custCode, CreatedBy = "DataSeeder" });
+            else if (user.UserType == UserType.ShopOwner && custCode != null)
+                context.ShopOwnerProfiles.Add(new ShopOwnerProfile { UserId = user.Id, CustomerCode = custCode, CreatedBy = "DataSeeder" });
+            else if (user.UserType == UserType.Technician)
+                context.TechnicianProfiles.Add(new TechnicianProfile { UserId = user.Id, CreatedBy = "DataSeeder" });
+        }
+
+        await context.SaveChangesAsync();
+
+        // --- 2. Create ShopData ---
+        var shopDataEntries = new (string CustCode, string StoreName, string VAT, string CRN, string ShortAddr, string CityId, string EnteredBy)[]
+        {
+            (erpCodes[0], "محل الرائد - الرياض", "300000000000003", "1000000001", "SEED0001", riyadhCity.Id, createdUsers["بائع الرياض"].Id),
+            (erpCodes[2], "محل الرائد - جدة", "300000000000023", "1000000002", "SEED0002", jeddahCity.Id, createdUsers["بائع جدة"].Id),
+            (erpCodes[3], "محل الرائد - الدمام", "300000000000043", "1000000003", "SEED0003", dammamCity.Id, createdUsers["بائع الدمام"].Id),
+            (erpCodes[6], "محل صاحب المحل - الرياض", "300000000000063", "1000000004", "SEED0004", riyadhCity.Id, createdUsers["صاحب محل الرياض"].Id),
+            (erpCodes[7], "محل صاحب المحل - جدة", "300000000000083", "1000000005", "SEED0005", jeddahCity.Id, createdUsers["صاحب محل جدة"].Id),
+        };
+
+        foreach (var (custCode, storeName, vat, crn, shortAddr, cityId, enteredBy) in shopDataEntries)
+        {
+            context.ShopData.Add(new ShopData
+            {
+                CustomerCode = custCode,
+                StoreName = storeName,
+                VAT = vat,
+                CRN = crn,
+                ShortAddress = shortAddr,
+                District = "حي النسيم",
+                CityId = cityId,
+                Street = "شارع الملك فهد",
+                BuildingNumber = 2000,
+                PostalCode = "11564",
+                SubNumber = 1000,
+                ShopImageUrl = "/uploads/demo-shop.png",
+                EnteredByUserId = enteredBy,
+                CreatedBy = "DataSeeder"
+            });
+        }
+
+        await context.SaveChangesAsync();
+
+        // --- 3. Create Wallets ---
+        var wallets = new Dictionary<string, Wallet>();
+        foreach (var (name, user) in createdUsers)
+        {
+            var wallet = new Wallet { UserId = user.Id, CreatedBy = "DataSeeder" };
+            context.Wallets.Add(wallet);
+            wallets[name] = wallet;
+        }
+
+        await context.SaveChangesAsync();
+
+        // --- 4. Create Barcodes & Scan Records ---
+        var sellers = new[] { "بائع الرياض", "بائع الرياض ٢", "بائع جدة", "بائع الدمام", "بائع بريدة", "بائع أبها" };
+        var technicians = new[] { "فني الرياض", "فني الرياض ٢", "فني جدة", "فني الدمام", "فني تبوك" };
+
+        var barcodeIndex = 0;
+        var allScanRecords = new List<ScanRecord>();
+        var baseDate = DateTime.UtcNow.AddDays(-90);
+
+        // Helper to create barcodes with scan records
+        void AddBarcode(Product product, BarcodeStatus status, string? sellerName, string? techName, int dayOffset)
+        {
+            var barcode = new ProductBarcode
+            {
+                Code = $"SEED{barcodeIndex:D8}",
+                ProductId = product.Id,
+                Status = status,
+                CreatedBy = "DataSeeder"
+            };
+            context.ProductBarcodes.Add(barcode);
+            barcodeIndex++;
+
+            if (sellerName != null && createdUsers.TryGetValue(sellerName, out var sellerUser))
+            {
+                var pts = product.PointValue / 2.0m;
+                var scan = new ScanRecord
+                {
+                    BarcodeId = barcode.Id,
+                    UserId = sellerUser.Id,
+                    ScannerRole = ScannerRole.Seller,
+                    PointsAwarded = pts,
+                    Latitude = 24.7136 + (Random.Shared.NextDouble() - 0.5) * 0.1,
+                    Longitude = 46.6753 + (Random.Shared.NextDouble() - 0.5) * 0.1,
+                    CreatedBy = "DataSeeder"
+                };
+                context.ScanRecords.Add(scan);
+                allScanRecords.Add(scan);
+            }
+
+            if (techName != null && createdUsers.TryGetValue(techName, out var techUser))
+            {
+                var pts = (decimal)product.PointValue;
+                var scan = new ScanRecord
+                {
+                    BarcodeId = barcode.Id,
+                    UserId = techUser.Id,
+                    ScannerRole = ScannerRole.Technician,
+                    PointsAwarded = pts,
+                    Latitude = 24.7136 + (Random.Shared.NextDouble() - 0.5) * 0.1,
+                    Longitude = 46.6753 + (Random.Shared.NextDouble() - 0.5) * 0.1,
+                    CreatedBy = "DataSeeder"
+                };
+                context.ScanRecords.Add(scan);
+                allScanRecords.Add(scan);
+            }
+        }
+
+        // 20 Available barcodes (no scans)
+        for (var i = 0; i < 20; i++)
+            AddBarcode(products[i % products.Count], BarcodeStatus.Available, null, null, 0);
+
+        // 15 Consumed barcodes (seller + technician scan each)
+        for (var i = 0; i < 15; i++)
+            AddBarcode(products[i % products.Count], BarcodeStatus.Consumed,
+                sellers[i % sellers.Length], technicians[i % technicians.Length], i * 5);
+
+        // 10 SellerScanned only
+        for (var i = 0; i < 10; i++)
+            AddBarcode(products[i % products.Count], BarcodeStatus.SellerScanned,
+                sellers[i % sellers.Length], null, i * 7);
+
+        // 5 TechnicianScanned only
+        for (var i = 0; i < 5; i++)
+            AddBarcode(products[i % products.Count], BarcodeStatus.TechnicianScanned,
+                null, technicians[i % technicians.Length], i * 10);
+
+        await context.SaveChangesAsync();
+
+        // --- 5. Create Wallet Transactions ---
+        // Earned transactions from scans
+        foreach (var scan in allScanRecords)
+        {
+            var userName = createdUsers.First(kv => kv.Value.Id == scan.UserId).Key;
+            if (!wallets.TryGetValue(userName, out var wallet)) continue;
+
+            context.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Amount = scan.PointsAwarded,
+                Type = WalletTransactionType.Earned,
+                ReferenceId = scan.Id,
+                Description = "نقاط مكتسبة من مسح باركود",
+                SarRate = sarRate,
+                SarAmount = scan.PointsAwarded / sarRate,
+                RemainingAmount = scan.PointsAwarded,
+                CreatedBy = "DataSeeder"
+            });
+
+            wallet.Balance += scan.PointsAwarded;
+            wallet.SarBalance += scan.PointsAwarded / sarRate;
+        }
+
+        // Invitation rewards
+        var inviterWallet = wallets["بائع الرياض"];
+        var inviteeWallet = wallets["بائع الرياض ٢"];
+
+        context.WalletTransactions.Add(new WalletTransaction
+        {
+            WalletId = inviterWallet.Id,
+            Amount = settings.InviterRewardPoints,
+            Type = WalletTransactionType.InvitationReward,
+            Description = "مكافأة دعوة — بائع الرياض ٢",
+            SarRate = sarRate,
+            SarAmount = settings.InviterRewardPoints / sarRate,
+            RemainingAmount = settings.InviterRewardPoints,
+            CreatedBy = "DataSeeder"
+        });
+        inviterWallet.Balance += settings.InviterRewardPoints;
+        inviterWallet.SarBalance += settings.InviterRewardPoints / sarRate;
+
+        context.WalletTransactions.Add(new WalletTransaction
+        {
+            WalletId = inviteeWallet.Id,
+            Amount = settings.InviteeRewardPoints,
+            Type = WalletTransactionType.InvitationReward,
+            Description = "مكافأة تسجيل بدعوة",
+            SarRate = sarRate,
+            SarAmount = settings.InviteeRewardPoints / sarRate,
+            RemainingAmount = settings.InviteeRewardPoints,
+            CreatedBy = "DataSeeder"
+        });
+        inviteeWallet.Balance += settings.InviteeRewardPoints;
+        inviteeWallet.SarBalance += settings.InviteeRewardPoints / sarRate;
+
+        await context.SaveChangesAsync();
+
+        // --- 6. Redemption Requests ---
+        // Find the user with highest balance for a completed redemption (sellers or technicians)
+        var redeemableUsers = sellers.Concat(technicians).ToArray();
+        var topSeller = wallets.Where(kv => redeemableUsers.Contains(kv.Key))
+            .OrderByDescending(kv => kv.Value.Balance)
+            .First();
+
+        // Completed bank transfer redemption (1000 pts = 100 SAR)
+        RedemptionRequest? completedRedemption = null;
+        if (topSeller.Value.Balance >= 1000m)
+        {
+            completedRedemption = new RedemptionRequest
+            {
+                UserId = createdUsers[topSeller.Key].Id,
+                Method = RedemptionMethod.BankTransfer,
+                Status = RedemptionRequestStatus.Completed,
+                PointsAmount = 1000m,
+                SarRate = sarRate,
+                SarAmount = 100m,
+                Iban = "SA4420000001234567891234",
+                BankName = "الراجحي",
+                AccountHolderName = topSeller.Key,
+                CreatedBy = "DataSeeder"
+            };
+            context.RedemptionRequests.Add(completedRedemption);
+
+            // Deduct from wallet
+            topSeller.Value.Balance -= 1000m;
+            topSeller.Value.SarBalance -= 100m;
+
+            // Redeemed transaction
+            context.WalletTransactions.Add(new WalletTransaction
+            {
+                WalletId = topSeller.Value.Id,
+                Amount = -1000m,
+                Type = WalletTransactionType.Redeemed,
+                Description = "استبدال — تحويل بنكي",
+                SarRate = sarRate,
+                SarAmount = -100m,
+                RemainingAmount = 0,
+                CreatedBy = "DataSeeder"
+            });
+
+            await context.SaveChangesAsync();
+
+            // Approval chain for completed redemption
+            context.RedemptionApprovals.Add(new RedemptionApproval
+            {
+                RedemptionRequestId = completedRedemption.Id,
+                ApproverId = smRiyadh1!.Id,
+                Action = ApprovalAction.Approved,
+                FromStatus = RedemptionRequestStatus.PendingSalesMan,
+                ToStatus = RedemptionRequestStatus.PendingZoneManager,
+                CreatedBy = "DataSeeder"
+            });
+            context.RedemptionApprovals.Add(new RedemptionApproval
+            {
+                RedemptionRequestId = completedRedemption.Id,
+                ApproverId = zmRiyadh!.Id,
+                Action = ApprovalAction.Approved,
+                FromStatus = RedemptionRequestStatus.PendingZoneManager,
+                ToStatus = RedemptionRequestStatus.PendingAdmin,
+                CreatedBy = "DataSeeder"
+            });
+            context.RedemptionApprovals.Add(new RedemptionApproval
+            {
+                RedemptionRequestId = completedRedemption.Id,
+                ApproverId = admin!.Id,
+                Action = ApprovalAction.Approved,
+                FromStatus = RedemptionRequestStatus.PendingAdmin,
+                ToStatus = RedemptionRequestStatus.AdminApproved,
+                CreatedBy = "DataSeeder"
+            });
+
+            await context.SaveChangesAsync();
+        }
+
+        // Pending cash redemption (if another user has enough)
+        var pendingSeller = wallets.Where(kv => redeemableUsers.Contains(kv.Key) && kv.Key != topSeller.Key)
+            .OrderByDescending(kv => kv.Value.Balance)
+            .FirstOrDefault();
+
+        if (pendingSeller.Value != null && pendingSeller.Value.Balance >= 1000m)
+        {
+            var pendingRedemption = new RedemptionRequest
+            {
+                UserId = createdUsers[pendingSeller.Key].Id,
+                Method = RedemptionMethod.Cash,
+                Status = RedemptionRequestStatus.PendingZoneManager,
+                PointsAmount = 1000m,
+                SarRate = sarRate,
+                SarAmount = 100m,
+                CreatedBy = "DataSeeder"
+            };
+            context.RedemptionRequests.Add(pendingRedemption);
+
+            // Hold points
+            pendingSeller.Value.HeldBalance += 1000m;
+            pendingSeller.Value.HeldSarBalance += 100m;
+
+            await context.SaveChangesAsync();
+
+            // SalesMan approval only
+            context.RedemptionApprovals.Add(new RedemptionApproval
+            {
+                RedemptionRequestId = pendingRedemption.Id,
+                ApproverId = smJeddah!.Id,
+                Action = ApprovalAction.Approved,
+                FromStatus = RedemptionRequestStatus.PendingSalesMan,
+                ToStatus = RedemptionRequestStatus.PendingZoneManager,
+                CreatedBy = "DataSeeder"
+            });
+
+            await context.SaveChangesAsync();
+        }
+
+        // --- 7. Notifications ---
+        var notifIndex = 0;
+        void AddNotif(string userId, NotificationType type, string title, string body, string? refId = null, bool isRead = false)
+        {
+            context.Notifications.Add(new Notification
+            {
+                UserId = userId,
+                Type = type,
+                Title = title,
+                Body = body,
+                ReferenceId = refId,
+                IsRead = isRead,
+                ReadAt = isRead ? DateTime.UtcNow : null,
+                CreatedBy = "DataSeeder"
+            });
+            notifIndex++;
+        }
+
+        // Registration approved for all demo users
+        foreach (var (name, user) in createdUsers)
+            AddNotif(user.Id, NotificationType.RegistrationApproved,
+                "تمت الموافقة على تسجيلك", "مرحبًا بك في برنامج المكافآت", isRead: true);
+
+        // Points earned for top 4 scanners
+        foreach (var scan in allScanRecords.Take(4))
+            AddNotif(scan.UserId, NotificationType.PointsEarned,
+                "نقاط مكتسبة", $"حصلت على {scan.PointsAwarded} نقطة", scan.Id);
+
+        // Invitation reward
+        AddNotif(seller1.Id, NotificationType.InvitationReward,
+            "مكافأة دعوة", "حصلت على 100 نقطة مكافأة دعوة");
+        AddNotif(seller2.Id, NotificationType.InvitationReward,
+            "مكافأة تسجيل", "حصلت على 50 نقطة مكافأة تسجيل بدعوة");
+
+        // Redemption notifications
+        if (completedRedemption != null)
+        {
+            AddNotif(createdUsers[topSeller.Key].Id, NotificationType.RedemptionCreated,
+                "طلب استبدال جديد", "تم تقديم طلب استبدال 1000 نقطة", completedRedemption.Id, true);
+            AddNotif(createdUsers[topSeller.Key].Id, NotificationType.RedemptionCompleted,
+                "تم الاستبدال", "تم تحويل 100 ريال إلى حسابك البنكي", completedRedemption.Id, true);
+        }
+
+        // Admin broadcast
+        foreach (var (name, user) in createdUsers.Take(5))
+            AddNotif(user.Id, NotificationType.AdminMessage,
+                "رسالة من الإدارة", "شكرًا لمشاركتك في برنامج المكافآت");
+
+        await context.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Seeded demo analytics: {Users} users, {Barcodes} barcodes, {Scans} scans, {Txns} wallet transactions, {Notifications} notifications",
+            createdUsers.Count, barcodeIndex, allScanRecords.Count,
+            await context.WalletTransactions.CountAsync(),
+            notifIndex);
     }
 
     #endregion
