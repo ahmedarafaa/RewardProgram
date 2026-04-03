@@ -1,0 +1,3077 @@
+{
+  "info": {
+    "_postman_id": "86ac9587-7956-49ac-bdb5-f2bcd9f3949f",
+    "name": "RewardProgram — E2E Test Scenarios",
+    "description": "End-to-end test scenarios for Collection Runner.\\n\\nRun folders in order (0→5). Each request saves variables for the next.\\n\\n⚠️ OTP: If Twilio mock is OFF, replace '123456' with real OTP from WhatsApp before running OTP verification steps.\\n\\n**Seeded accounts used:**\\n- Admin: admin / Admin@123\\n- SalesMan (محمود حجازي): 0500000010\\n- ZoneManager (فرحان ممدوح): 0500000002",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Setup — Admin & Reference Data",
+      "item": [
+        {
+          "name": "0.1 Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin login successful', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', json.token);",
+                  "pm.collectionVariables.set('adminRefreshToken', json.refreshToken);",
+                  "console.log('Admin token saved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.2 Get All Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookup/cities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "lookup",
+                "cities"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cities loaded', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.length).to.be.above(0);",
+                  "});",
+                  "var cities = pm.response.json();",
+                  "// Save first city (Riyadh region)",
+                  "pm.collectionVariables.set('cityId', cities[0].id);",
+                  "console.log('City saved: ' + cities[0].nameEn + ' (' + cities[0].id + ')');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.3 Get Reward Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reward-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "reward-settings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reward settings loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('SAR rate is 10:1', () => pm.expect(json.pointsToSarRate).to.eql(10));",
+                  "pm.test('Min redemption is 1000', () => pm.expect(json.minimumRedemptionPoints).to.eql(1000));",
+                  "pm.test('Inviter reward is 100', () => pm.expect(json.inviterRewardPoints).to.eql(100));",
+                  "pm.test('Invitee reward is 50', () => pm.expect(json.inviteeRewardPoints).to.eql(50));",
+                  "console.log('Reward settings verified');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.4 List Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/products?page=1&pageSize=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Products loaded', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.items.length).to.be.above(0);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('productId', json.items[0].id);",
+                  "pm.collectionVariables.set('productPointValue', json.items[0].pointValue);",
+                  "console.log('Product saved: ' + json.items[0].name + ' (points: ' + json.items[0].pointValue + ')');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.5 Generate Barcodes (5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/barcodes/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "barcodes",
+                "generate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcodes generated (PDF)', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is PDF', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "console.log('5 barcodes generated successfully');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.6 List Available Barcodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/barcodes?productId={{productId}}&status=1&page=1&pageSize=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "barcodes"
+              ],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{productId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "1"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcodes listed', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.items.length).to.be.at.least(5);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "for (var i = 0; i < 5; i++) {",
+                  "    pm.collectionVariables.set('barcodeCode' + (i+1), json.items[i].code);",
+                  "}",
+                  "console.log('Barcode codes saved: ' + json.items.slice(0,5).map(b => b.code).join(', '));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Seller Full Journey",
+      "item": [
+        {
+          "name": "1.1 Send OTP (Seller)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/send-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"{{sellerMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "pm.test('Has masked mobile', () => pm.expect(json.maskedMobileNumber).to.be.a('string'));",
+                  "console.log('Seller OTP sent, pinId: ' + json.pinId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Verify Registration OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-registration-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-registration-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"mobileNumber\": \"{{sellerMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ If Twilio mock is OFF, replace '123456' with the real OTP from WhatsApp"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OTP verified', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('verificationToken', json.verificationToken);",
+                  "pm.test('Has verification token', () => pm.expect(json.verificationToken).to.be.a('string'));",
+                  "console.log('Verification token saved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Register Seller",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/seller",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "seller"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "VerificationToken",
+                  "value": "{{verificationToken}}",
+                  "type": "text",
+                  "description": "From verify-registration-otp"
+                },
+                {
+                  "key": "Name",
+                  "value": "بائع تجريبي للاختبار",
+                  "type": "text",
+                  "description": "Test seller"
+                },
+                {
+                  "key": "MobileNumber",
+                  "value": "{{sellerMobile}}",
+                  "type": "text"
+                },
+                {
+                  "key": "CustomerCode",
+                  "value": "10001",
+                  "type": "text",
+                  "description": "Must exist in ERP"
+                },
+                {
+                  "key": "StoreName",
+                  "value": "متجر الاختبار الشامل",
+                  "type": "text",
+                  "description": "5-150 chars"
+                },
+                {
+                  "key": "VAT",
+                  "value": "300000000100003",
+                  "type": "text",
+                  "description": "15 digits, starts/ends with 3"
+                },
+                {
+                  "key": "CRN",
+                  "value": "1010100001",
+                  "type": "text",
+                  "description": "10 digits"
+                },
+                {
+                  "key": "ShortAddress",
+                  "value": "TEST1234",
+                  "type": "text",
+                  "description": "4 letters + 4 digits"
+                },
+                {
+                  "key": "CityId",
+                  "value": "{{cityId}}",
+                  "type": "text",
+                  "description": "From lookups"
+                },
+                {
+                  "key": "NationalAddress.BuildingNumber",
+                  "value": "1234",
+                  "type": "text"
+                },
+                {
+                  "key": "NationalAddress.Street",
+                  "value": "شارع الاختبار",
+                  "type": "text"
+                },
+                {
+                  "key": "NationalAddress.PostalCode",
+                  "value": "12345",
+                  "type": "text"
+                },
+                {
+                  "key": "NationalAddress.SubNumber",
+                  "value": "5678",
+                  "type": "text"
+                },
+                {
+                  "key": "NationalAddress.District",
+                  "value": "حي الاختبار",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller registered', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('sellerId', json.userId);",
+                  "pm.test('Has userId', () => pm.expect(json.userId).to.be.a('string'));",
+                  "console.log('Seller registered: ' + json.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 SalesMan Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"0500000010\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SalesMan: محمود حجازي (assigned to Riyadh)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('SM OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "console.log('SalesMan login OTP sent');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 SalesMan Verify Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ Replace OTP if Twilio mock is OFF"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('SM logged in', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('salesManToken', json.token);",
+                  "pm.test('Is SalesMan', () => pm.expect(json.user.userType).to.eql(4));",
+                  "console.log('SalesMan token saved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 SalesMan Get Pending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesManToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/pending?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "pending"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pending list loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var sellerId = pm.collectionVariables.get('sellerId');",
+                  "var found = json.items.find(u => u.id === sellerId);",
+                  "pm.test('Seller in pending list', () => pm.expect(found).to.not.be.undefined);",
+                  "pm.test('Status is PendingSalesman', () => pm.expect(found.registrationStatus).to.eql(1));",
+                  "console.log('Seller found in pending queue');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.7 SalesMan Approve Seller",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesManToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{sellerId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller approved by SM', () => pm.response.to.have.status(200));",
+                  "console.log('SalesMan approved seller');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.8 ZoneManager Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"0500000002\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ZoneManager: فرحان ممدوح (manages Riyadh region)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ZM OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "console.log('ZoneManager login OTP sent');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.9 ZoneManager Verify Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ Replace OTP if Twilio mock is OFF"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ZM logged in', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('zoneManagerToken', json.token);",
+                  "pm.test('Is ZoneManager', () => pm.expect(json.user.userType).to.eql(5));",
+                  "console.log('ZoneManager token saved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.10 ZoneManager Get Pending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{zoneManagerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/pending?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "pending"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pending list loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var sellerId = pm.collectionVariables.get('sellerId');",
+                  "var found = json.items.find(u => u.id === sellerId);",
+                  "pm.test('Seller in ZM pending list', () => pm.expect(found).to.not.be.undefined);",
+                  "pm.test('Status is PendingZoneManager', () => pm.expect(found.registrationStatus).to.eql(2));",
+                  "console.log('Seller found in ZM queue');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.11 ZoneManager Approve Seller",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{zoneManagerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{sellerId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller approved by ZM', () => pm.response.to.have.status(200));",
+                  "console.log('ZoneManager approved seller → now Approved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.12 Seller Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"{{sellerMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "console.log('Seller login OTP sent');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.13 Seller Verify Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ Replace OTP if Twilio mock is OFF"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller logged in', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('sellerToken', json.token);",
+                  "pm.collectionVariables.set('sellerRefreshToken', json.refreshToken);",
+                  "pm.test('Is Seller', () => pm.expect(json.user.userType).to.eql(2));",
+                  "pm.test('Is Approved', () => pm.expect(json.user.registrationStatus).to.eql(3));",
+                  "console.log('Seller logged in — Approved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.14 Seller Scan Barcode 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcode 1 scanned', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Points awarded > 0', () => pm.expect(json.pointsAwarded).to.be.above(0));",
+                  "pm.test('Has product name', () => pm.expect(json.productName).to.be.a('string'));",
+                  "pm.collectionVariables.set('sellerBalance', json.newBalance);",
+                  "console.log('Barcode 1 scanned — earned ' + json.pointsAwarded + ' pts, balance: ' + json.newBalance);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.15 Seller Scan Barcode 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcode 2 scanned', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Points awarded > 0', () => pm.expect(json.pointsAwarded).to.be.above(0));",
+                  "pm.test('Has product name', () => pm.expect(json.productName).to.be.a('string'));",
+                  "pm.collectionVariables.set('sellerBalance', json.newBalance);",
+                  "console.log('Barcode 2 scanned — earned ' + json.pointsAwarded + ' pts, balance: ' + json.newBalance);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.16 Seller Scan Barcode 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode3}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcode 3 scanned', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Points awarded > 0', () => pm.expect(json.pointsAwarded).to.be.above(0));",
+                  "pm.test('Has product name', () => pm.expect(json.productName).to.be.a('string'));",
+                  "pm.collectionVariables.set('sellerBalance', json.newBalance);",
+                  "console.log('Barcode 3 scanned — earned ' + json.pointsAwarded + ' pts, balance: ' + json.newBalance);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.17 Seller Get Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Balance loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Balance > 0', () => pm.expect(json.balance).to.be.above(0));",
+                  "pm.test('SAR balance > 0', () => pm.expect(json.sarBalance).to.be.above(0));",
+                  "console.log('Wallet: ' + json.balance + ' pts / ' + json.sarBalance + ' SAR');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.18 Seller Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Dashboard loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has user name', () => pm.expect(json.userName).to.be.a('string'));",
+                  "pm.test('Points > 0', () => pm.expect(json.points).to.be.above(0));",
+                  "pm.test('Has recent transactions', () => pm.expect(json.recentTransactions.length).to.be.above(0));",
+                  "console.log('Dashboard: ' + json.points + ' pts, ' + json.recentTransactions.length + ' transactions');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.19 Seller Get Invitation Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invitation"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invitation info loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('sellerInvitationCode', json.invitationCode);",
+                  "pm.test('Has invitation code', () => pm.expect(json.invitationCode).to.have.lengthOf(8));",
+                  "pm.test('Has QR code', () => pm.expect(json.qrCodeBase64).to.be.a('string'));",
+                  "console.log('Invitation code: ' + json.invitationCode);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Technician + Invitation Reward",
+      "item": [
+        {
+          "name": "2.1 Send OTP (Technician)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/send-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"{{technicianMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "console.log('Technician OTP sent');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Verify Registration OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-registration-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-registration-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\",\n  \"mobileNumber\": \"{{technicianMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ Replace OTP if Twilio mock is OFF"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OTP verified', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('verificationToken', json.verificationToken);",
+                  "console.log('Technician verification token saved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Register Technician (with Invitation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/technician",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "technician"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"فني اختبار المنظومة\",\n  \"mobileNumber\": \"{{technicianMobile}}\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"54321\",\n  \"district\": \"حي التقنية\",\n  \"invitationCode\": \"{{sellerInvitationCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Technician registered', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('technicianId', json.userId);",
+                  "console.log('Technician registered with invitation: ' + json.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 SalesMan Approve Technician",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesManToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{technicianId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Technician approved by SM', () => pm.response.to.have.status(200));",
+                  "console.log('SalesMan approved technician');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 ZoneManager Approve Technician",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{zoneManagerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{technicianId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Technician approved by ZM', () => pm.response.to.have.status(200));",
+                  "console.log('ZoneManager approved technician → Approved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.6 Technician Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"{{technicianMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tech OTP sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('pinId', json.pinId);",
+                  "console.log('Technician login OTP sent');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.7 Technician Verify Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pinId\": \"{{pinId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "⚠️ Replace OTP if Twilio mock is OFF"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tech logged in', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('technicianToken', json.token);",
+                  "pm.test('Is Technician', () => pm.expect(json.user.userType).to.eql(3));",
+                  "pm.test('Is Approved', () => pm.expect(json.user.registrationStatus).to.eql(3));",
+                  "console.log('Technician logged in — Approved');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.8 Technician Scan Barcode 1 (dual scan → Consumed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "This barcode was already scanned by the Seller. Technician scan makes it Consumed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcode 1 scanned by tech', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Points awarded', () => pm.expect(json.pointsAwarded).to.be.above(0));",
+                  "console.log('Barcode 1 dual-scanned → Consumed, earned ' + json.pointsAwarded + ' pts');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.9 Technician Scan Barcode 4 (tech-only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode4}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Barcode 4 scanned', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Points awarded', () => pm.expect(json.pointsAwarded).to.be.above(0));",
+                  "console.log('Barcode 4 scanned (tech-only), earned ' + json.pointsAwarded + ' pts');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.10 Technician Get Wallet (scan + invitation reward)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Balance loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Balance includes invitation reward', () => pm.expect(json.balance).to.be.above(50));",
+                  "console.log('Technician wallet: ' + json.balance + ' pts (includes 50 invitee reward)');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.11 Seller Check Inviter Reward",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seller balance loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var prevBalance = parseFloat(pm.collectionVariables.get('sellerBalance') || '0');",
+                  "pm.test('Balance increased (invitation reward)', () => pm.expect(json.balance).to.be.above(prevBalance));",
+                  "pm.collectionVariables.set('sellerBalance', json.balance);",
+                  "console.log('Seller wallet after invitation reward: ' + json.balance + ' pts');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.12 Seller Verify Invitation Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invitation"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invitation stats loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Total invitations >= 1', () => pm.expect(json.totalInvitations).to.be.at.least(1));",
+                  "pm.test('Approved invitations >= 1', () => pm.expect(json.approvedInvitations).to.be.at.least(1));",
+                  "console.log('Invitations: ' + json.totalInvitations + ' total, ' + json.approvedInvitations + ' approved');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Bank Transfer Redemption",
+      "item": [
+        {
+          "name": "3.1 Seller Get Available Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/available-balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "available-balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Available balance loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('availableBalance', json.availableBalance);",
+                  "pm.test('Has available balance', () => pm.expect(json.availableBalance).to.be.above(0));",
+                  "console.log('Available: ' + json.availableBalance + ' pts (held: ' + json.heldBalance + ')');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Seller Request Bank Transfer Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "request"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"SA0380000000608010167519\",\n  \"bankName\": \"بنك الراجحي\",\n  \"accountHolderName\": \"بائع تجريبي للاختبار\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Bank transfer auto-completes on admin approval (no OTP needed)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redemption created', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('redemptionRequestId', json.id);",
+                  "pm.test('Status is PendingSalesMan', () => pm.expect(json.status).to.eql(1));",
+                  "pm.test('Method is BankTransfer', () => pm.expect(json.method).to.eql(1));",
+                  "pm.test('SAR amount calculated', () => pm.expect(json.sarAmount).to.be.above(0));",
+                  "console.log('Redemption created: ' + json.id + ' — ' + json.pointsAmount + ' pts = ' + json.sarAmount + ' SAR');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 Seller Get Active Redemption",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "active"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Active redemption loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Is our request', () => pm.expect(json.id).to.eql(pm.collectionVariables.get('redemptionRequestId')));",
+                  "pm.test('Status PendingSalesMan', () => pm.expect(json.status).to.eql(1));",
+                  "console.log('Active redemption confirmed: status=' + json.status);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 SalesMan Get Pending Redemptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesManToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "pending"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pending redemptions loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var rid = pm.collectionVariables.get('redemptionRequestId');",
+                  "var found = json.items.find(r => r.id === rid);",
+                  "pm.test('Redemption in SM pending', () => pm.expect(found).to.not.be.undefined);",
+                  "console.log('Redemption found in SM pending queue');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 SalesMan Approve Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesManToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"{{redemptionRequestId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redemption approved by SM', () => pm.response.to.have.status(200));",
+                  "console.log('SalesMan approved redemption → PendingZoneManager');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 ZoneManager Get Pending Redemptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{zoneManagerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "pending"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ZM pending loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var rid = pm.collectionVariables.get('redemptionRequestId');",
+                  "var found = json.items.find(r => r.id === rid);",
+                  "pm.test('Redemption in ZM pending', () => pm.expect(found).to.not.be.undefined);",
+                  "console.log('Redemption found in ZM queue');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.7 ZoneManager Approve Redemption",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{zoneManagerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"{{redemptionRequestId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redemption approved by ZM', () => pm.response.to.have.status(200));",
+                  "console.log('ZoneManager approved redemption → PendingAdmin');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.8 Admin Approve Redemption (auto-completes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redemptionRequestId\": \"{{redemptionRequestId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Bank transfer redemptions auto-complete to Completed on admin approval"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redemption approved by Admin', () => pm.response.to.have.status(200));",
+                  "console.log('Admin approved → BankTransfer auto-completed');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.9 Seller Get Redemption History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/history?page=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('History loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has completed redemption', () => {",
+                  "    var completed = json.items.find(r => r.status === 5);",
+                  "    pm.expect(completed).to.not.be.undefined;",
+                  "});",
+                  "console.log('Redemption history: ' + json.items.length + ' records');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.10 Seller Verify Balance After Redemption",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "balance"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Balance loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "var prevBalance = parseFloat(pm.collectionVariables.get('sellerBalance') || '0');",
+                  "pm.test('Balance decreased after redemption', () => pm.expect(json.balance).to.be.below(prevBalance));",
+                  "console.log('Seller balance after redemption: ' + json.balance + ' pts');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Admin Operations & Notifications",
+      "item": [
+        {
+          "name": "4.1 Admin Send Notification to Seller",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/notifications/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "notifications",
+                "send"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUserId\": \"{{sellerId}}\",\n  \"title\": \"إشعار اختبار النظام\",\n  \"body\": \"هذا إشعار تجريبي من مدير النظام للتحقق من عمل الإشعارات\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notification sent', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Sent to 1 user', () => pm.expect(json.sentCount).to.eql(1));",
+                  "console.log('Admin notification sent to seller');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 Seller Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unread count loaded', () => pm.response.to.have.status(200));",
+                  "var count = pm.response.json();",
+                  "pm.collectionVariables.set('unreadBefore', count);",
+                  "pm.test('Has unread notifications', () => pm.expect(count).to.be.above(0));",
+                  "console.log('Unread notifications: ' + count);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Seller Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notifications loaded', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has notifications', () => pm.expect(json.items.length).to.be.above(0));",
+                  "// Find admin message (type 9)",
+                  "var adminMsg = json.items.find(n => n.type === 9);",
+                  "if (adminMsg) {",
+                  "    pm.collectionVariables.set('notificationId', adminMsg.id);",
+                  "    pm.test('Admin notification found', () => pm.expect(adminMsg.title).to.eql('إشعار اختبار النظام'));",
+                  "}",
+                  "console.log('Notifications: ' + json.items.length + ' total');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 Seller Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notification marked read', () => pm.response.to.have.status(204));",
+                  "console.log('Notification marked as read');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.5 Seller Verify Unread Decreased",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unread count loaded', () => pm.response.to.have.status(200));",
+                  "var count = pm.response.json();",
+                  "var before = parseInt(pm.collectionVariables.get('unreadBefore') || '1');",
+                  "pm.test('Unread count decreased', () => pm.expect(count).to.be.below(before));",
+                  "console.log('Unread after marking: ' + count);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6 Seller Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('All marked read', () => pm.response.to.have.status(204));",
+                  "console.log('All notifications marked as read');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.7 Admin List All Scans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/scans?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "scans"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Scans listed', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has scan records', () => pm.expect(json.items.length).to.be.above(0));",
+                  "pm.test('Scans have user info', () => pm.expect(json.items[0].userName).to.be.a('string'));",
+                  "console.log('Admin scans: ' + json.totalCount + ' total records');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.8 Admin List Consumed Barcodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/barcodes?status=4&page=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "barcodes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "4"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consumed barcodes listed', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.test('Has consumed barcodes', () => pm.expect(json.items.length).to.be.above(0));",
+                  "pm.test('Status is Consumed (4)', () => pm.expect(json.items[0].status).to.eql(4));",
+                  "console.log('Consumed barcodes: ' + json.totalCount);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Negative Tests — Error Validation",
+      "item": [
+        {
+          "name": "5.1 Seller Re-scan Barcode 1 (already scanned) → Error",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — seller already scanned this barcode"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Duplicate scan rejected', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+                  "});",
+                  "console.log('Duplicate scan correctly rejected: ' + pm.response.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Register Duplicate Mobile → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/send-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"{{sellerMobile}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — this mobile is already registered"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Duplicate mobile rejected', () => pm.response.to.have.status(409));",
+                  "console.log('Duplicate registration correctly rejected: 409');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Register with Invalid Token → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/technician",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "technician"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationToken\": \"tamperedInvalidToken.fakeSignature\",\n  \"name\": \"هاكر\",\n  \"mobileNumber\": \"0555999999\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"11111\",\n  \"district\": \"حي مجهول\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — verification token is tampered"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid token rejected', () => pm.response.to.have.status(400));",
+                  "console.log('Tampered token correctly rejected: 400');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 Redeem Below Minimum (1 pt) → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption",
+                "request"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1,\n  \"iban\": \"SA0380000000608010167519\",\n  \"bankName\": \"بنك الراجحي\",\n  \"accountHolderName\": \"بائع تجريبي\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — minimum redemption is 1000 points"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Below minimum rejected', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});",
+                  "console.log('Below minimum correctly rejected: ' + pm.response.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.5 Scan Without Auth → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode5}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — no Authorization header"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated rejected', () => pm.response.to.have.status(401));",
+                  "console.log('Unauthenticated access correctly rejected: 401');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.6 Technician Re-scan Consumed Barcode → Error",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technicianToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcodeCode\": \"{{barcodeCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Should fail — barcode already consumed (both roles scanned)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consumed barcode rejected', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+                  "});",
+                  "console.log('Consumed barcode re-scan correctly rejected: ' + pm.response.code);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:44315",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "salesManToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "zoneManagerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "technicianToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pinId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "verificationToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerMobile",
+      "value": "0555100001",
+      "type": "string"
+    },
+    {
+      "key": "technicianId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "technicianMobile",
+      "value": "0555100002",
+      "type": "string"
+    },
+    {
+      "key": "sellerInvitationCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerBalance",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "cityId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productPointValue",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "barcodeCode1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "barcodeCode2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "barcodeCode3",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "barcodeCode4",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "barcodeCode5",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "redemptionRequestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "availableBalance",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "unreadBefore",
+      "value": "0",
+      "type": "string"
+    }
+  ]
+}
