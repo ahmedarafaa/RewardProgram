@@ -839,22 +839,27 @@ public static class DataSeeder
         await userManager.UpdateAsync(seller1);
         await userManager.UpdateAsync(seller2);
 
-        // Create profiles
+        // Create profiles (skip existing)
+        var existingSellerIds = await context.SellerProfiles.Select(p => p.UserId).ToListAsync();
+        var existingOwnerIds = await context.ShopOwnerProfiles.Select(p => p.UserId).ToListAsync();
+        var existingTechIds = await context.TechnicianProfiles.Select(p => p.UserId).ToListAsync();
+
         foreach (var (name, _, _, _, _, custCode) in demoUsers)
         {
             if (!createdUsers.TryGetValue(name, out var user)) continue;
 
-            if (user.UserType == UserType.Seller && custCode != null)
+            if (user.UserType == UserType.Seller && custCode != null && !existingSellerIds.Contains(user.Id))
                 context.SellerProfiles.Add(new SellerProfile { UserId = user.Id, CustomerCode = custCode, CreatedBy = "DataSeeder" });
-            else if (user.UserType == UserType.ShopOwner && custCode != null)
+            else if (user.UserType == UserType.ShopOwner && custCode != null && !existingOwnerIds.Contains(user.Id))
                 context.ShopOwnerProfiles.Add(new ShopOwnerProfile { UserId = user.Id, CustomerCode = custCode, CreatedBy = "DataSeeder" });
-            else if (user.UserType == UserType.Technician)
+            else if (user.UserType == UserType.Technician && !existingTechIds.Contains(user.Id))
                 context.TechnicianProfiles.Add(new TechnicianProfile { UserId = user.Id, CreatedBy = "DataSeeder" });
         }
 
         await context.SaveChangesAsync();
 
-        // --- 2. Create ShopData ---
+        // --- 2. Create ShopData (skip existing) ---
+        var existingShopCodes = await context.ShopData.Select(s => s.CustomerCode).ToListAsync();
         var shopDataEntries = new (string CustCode, string StoreName, string VAT, string CRN, string ShortAddr, string CityId, string EnteredBy)[]
         {
             (erpCodes[0], "محل الرائد - الرياض", "300000000000003", "1000000001", "SEED0001", riyadhCity.Id, createdUsers["بائع الرياض"].Id),
@@ -866,6 +871,7 @@ public static class DataSeeder
 
         foreach (var (custCode, storeName, vat, crn, shortAddr, cityId, enteredBy) in shopDataEntries)
         {
+            if (existingShopCodes.Contains(custCode)) continue;
             context.ShopData.Add(new ShopData
             {
                 CustomerCode = custCode,
@@ -887,23 +893,45 @@ public static class DataSeeder
 
         await context.SaveChangesAsync();
 
-        // --- 3. Create Wallets ---
+        // --- 3. Create Wallets (skip existing) ---
+        var existingWalletUserIds = await context.Wallets.Select(w => w.UserId).ToListAsync();
         var wallets = new Dictionary<string, Wallet>();
         foreach (var (name, user) in createdUsers)
         {
-            var wallet = new Wallet { UserId = user.Id, CreatedBy = "DataSeeder" };
-            context.Wallets.Add(wallet);
-            wallets[name] = wallet;
+            var existingWallet = existingWalletUserIds.Contains(user.Id)
+                ? await context.Wallets.FirstAsync(w => w.UserId == user.Id)
+                : null;
+
+            if (existingWallet != null)
+            {
+                wallets[name] = existingWallet;
+            }
+            else
+            {
+                var wallet = new Wallet { UserId = user.Id, CreatedBy = "DataSeeder" };
+                context.Wallets.Add(wallet);
+                wallets[name] = wallet;
+            }
         }
 
         await context.SaveChangesAsync();
 
-        // --- 4. Create Barcodes & Scan Records ---
+        // --- 4. Create Barcodes & Scan Records (skip if seed barcodes exist) ---
         var sellers = new[] { "بائع الرياض", "بائع الرياض ٢", "بائع جدة", "بائع الدمام", "بائع بريدة", "بائع أبها" };
         var technicians = new[] { "فني الرياض", "فني الرياض ٢", "فني جدة", "فني الدمام", "فني تبوك" };
+        var seedBarcodesExist = await context.ProductBarcodes.AnyAsync(b => b.Code.StartsWith("SEED"));
 
         var barcodeIndex = 0;
         var allScanRecords = new List<ScanRecord>();
+        RedemptionRequest? completedRedemption = null;
+        KeyValuePair<string, Wallet> topSeller = default;
+
+        if (seedBarcodesExist)
+        {
+            logger.LogInformation("Seed barcodes already exist, skipping barcode/scan/transaction/redemption seeding");
+        }
+        else
+        {
         var baseDate = DateTime.UtcNow.AddDays(-90);
 
         // Helper to create barcodes with scan records
@@ -1036,12 +1064,9 @@ public static class DataSeeder
         // --- 6. Redemption Requests ---
         // Find the user with highest balance for a completed redemption (sellers or technicians)
         var redeemableUsers = sellers.Concat(technicians).ToArray();
-        var topSeller = wallets.Where(kv => redeemableUsers.Contains(kv.Key))
+        topSeller = wallets.Where(kv => redeemableUsers.Contains(kv.Key))
             .OrderByDescending(kv => kv.Value.Balance)
             .First();
-
-        // Completed bank transfer redemption (1000 pts = 100 SAR)
-        RedemptionRequest? completedRedemption = null;
         if (topSeller.Value.Balance >= 1000m)
         {
             completedRedemption = new RedemptionRequest
@@ -1149,7 +1174,15 @@ public static class DataSeeder
             await context.SaveChangesAsync();
         }
 
+        } // end of if (!seedBarcodesExist)
+
         // --- 7. Notifications ---
+        if (await context.Notifications.AnyAsync(n => n.CreatedBy == "DataSeeder"))
+        {
+            logger.LogInformation("Seed notifications already exist, skipping");
+            return;
+        }
+
         var notifIndex = 0;
         void AddNotif(string userId, NotificationType type, string title, string body, string? refId = null, bool isRead = false)
         {
