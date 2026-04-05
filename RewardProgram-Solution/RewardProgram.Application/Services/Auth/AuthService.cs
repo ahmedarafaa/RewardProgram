@@ -599,6 +599,9 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
+        if (user.RegistrationStatus == RegistrationStatus.Rejected)
+            return Result.Failure<AuthResponse>(AuthErrors.UserRejected);
+
         if (user.RegistrationStatus != RegistrationStatus.Approved)
             return Result.Failure<AuthResponse>(AuthErrors.UserNotApproved);
 
@@ -638,8 +641,8 @@ public class AuthService : IAuthService
         // Revoke old token
         token.RevokedOn = DateTime.UtcNow;
 
-        // Clean up expired/revoked tokens to prevent unbounded growth
-        user.RefreshTokens.RemoveAll(t => t.Token != refreshToken && (!t.IsActive || t.IsExpired));
+        // Clean up only tokens that are both revoked AND expired (safe for multi-device)
+        user.RefreshTokens.RemoveAll(t => t.Token != refreshToken && t.RevokedOn != null && t.IsExpired);
 
         // Generate new auth response (adds new token to user.RefreshTokens)
         // Single UpdateAsync call persists both revocation and new token atomically

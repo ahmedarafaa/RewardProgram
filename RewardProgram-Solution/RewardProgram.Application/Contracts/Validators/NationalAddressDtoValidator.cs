@@ -28,8 +28,8 @@ public class NationalAddressDtoValidator : AbstractValidator<NationalAddressResp
             .WithMessage(L["Address.SubNumber.Range"]);
 
             RuleFor(x => x.District)
-            .MaximumLength(100).WithMessage(L["Address.District.MaxLength"])
-            .When(x => x.District != null);
+            .NotEmpty().WithMessage(L["Address.District.NotEmpty"])
+            .MaximumLength(100).WithMessage(L["Address.District.MaxLength"]);
         });
     }
 }

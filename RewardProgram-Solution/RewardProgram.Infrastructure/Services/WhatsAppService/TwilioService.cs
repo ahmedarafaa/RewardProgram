@@ -106,11 +106,10 @@ public class TwilioService : ITwilioService
         {
             if (_useMockMode)
             {
-                var isValid = otp.Length == 6 && otp.All(char.IsDigit);
+                var isValid = otp == "123456";
 
                 _logger.LogInformation(
-                    "[MOCK] OTP verification for Sid: {Sid}, Valid: {Valid}",
-                    verificationSid,
+                    "[MOCK] OTP verification, Valid: {Valid}",
                     isValid);
 
                 return Result.Success(isValid);

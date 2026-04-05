@@ -182,16 +182,23 @@ public class ScanService : IScanService
                 "Barcode '{Code}' scanned by {Role} user {UserId} — {Points} points awarded",
                 barcode.Code, scannerRole, userId, pointsForScanner);
 
-            await _notificationService.CreateAsync(userId, NotificationType.PointsEarned,
-                "نقاط جديدة", $"حصلت على {pointsForScanner} نقطة من مسح {barcode.Product.Name}",
-                scanRecord.Id, ct);
-
-            // Notify first scanner about deferred points
-            if (deferredPointsForFirstScanner.HasValue && firstScannerUserId is not null)
+            try
             {
-                await _notificationService.CreateAsync(firstScannerUserId, NotificationType.PointsEarned,
-                    "نقاط جديدة", $"حصلت على {deferredPointsForFirstScanner.Value} نقطة مؤجلة — {barcode.Product.Name}",
+                await _notificationService.CreateAsync(userId, NotificationType.PointsEarned,
+                    "نقاط جديدة", $"حصلت على {pointsForScanner} نقطة من مسح {barcode.Product.Name}",
                     scanRecord.Id, ct);
+
+                // Notify first scanner about deferred points
+                if (deferredPointsForFirstScanner.HasValue && firstScannerUserId is not null)
+                {
+                    await _notificationService.CreateAsync(firstScannerUserId, NotificationType.PointsEarned,
+                        "نقاط جديدة", $"حصلت على {deferredPointsForFirstScanner.Value} نقطة مؤجلة — {barcode.Product.Name}",
+                        scanRecord.Id, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create scan notification for user {UserId}", userId);
             }
 
             return Result.Success(new ScanBarcodeResponse(

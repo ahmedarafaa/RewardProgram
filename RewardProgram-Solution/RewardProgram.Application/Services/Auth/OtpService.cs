@@ -53,8 +53,8 @@ public class OtpService : IOtpService
         await _context.OtpCodes.AddAsync(otpCode, ct);
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("OTP sent and stored for PinId: {PinId}, Mobile: {Mobile}",
-            pinId, MobileNumberHelper.Mask(mobileNumber));
+        _logger.LogInformation("OTP sent and stored for Mobile: {Mobile}",
+            MobileNumberHelper.Mask(mobileNumber));
 
         return Result.Success(pinId);
     }

@@ -78,12 +78,12 @@ public class ShopDataConfiguration : IEntityTypeConfiguration<ShopData>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes
-        builder.HasIndex(x => x.CustomerCode).IsUnique();
-        builder.HasIndex(x => x.VAT).IsUnique();
-        builder.HasIndex(x => x.CRN).IsUnique();
+        builder.HasIndex(x => x.CustomerCode).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.VAT).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.CRN).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.CityId);
         builder.HasIndex(x => x.StoreName);
-        builder.HasIndex(x => x.ShortAddress).IsUnique();
+        builder.HasIndex(x => x.ShortAddress).IsUnique().HasFilter("[IsDeleted] = 0");
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

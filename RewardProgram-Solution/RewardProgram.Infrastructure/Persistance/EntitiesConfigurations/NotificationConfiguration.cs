@@ -40,6 +40,12 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(x => x.UpdatedBy).HasMaxLength(450);
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
+        // Relationships
+        builder.HasOne<RewardProgram.Domain.Entities.Users.ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Indexes
         builder.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
         builder.HasIndex(x => x.UserId);

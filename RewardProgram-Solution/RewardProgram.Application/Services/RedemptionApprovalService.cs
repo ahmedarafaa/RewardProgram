@@ -392,7 +392,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     private async Task CompleteRedemptionAsync(RedemptionRequest redemptionRequest, CancellationToken ct)
     {
         var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == redemptionRequest.UserId, ct);
-        if (wallet is null) return;
+        if (wallet is null)
+            throw new InvalidOperationException($"Wallet not found for user {redemptionRequest.UserId} during redemption completion");
 
         // FIFO: consume oldest points first
         var earnedTransactions = await _context.WalletTransactions
@@ -411,6 +412,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             tx.RemainingAmount -= consume;
             remaining -= consume;
         }
+
+        if (remaining > 0)
+            _logger.LogWarning("FIFO shortfall: {Remaining} points could not be consumed from earned transactions for request {Id}",
+                remaining, redemptionRequest.Id);
 
         // Deduct from wallet
         wallet.Balance -= redemptionRequest.PointsAmount;
@@ -436,7 +441,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     private async Task RefundPointsAsync(RedemptionRequest redemptionRequest, CancellationToken ct)
     {
         var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == redemptionRequest.UserId, ct);
-        if (wallet is null) return;
+        if (wallet is null)
+            throw new InvalidOperationException($"Wallet not found for user {redemptionRequest.UserId} during refund");
 
         wallet.HeldBalance -= redemptionRequest.PointsAmount;
         wallet.HeldSarBalance -= redemptionRequest.SarAmount;
@@ -455,7 +461,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
     private static string GenerateOtp()
     {
-        return Random.Shared.Next(100000, 999999).ToString();
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 
     private static string HashOtp(string otp)

@@ -38,7 +38,7 @@ public class ProductBarcodeConfiguration : IEntityTypeConfiguration<ProductBarco
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes
-        builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasIndex(x => x.Code).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.ProductId);
         builder.HasIndex(x => x.Status);
 

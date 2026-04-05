@@ -27,7 +27,7 @@ public class ErpCustomerConfiguration : IEntityTypeConfiguration<ErpCustomer>
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
         // Indexes
-        builder.HasIndex(x => x.CustomerCode).IsUnique();
+        builder.HasIndex(x => x.CustomerCode).IsUnique().HasFilter("[IsDeleted] = 0");
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

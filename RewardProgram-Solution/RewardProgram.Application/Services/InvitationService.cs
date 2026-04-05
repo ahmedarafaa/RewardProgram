@@ -196,6 +196,11 @@ public class InvitationService : IInvitationService
                     "مكافأة دعوة", $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}", ct: ct);
             }
         }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Concurrency conflict crediting invitation rewards for invitee {InviteeId} — likely duplicate", invitedUserId);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);

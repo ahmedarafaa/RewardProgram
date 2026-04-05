@@ -37,7 +37,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
         // Indexes
-        builder.HasIndex(x => x.ProductCode).IsUnique();
+        builder.HasIndex(x => x.ProductCode).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.Name);
         builder.HasIndex(x => x.Category);
 

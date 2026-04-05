@@ -47,7 +47,7 @@ public class ScanRecordConfiguration : IEntityTypeConfiguration<ScanRecord>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Composite unique: one scan per role per barcode
-        builder.HasIndex(x => new { x.BarcodeId, x.ScannerRole }).IsUnique();
+        builder.HasIndex(x => new { x.BarcodeId, x.ScannerRole }).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.UserId);
 
         builder.HasQueryFilter(x => !x.IsDeleted);

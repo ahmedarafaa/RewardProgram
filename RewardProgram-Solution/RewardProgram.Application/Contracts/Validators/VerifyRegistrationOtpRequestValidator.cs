@@ -12,7 +12,9 @@ public class VerifyRegistrationOtpRequestValidator : AbstractValidator<VerifyReg
             .NotEmpty().WithMessage(L["PinId.NotEmpty"]);
 
         RuleFor(x => x.Otp)
-            .NotEmpty().WithMessage(L["Otp.NotEmpty"]);
+            .NotEmpty().WithMessage(L["Otp.NotEmpty"])
+            .Length(6).WithMessage(L["Otp.InvalidFormat"])
+            .Matches(@"^\d{6}$").WithMessage(L["Otp.InvalidFormat"]);
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
