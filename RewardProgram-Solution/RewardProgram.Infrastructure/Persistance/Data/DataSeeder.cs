@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
@@ -23,20 +24,27 @@ public static class DataSeeder
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+        var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+        var isDev = env.IsDevelopment();
 
         await SeedRolesAsync(roleManager, logger);
-        var users = await SeedUsersAsync(userManager, logger);
+        var users = await SeedUsersAsync(userManager, logger, isDev);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
-        try
+
+        // Demo analytics data only in Development
+        if (isDev)
         {
-            await SeedDemoAnalyticsDataAsync(context, userManager, users, logger);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to seed demo analytics data — app will continue without it");
+            try
+            {
+                await SeedDemoAnalyticsDataAsync(context, userManager, users, logger);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed demo analytics data — app will continue without it");
+            }
         }
     }
 
@@ -73,7 +81,7 @@ public static class DataSeeder
     #region Users
 
     private static async Task<Dictionary<string, ApplicationUser>> SeedUsersAsync(
-        UserManager<ApplicationUser> userManager, ILogger logger)
+        UserManager<ApplicationUser> userManager, ILogger logger, bool isDev)
     {
         var users = new Dictionary<string, ApplicationUser>();
         _mobileCounter = 1;
@@ -84,15 +92,19 @@ public static class DataSeeder
             userType: UserType.SystemAdmin,
             roles: [UserRoles.SystemAdmin],
             usernameOverride: "admin",
-            password: "Admin@123");
+            password: "R@ed$Admin#2026!");
 
-        await CreateUser(userManager, users, logger,
-            name: "مدير النظام - تست",
-            userType: UserType.SystemAdmin,
-            roles: [UserRoles.SystemAdmin],
-            mobileOverride: "+201121007505",
-            usernameOverride: "admin.test",
-            password: "Admin@123");
+        // Dev-only test admin
+        if (isDev)
+        {
+            await CreateUser(userManager, users, logger,
+                name: "مدير النظام - تست",
+                userType: UserType.SystemAdmin,
+                roles: [UserRoles.SystemAdmin],
+                mobileOverride: "+201121007505",
+                usernameOverride: "admin.test",
+                password: "Admin@123");
+        }
 
         // === Pure ZoneManagers (not also salesmen) ===
         await CreateUser(userManager, users, logger,
@@ -267,11 +279,20 @@ public static class DataSeeder
         var existing = await userManager.Users.FirstOrDefaultAsync(u => u.Name == trimmedName);
         if (existing != null)
         {
-            // Ensure password is set for existing admin users
-            if (password != null && !await userManager.HasPasswordAsync(existing))
+            // Ensure password is set/reset for admin users
+            if (password != null)
             {
-                await userManager.AddPasswordAsync(existing, password);
-                logger.LogInformation("Password added to existing user '{Name}'", trimmedName);
+                if (!await userManager.HasPasswordAsync(existing))
+                {
+                    await userManager.AddPasswordAsync(existing, password);
+                    logger.LogInformation("Password added to existing user '{Name}'", trimmedName);
+                }
+                else if (!await userManager.CheckPasswordAsync(existing, password))
+                {
+                    var token = await userManager.GeneratePasswordResetTokenAsync(existing);
+                    await userManager.ResetPasswordAsync(existing, token, password);
+                    logger.LogInformation("Password reset for existing user '{Name}'", trimmedName);
+                }
             }
 
             // Ensure username is updated for existing admin users
