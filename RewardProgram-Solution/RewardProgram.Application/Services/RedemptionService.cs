@@ -39,12 +39,13 @@ public class RedemptionService : IRedemptionService
         if (user is null || user.IsDisabled || user.RegistrationStatus != RegistrationStatus.Approved)
             return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.UserNotApproved);
 
-        // 2. Check minimum points
-        if (request.PointsAmount < 1000)
-            return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.BelowMinimum);
-
-        // 3. Get SAR rate
+        // 2. Get settings (SAR rate + minimum points)
         var settings = await _context.RewardSettings.FirstOrDefaultAsync(ct);
+        var minimumPoints = settings?.MinimumRedemptionPoints ?? 1000m;
+
+        // 3. Check minimum points (dynamic from admin settings)
+        if (request.PointsAmount < minimumPoints)
+            return Result.Failure<RedemptionRequestResponse>(RedemptionErrors.BelowMinimum);
         var sarRate = settings?.PointsToSarRate ?? 10m;
         var sarAmount = request.PointsAmount / sarRate;
 
@@ -137,6 +138,8 @@ public class RedemptionService : IRedemptionService
     public async Task<Result<PaginatedResult<RedemptionRequestResponse>>> GetHistoryAsync(
         string userId, RedemptionListQuery query, CancellationToken ct = default)
     {
+        var (page, pageSize) = Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var baseQuery = _context.RedemptionRequests
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt);
@@ -144,15 +147,15 @@ public class RedemptionService : IRedemptionService
         var totalCount = await baseQuery.CountAsync(ct);
 
         var items = await baseQuery
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         var result = new PaginatedResult<RedemptionRequestResponse>(
             items.Select(MapToResponse).ToList(),
             totalCount,
-            query.Page,
-            query.PageSize);
+            page,
+            pageSize);
 
         return Result.Success(result);
     }
@@ -164,7 +167,10 @@ public class RedemptionService : IRedemptionService
         if (wallet is null)
             return Result.Success(new AvailableBalanceResponse(0, 0, 0, 0));
 
+        await using var transaction = await _context.BeginTransactionAsync(ct);
         await ExpireOldPointsAsync(wallet, ct);
+        await _context.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         var available = wallet.Balance - wallet.HeldBalance;
         var settings = await _context.RewardSettings.FirstOrDefaultAsync(ct);
@@ -208,7 +214,7 @@ public class RedemptionService : IRedemptionService
                 break;
 
             var expireAmount = Math.Min(tx.RemainingAmount, maxExpirable - totalExpired);
-            var sarExpireAmount = expireAmount / tx.SarRate;
+            var sarExpireAmount = tx.SarRate > 0 ? expireAmount / tx.SarRate : 0;
 
             totalExpired += expireAmount;
             totalSarExpired += sarExpireAmount;
@@ -230,8 +236,7 @@ public class RedemptionService : IRedemptionService
         wallet.Balance -= totalExpired;
         wallet.SarBalance -= totalSarExpired;
 
-        await _context.SaveChangesAsync(ct);
-
+        // No separate SaveChangesAsync — caller owns the save/transaction
         _logger.LogInformation("Expired {Points} points for wallet {WalletId}",
             totalExpired, wallet.Id);
     }

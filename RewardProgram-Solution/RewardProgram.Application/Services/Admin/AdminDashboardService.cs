@@ -280,12 +280,14 @@ public class AdminDashboardService : IAdminDashboardService
         if (query.Type.HasValue)
             baseQuery = baseQuery.Where(x => x.wt.Type == query.Type.Value);
 
+        var (page, pageSize) = Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var totalCount = await baseQuery.CountAsync(ct);
 
         var items = await baseQuery
             .OrderByDescending(x => x.wt.CreatedAt)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new AdminPointsDetailItemResponse(
                 x.wt.Id,
                 x.u.Id,
@@ -300,11 +302,13 @@ public class AdminDashboardService : IAdminDashboardService
             .ToListAsync(ct);
 
         return Result.Success(new PaginatedResult<AdminPointsDetailItemResponse>(
-            items, totalCount, query.Page, query.PageSize));
+            items, totalCount, page, pageSize));
     }
 
     public async Task<Result<TopPerformersResponse>> GetTopPerformersAsync(int top = 10, CancellationToken ct = default)
     {
+        top = Math.Clamp(top, 1, 100);
+
         // Top sellers by points earned
         var topSellers = await (
             from sr in _context.ScanRecords.Where(s => s.DeletedAt == null)
@@ -357,18 +361,21 @@ public class AdminDashboardService : IAdminDashboardService
     {
         var cutoff = DateTime.UtcNow.AddDays(-query.InactiveDays);
 
-        // Materialize last scan dates per user (avoids untranslatable GroupBy subquery in left join)
+        // Only load user IDs who scanned AFTER cutoff (active users) — much smaller set than all scan records
+        var activeUserIds = await _context.ScanRecords
+            .Where(s => s.DeletedAt == null && s.CreatedAt >= cutoff)
+            .Select(s => s.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var activeUserIdSet = activeUserIds.ToHashSet();
+
+        // Load last scan dates only for eligible inactive users (filtered set, not all records)
         var lastScans = await _context.ScanRecords
-            .Where(s => s.DeletedAt == null)
+            .Where(s => s.DeletedAt == null && !activeUserIdSet.Contains(s.UserId))
             .GroupBy(s => s.UserId)
             .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) })
             .ToDictionaryAsync(x => x.UserId, x => x.LastScan, ct);
-
-        // Get only users whose last scan is before cutoff (or never scanned)
-        var activeUserIds = lastScans
-            .Where(kv => kv.Value >= cutoff)
-            .Select(kv => kv.Key)
-            .ToHashSet();
 
         var now = DateTime.UtcNow;
 
@@ -376,7 +383,7 @@ public class AdminDashboardService : IAdminDashboardService
             .Where(u => (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
                && u.RegistrationStatus == RegistrationStatus.Approved
                && !u.IsDisabled
-               && !activeUserIds.Contains(u.Id))
+               && !activeUserIdSet.Contains(u.Id))
             .Select(u => new { u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt })
             .ToListAsync(ct);
 

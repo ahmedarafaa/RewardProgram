@@ -30,6 +30,8 @@ public class NotificationService : INotificationService
     public async Task<PaginatedResult<NotificationResponse>> GetUserNotificationsAsync(
         string userId, NotificationListQuery query, CancellationToken ct)
     {
+        var (page, pageSize) = Application.Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var baseQuery = _context.Notifications
             .Where(n => n.UserId == userId && !n.IsDeleted)
             .OrderByDescending(n => n.CreatedAt);
@@ -37,8 +39,8 @@ public class NotificationService : INotificationService
         var totalCount = await baseQuery.CountAsync(ct);
 
         var items = await baseQuery
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(n => new NotificationResponse(
                 n.Id,
                 n.Type,
@@ -49,7 +51,7 @@ public class NotificationService : INotificationService
                 n.CreatedAt))
             .ToListAsync(ct);
 
-        return new PaginatedResult<NotificationResponse>(items, totalCount, query.Page, query.PageSize);
+        return new PaginatedResult<NotificationResponse>(items, totalCount, page, pageSize);
     }
 
     public async Task<int> GetUnreadCountAsync(string userId, CancellationToken ct)

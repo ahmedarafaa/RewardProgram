@@ -40,12 +40,14 @@ public class AdminRedemptionService : IAdminRedemptionService
         if (query.ToDate.HasValue)
             baseQuery = baseQuery.Where(r => r.CreatedAt <= query.ToDate.Value);
 
+        var (page, pageSize) = Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
+
         var totalCount = await baseQuery.CountAsync(ct);
 
         var items = await baseQuery
             .OrderByDescending(r => r.CreatedAt)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(r => new AdminRedemptionListItemResponse(
                 r.Id,
                 r.User.Name,
@@ -57,7 +59,7 @@ public class AdminRedemptionService : IAdminRedemptionService
                 r.CreatedAt))
             .ToListAsync(ct);
 
-        return Result.Success(new PaginatedResult<AdminRedemptionListItemResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(new PaginatedResult<AdminRedemptionListItemResponse>(items, totalCount, page, pageSize));
     }
 
     public async Task<Result<AdminRedemptionResponse>> GetByIdAsync(string id, CancellationToken ct = default)

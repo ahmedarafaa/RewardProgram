@@ -650,11 +650,15 @@ public class AuthService : IAuthService
         return Result.Success(authResponse);
     }
 
-    public async Task<Result> RevokeTokenAsync(string refreshToken, CancellationToken ct = default)
+    public async Task<Result> RevokeTokenAsync(string refreshToken, string currentUserId, CancellationToken ct = default)
     {
         var user = await _userRepository.FindByRefreshTokenAsync(refreshToken, ct);
 
         if (user == null)
+            return Result.Failure(AuthErrors.InvalidRefreshToken);
+
+        // Ownership check: only allow revoking your own tokens
+        if (user.Id != currentUserId)
             return Result.Failure(AuthErrors.InvalidRefreshToken);
 
         var token = user.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);

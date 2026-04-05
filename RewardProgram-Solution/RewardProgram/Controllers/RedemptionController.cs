@@ -10,7 +10,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/redemption")]
-[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
+[Authorize(Roles = $"{UserRoles.ShopOwner},{UserRoles.Seller},{UserRoles.Technician}")]
 public class RedemptionController : ControllerBase
 {
     private readonly IRedemptionService _redemptionService;

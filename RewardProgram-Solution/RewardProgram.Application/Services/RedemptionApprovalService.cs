@@ -43,6 +43,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     public async Task<Result<PaginatedResult<PendingRedemptionResponse>>> GetPendingAsync(
         string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
+        (page, pageSize) = Helpers.PaginationHelper.Normalize(page, pageSize, maxPageSize: 50);
+
         var approver = await _userRepository.FindByIdAsync(approverId, ct);
         if (approver is null)
             return Result.Failure<PaginatedResult<PendingRedemptionResponse>>(RedemptionErrors.NotAuthorizedToApprove);
@@ -269,9 +271,17 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             return Result.Failure(RedemptionErrors.OtpExpired);
         }
 
-        // Check brute-force limit
+        // Check brute-force limit — auto-cancel and refund on lockout
         if (redemptionRequest.CashOtpAttempts >= MaxOtpAttempts)
+        {
+            await using var lockoutTx = await _context.BeginTransactionAsync(ct);
+            redemptionRequest.Status = RedemptionRequestStatus.Cancelled;
+            await RefundPointsAsync(redemptionRequest, ct);
+            await _context.SaveChangesAsync(ct);
+            await lockoutTx.CommitAsync(ct);
+
             return Result.Failure(RedemptionErrors.OtpMaxAttemptsExceeded);
+        }
 
         // Validate OTP (hash comparison)
         if (redemptionRequest.CashOtpHash != HashOtp(request.Otp))

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Contracts.Auth;
@@ -156,7 +157,8 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenRequest request, CancellationToken ct)
     {
-        var result = await _authService.RevokeTokenAsync(request.RefreshToken, ct);
+        var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier)!;
+        var result = await _authService.RevokeTokenAsync(request.RefreshToken, userId, ct);
 
         return result.IsSuccess
             ? Ok(new { message = "تم تسجيل الخروج بنجاح" })

@@ -738,9 +738,10 @@ public class AdminUserService : IAdminUserService
             {
                 var removedCityIds = removedCities.Select(c => c.Id).ToList();
 
-                // Find cities that have another SalesMan assigned (set by a previous admin action)
-                // After clearing above, removedCities.ApprovalSalesManId is null, so query DB for any other assignment
+                // Query replacement SalesMan BEFORE clearing (EF tracks the in-memory null already)
+                // Use AsNoTracking on a fresh query to get the actual DB state
                 var cityReplacements = await _context.Cities
+                    .AsNoTracking()
                     .Where(c => removedCityIds.Contains(c.Id) && c.ApprovalSalesManId != null && c.ApprovalSalesManId != userId)
                     .ToDictionaryAsync(c => c.Id, c => c.ApprovalSalesManId, ct);
 

@@ -34,7 +34,9 @@ public class ShopOwnerProfileConfiguration : IEntityTypeConfiguration<ShopOwnerP
 
         // Indexes
         builder.HasIndex(x => x.UserId).IsUnique();
-        builder.HasIndex(x => x.CustomerCode);
+        builder.HasIndex(x => x.CustomerCode)
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

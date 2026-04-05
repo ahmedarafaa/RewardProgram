@@ -10,7 +10,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/wallet")]
-[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
+[Authorize(Roles = $"{UserRoles.ShopOwner},{UserRoles.Seller},{UserRoles.Technician}")]
 public class WalletController : ControllerBase
 {
     private readonly IWalletService _walletService;
