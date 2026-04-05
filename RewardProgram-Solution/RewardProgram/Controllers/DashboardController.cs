@@ -9,7 +9,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = $"{UserRoles.ShopOwner},{UserRoles.Seller},{UserRoles.Technician}")]
+[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

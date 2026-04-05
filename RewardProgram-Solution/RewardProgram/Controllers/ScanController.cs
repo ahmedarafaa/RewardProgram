@@ -10,7 +10,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/scan")]
-[Authorize(Roles = $"{UserRoles.ShopOwner},{UserRoles.Seller},{UserRoles.Technician}")]
+[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
 public class ScanController : ControllerBase
 {
     private readonly IScanService _scanService;
