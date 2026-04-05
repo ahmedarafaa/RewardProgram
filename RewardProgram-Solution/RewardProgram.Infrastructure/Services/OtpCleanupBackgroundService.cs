@@ -31,6 +31,10 @@ public class OtpCleanupBackgroundService : BackgroundService
             {
                 await CleanupExpiredOtpCodesAsync(stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error cleaning up expired OTP codes");

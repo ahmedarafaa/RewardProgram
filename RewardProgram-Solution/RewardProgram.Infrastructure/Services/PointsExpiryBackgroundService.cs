@@ -32,6 +32,10 @@ public class PointsExpiryBackgroundService : BackgroundService
             {
                 await ProcessExpiredPointsAsync(stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing expired points");
@@ -68,11 +72,16 @@ public class PointsExpiryBackgroundService : BackgroundService
         foreach (var group in walletGroups)
         {
             var wallet = group.First().Wallet;
-            decimal totalExpired = 0;
+            decimal totalExpiredPoints = 0;
+            decimal totalExpiredSar = 0;
 
             foreach (var tx in group)
             {
-                totalExpired += tx.RemainingAmount;
+                totalExpiredPoints += tx.RemainingAmount;
+
+                // Calculate SAR per-transaction using its own rate (guard against zero)
+                var txSarAmount = tx.SarRate > 0 ? tx.RemainingAmount / tx.SarRate : 0;
+                totalExpiredSar += txSarAmount;
 
                 await context.WalletTransactions.AddAsync(new WalletTransaction
                 {
@@ -80,19 +89,19 @@ public class PointsExpiryBackgroundService : BackgroundService
                     Amount = -tx.RemainingAmount,
                     Type = WalletTransactionType.Expired,
                     ReferenceId = tx.Id,
-                    Description = "نقاط منتهية الصلاحية",
+                    Description = "نقاط منتهية ا��صلاحية",
                     SarRate = tx.SarRate,
-                    SarAmount = -(tx.RemainingAmount / tx.SarRate)
+                    SarAmount = -txSarAmount
                 }, ct);
 
                 tx.RemainingAmount = 0;
             }
 
-            wallet.Balance -= totalExpired;
-            wallet.SarBalance -= totalExpired / group.First().SarRate;
+            wallet.Balance -= totalExpiredPoints;
+            wallet.SarBalance -= totalExpiredSar;
 
             _logger.LogInformation("Expired {Points} points for wallet {WalletId} (user {UserId})",
-                totalExpired, wallet.Id, wallet.UserId);
+                totalExpiredPoints, wallet.Id, wallet.UserId);
         }
 
         await context.SaveChangesAsync(ct);

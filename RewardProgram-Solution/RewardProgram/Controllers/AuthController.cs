@@ -137,7 +137,7 @@ public class AuthController : ControllerBase
 
     #region Token Management
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpPost("refresh-token")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

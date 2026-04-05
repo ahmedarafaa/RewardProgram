@@ -8,6 +8,9 @@ public class Wallet : TrackableEntity
     public decimal HeldBalance { get; set; }
     public decimal HeldSarBalance { get; set; }
 
+    // Concurrency control
+    public byte[] RowVersion { get; set; } = [];
+
     // Navigation
     public Users.ApplicationUser User { get; set; } = null!;
     public List<WalletTransaction> Transactions { get; set; } = [];

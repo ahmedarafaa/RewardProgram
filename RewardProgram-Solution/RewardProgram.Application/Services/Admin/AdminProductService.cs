@@ -54,7 +54,8 @@ public class AdminProductService : IAdminProductService
     public async Task<Result<AdminProductResponse>> EditProductAsync(
         string productId, AdminEditProductRequest request, string adminUserId, CancellationToken ct = default)
     {
-        var product = await _context.Products.FindAsync([productId], ct);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
         if (product is null)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductNotFound);
 
@@ -81,7 +82,8 @@ public class AdminProductService : IAdminProductService
     public async Task<Result> DeleteProductAsync(
         string productId, string adminUserId, CancellationToken ct = default)
     {
-        var product = await _context.Products.FindAsync([productId], ct);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
         if (product is null)
             return Result.Failure(ProductErrors.ProductNotFound);
 
@@ -149,7 +151,8 @@ public class AdminProductService : IAdminProductService
     public async Task<Result<AdminProductResponse>> GetProductAsync(
         string productId, CancellationToken ct = default)
     {
-        var product = await _context.Products.FindAsync([productId], ct);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
         if (product is null)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductNotFound);
 

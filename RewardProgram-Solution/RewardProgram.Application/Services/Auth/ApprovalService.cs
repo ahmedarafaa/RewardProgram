@@ -204,6 +204,8 @@ public class ApprovalService : IApprovalService
 
     public async Task<Result> ApproveAsync(string userId, string approverId, CancellationToken ct = default)
     {
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
         var user = await _userRepository.Query()
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
@@ -238,6 +240,7 @@ public class ApprovalService : IApprovalService
 
             await _userRepository.UpdateAsync(user);
             await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
+            await transaction.CommitAsync(ct);
 
             _logger.LogInformation(
                 "SalesMan {ApproverId} approved user {UserId}. Status: PendingSalesman → PendingZoneManager",
@@ -264,6 +267,7 @@ public class ApprovalService : IApprovalService
 
             await _userRepository.UpdateAsync(user);
             await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
+            await transaction.CommitAsync(ct);
 
             _logger.LogInformation(
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
@@ -304,6 +308,8 @@ public class ApprovalService : IApprovalService
 
     public async Task<Result> RejectAsync(string userId, string reason, string approverId, CancellationToken ct = default)
     {
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
         var user = await _userRepository.Query()
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
@@ -350,6 +356,7 @@ public class ApprovalService : IApprovalService
 
         await _userRepository.UpdateAsync(user);
         await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Rejected, fromStatus, RegistrationStatus.Rejected, reason, ct);
+        await transaction.CommitAsync(ct);
 
         _logger.LogInformation(
             "Approver {ApproverId} rejected user {UserId}. Status: {FromStatus} → Rejected. Reason: {Reason}",

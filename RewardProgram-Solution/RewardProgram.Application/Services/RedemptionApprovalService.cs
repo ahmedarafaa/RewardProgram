@@ -119,6 +119,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     public async Task<Result> ApproveAsync(
         ApproveRedemptionRequest request, string approverId, CancellationToken ct = default)
     {
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
         var redemptionRequest = await _context.RedemptionRequests
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == request.RedemptionRequestId, ct);
@@ -126,12 +128,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         if (redemptionRequest is null)
             return Result.Failure(RedemptionErrors.RequestNotFound);
 
-        // Validate approver authorization for current status
+        // Validate approver authorization for current status (inside transaction)
         var validationResult = await ValidateApproverAsync(redemptionRequest, approverId, ct);
         if (validationResult.IsFailure)
             return validationResult;
-
-        await using var transaction = await _context.BeginTransactionAsync(ct);
 
         var fromStatus = redemptionRequest.Status;
         var toStatus = GetNextApprovalStatus(fromStatus);
@@ -198,6 +198,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     public async Task<Result> RejectAsync(
         RejectRedemptionRequest request, string approverId, CancellationToken ct = default)
     {
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
         var redemptionRequest = await _context.RedemptionRequests
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == request.RedemptionRequestId, ct);
@@ -208,8 +210,6 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         var validationResult = await ValidateApproverAsync(redemptionRequest, approverId, ct);
         if (validationResult.IsFailure)
             return validationResult;
-
-        await using var transaction = await _context.BeginTransactionAsync(ct);
 
         var fromStatus = redemptionRequest.Status;
 

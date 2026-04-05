@@ -35,7 +35,8 @@ public class AdminBarcodeService : IAdminBarcodeService
     public async Task<Result<AdminGenerateBarcodesResponse>> GenerateBarcodesAsync(
         AdminGenerateBarcodesRequest request, string adminUserId, CancellationToken ct = default)
     {
-        var product = await _context.Products.FindAsync([request.ProductId], ct);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == request.ProductId, ct);
         if (product is null)
             return Result.Failure<AdminGenerateBarcodesResponse>(ProductErrors.ProductNotFound);
 

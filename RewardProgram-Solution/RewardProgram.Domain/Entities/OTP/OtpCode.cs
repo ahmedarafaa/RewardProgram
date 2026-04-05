@@ -8,7 +8,7 @@ namespace RewardProgram.Domain.Entities.OTP;
 public class OtpCode
 { 
     // Default OTP validity period in minutes.   
-    public const int DefaultExpirationMinutes = 5;
+    public const int DefaultExpirationMinutes = 3;
 
     // Rate limit window in minutes for OTP requests per mobile number.
     

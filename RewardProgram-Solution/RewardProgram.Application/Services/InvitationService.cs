@@ -98,6 +98,18 @@ public class InvitationService : IInvitationService
 
         try
         {
+            // Idempotency guard: check if rewards were already credited for this pair
+            var alreadyCredited = await _context.WalletTransactions
+                .AnyAsync(t => t.Type == WalletTransactionType.InvitationReward
+                    && t.ReferenceId == inviter.Id
+                    && t.Wallet.UserId == invitee.Id, ct);
+
+            if (alreadyCredited)
+            {
+                _logger.LogInformation("Invitation rewards already credited for invitee {InviteeId}, skipping", invitedUserId);
+                return;
+            }
+
             // Always credit invitee
             if (inviteePoints > 0)
             {
@@ -128,9 +140,11 @@ public class InvitationService : IInvitationService
             var inviterRewarded = false;
             if (inviterPoints > 0)
             {
+                // Count only inviter rewards (where ReferenceId is an invitee's userId, not the inviter's own invitee reward)
                 inviterRewardCount = await _context.WalletTransactions
                     .CountAsync(t => t.Wallet.UserId == inviter.Id
-                        && t.Type == WalletTransactionType.InvitationReward, ct);
+                        && t.Type == WalletTransactionType.InvitationReward
+                        && t.ReferenceId != inviter.Id, ct);
 
                 if (inviterRewardCount < MaxRewardedInvitations)
                 {
