@@ -115,7 +115,7 @@ public class NotificationService : INotificationService
     {
         var user = await _userRepository.FindByIdAsync(targetUserId, ct);
         if (user is null)
-            return Result.Failure(NotificationErrors.NotificationNotFound);
+            return Result.Failure(NotificationErrors.UserNotFound);
 
         await CreateAsync(targetUserId, NotificationType.AdminMessage, title, body, ct: ct);
 

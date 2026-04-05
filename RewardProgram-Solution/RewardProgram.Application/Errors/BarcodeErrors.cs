@@ -14,7 +14,7 @@ public static class BarcodeErrors
         new("Barcode.Consumed", "الباركود مستهلك بالكامل", 400);
 
     public static readonly Error InvalidQuantity =
-        new("Barcode.InvalidQuantity", "الكمية يجب أن تكون بين 1 و 10000", 400);
+        new("Barcode.InvalidQuantity", "الكمية يجب أن تكون بين 1 و 1000", 400);
 
     public static readonly Error ConcurrencyConflict =
         new("Barcode.ConcurrencyConflict", "حدث تعارض أثناء المعالجة، يرجى المحاولة مرة أخرى", 409);

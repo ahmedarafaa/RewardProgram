@@ -243,7 +243,7 @@ public class TwilioService : ITwilioService
         if (mobileNumber.StartsWith("+966"))
             return mobileNumber;
 
-        return mobileNumber;
+        throw new ArgumentException($"Unrecognized mobile number format: {mobileNumber[..Math.Min(4, mobileNumber.Length)]}***");
     }
 
     #endregion

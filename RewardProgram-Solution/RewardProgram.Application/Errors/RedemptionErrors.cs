@@ -8,7 +8,7 @@ public static class RedemptionErrors
         new("Redemption.InsufficientBalance", "الرصيد المتاح غير كافٍ للاسترداد", 400);
 
     public static readonly Error BelowMinimum =
-        new("Redemption.BelowMinimum", "الحد الأدنى للاسترداد 1000 نقطة", 400);
+        new("Redemption.BelowMinimum", "المبلغ المطلوب أقل من الحد الأدنى للاسترداد", 400);
 
     public static readonly Error NotIntegerSar =
         new("Redemption.NotIntegerSar", "مبلغ الريال يجب أن يكون عدد صحيح", 400);

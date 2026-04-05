@@ -68,11 +68,11 @@ public static class DependencyInjection
         // Configure Twilio Options
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
 
-        // Configure Verification Token Options (reuses JWT key for HMAC signing)
+        // Configure Verification Token Options (derived from JWT key to avoid key reuse)
         var jwtKey = configuration.GetSection(JwtOptions.SectionName)["Key"]!;
         services.Configure<VerificationTokenOptions>(o =>
         {
-            o.HmacKey = jwtKey;
+            o.HmacKey = $"VerificationToken:{jwtKey}";
             o.ExpiryMinutes = 10;
         });
 
