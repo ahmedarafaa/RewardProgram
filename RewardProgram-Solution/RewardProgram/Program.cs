@@ -23,19 +23,21 @@ namespace RewardProgram
                        
             var app = builder.Build();
 
-            // Auto-migrate in Development & Staging
-            if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+            var isNonProd = app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Environment.IsEnvironment("UAT");
+
+            // Auto-migrate in Development, Staging & UAT
+            if (isNonProd)
             {
                 using var migrationScope = app.Services.CreateScope();
                 var db = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 await db.Database.MigrateAsync();
 
-                // Seed data (roles, users, regions, cities)
+                // Seed data (roles, users, regions, cities, products, ERP customers)
                 await DataSeeder.SeedAsync(app.Services);
             }
 
-            // Swagger in Development & Staging
-            if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+            // Swagger in Development, Staging & UAT
+            if (isNonProd)
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(options =>

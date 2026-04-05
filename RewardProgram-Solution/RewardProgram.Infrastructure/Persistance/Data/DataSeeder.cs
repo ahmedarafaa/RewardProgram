@@ -25,17 +25,17 @@ public static class DataSeeder
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
         var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
-        var isDev = env.IsDevelopment();
+        var isUat = env.IsEnvironment("UAT");
 
         await SeedRolesAsync(roleManager, logger);
-        var users = await SeedUsersAsync(userManager, logger, isDev);
+        var users = await SeedUsersAsync(userManager, logger, isUat);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
 
-        // Demo analytics data only in Development
-        if (isDev)
+        // Demo analytics data in Development & Staging (not UAT/Production)
+        if (!isUat)
         {
             try
             {
@@ -81,7 +81,7 @@ public static class DataSeeder
     #region Users
 
     private static async Task<Dictionary<string, ApplicationUser>> SeedUsersAsync(
-        UserManager<ApplicationUser> userManager, ILogger logger, bool isDev)
+        UserManager<ApplicationUser> userManager, ILogger logger, bool isUat)
     {
         var users = new Dictionary<string, ApplicationUser>();
         _mobileCounter = 1;
@@ -92,10 +92,10 @@ public static class DataSeeder
             userType: UserType.SystemAdmin,
             roles: [UserRoles.SystemAdmin],
             usernameOverride: "admin",
-            password: "R@ed$Admin#2026!");
+            password: "Raed@2026");
 
-        // Dev-only test admin
-        if (isDev)
+        // Dev/Staging test admin (not UAT)
+        if (!isUat)
         {
             await CreateUser(userManager, users, logger,
                 name: "مدير النظام - تست",
