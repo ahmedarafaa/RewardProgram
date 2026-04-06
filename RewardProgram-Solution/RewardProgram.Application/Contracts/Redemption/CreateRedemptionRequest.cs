@@ -6,6 +6,8 @@ public record CreateRedemptionRequest(
     RedemptionMethod Method,
     decimal PointsAmount,
     string? Iban,
-    string? BankName,
-    string? AccountHolderName
+    string? AccountNumber,
+    string? Address,
+    string? SwiftCode,
+    string? AccountName
 );

@@ -122,7 +122,7 @@ public class RedemptionServiceTests : IDisposable
         _userRepo.FindByIdAsync("bad", Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), "bad");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), "bad");
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.UserNotApproved);
@@ -135,7 +135,7 @@ public class RedemptionServiceTests : IDisposable
         user.IsDisabled = true;
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), user.Id);
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), user.Id);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.UserNotApproved);
@@ -147,7 +147,7 @@ public class RedemptionServiceTests : IDisposable
         CreateApprovedUser();
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 999, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 999, null, null, null, null, null), "user-1");
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.BelowMinimum);
@@ -174,7 +174,7 @@ public class RedemptionServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), "user-1");
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.AlreadyHasPendingRequest);
@@ -188,7 +188,7 @@ public class RedemptionServiceTests : IDisposable
         await SeedRewardSettings(sarRate: 3m); // 1005 / 3 = 335.0 OK, but 1001/3 = 333.67 not integer
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1001, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1001, null, null, null, null, null), "user-1");
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.NotIntegerSar);
@@ -202,7 +202,7 @@ public class RedemptionServiceTests : IDisposable
         await SeedRewardSettings();
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), "user-1");
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RedemptionErrors.InsufficientBalance);
@@ -219,7 +219,7 @@ public class RedemptionServiceTests : IDisposable
         await SeedCity();
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, "SA1234", "Bank", "Holder"), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, "SA1234", "1234567891234", "الرياض", "RJHISARI", "Holder"), "user-1");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.PointsAmount.Should().Be(1000);
@@ -242,7 +242,7 @@ public class RedemptionServiceTests : IDisposable
         await SeedCity(salesManId: "sm-1");
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), "user-1");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be(RedemptionRequestStatus.PendingSalesMan);
@@ -257,7 +257,7 @@ public class RedemptionServiceTests : IDisposable
         await SeedCity(salesManId: null);
 
         var result = await _sut.CreateRequestAsync(
-            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null), "user-1");
+            new CreateRedemptionRequest(RedemptionMethod.BankTransfer, 1000, null, null, null, null, null), "user-1");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be(RedemptionRequestStatus.PendingZoneManager);

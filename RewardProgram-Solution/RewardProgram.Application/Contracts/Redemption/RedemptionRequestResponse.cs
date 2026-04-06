@@ -10,8 +10,10 @@ public record RedemptionRequestResponse(
     decimal SarRate,
     decimal SarAmount,
     string? Iban,
-    string? BankName,
-    string? AccountHolderName,
+    string? AccountNumber,
+    string? Address,
+    string? SwiftCode,
+    string? AccountName,
     DateTime? CashOtpExpiresAt,
     string? RejectionReason,
     DateTime CreatedAt

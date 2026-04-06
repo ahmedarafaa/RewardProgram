@@ -38,10 +38,16 @@ public class RedemptionRequestConfiguration : IEntityTypeConfiguration<Redemptio
         builder.Property(x => x.Iban)
             .HasMaxLength(34);
 
-        builder.Property(x => x.BankName)
+        builder.Property(x => x.AccountNumber)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.Address)
             .HasMaxLength(200);
 
-        builder.Property(x => x.AccountHolderName)
+        builder.Property(x => x.SwiftCode)
+            .HasMaxLength(11);
+
+        builder.Property(x => x.AccountName)
             .HasMaxLength(200);
 
         // Cash handover fields

@@ -11,7 +11,9 @@ public record PendingRedemptionResponse(
     decimal PointsAmount,
     decimal SarAmount,
     string? Iban,
-    string? BankName,
-    string? AccountHolderName,
+    string? AccountNumber,
+    string? Address,
+    string? SwiftCode,
+    string? AccountName,
     DateTime CreatedAt
 );

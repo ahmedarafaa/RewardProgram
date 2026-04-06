@@ -101,8 +101,10 @@ public class RedemptionService : IRedemptionService
             SarRate = sarRate,
             SarAmount = sarAmount,
             Iban = request.Iban,
-            BankName = request.BankName,
-            AccountHolderName = request.AccountHolderName
+            AccountNumber = request.AccountNumber,
+            Address = request.Address,
+            SwiftCode = request.SwiftCode,
+            AccountName = request.AccountName
         };
 
         wallet.HeldBalance += request.PointsAmount;
@@ -258,8 +260,10 @@ public class RedemptionService : IRedemptionService
         r.SarRate,
         r.SarAmount,
         r.Iban,
-        r.BankName,
-        r.AccountHolderName,
+        r.AccountNumber,
+        r.Address,
+        r.SwiftCode,
+        r.AccountName,
         r.CashOtpExpiresAt,
         r.RejectionReason,
         r.CreatedAt

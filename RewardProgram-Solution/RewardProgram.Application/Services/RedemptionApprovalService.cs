@@ -110,8 +110,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
                 r.PointsAmount,
                 r.SarAmount,
                 r.Iban,
-                r.BankName,
-                r.AccountHolderName,
+                r.AccountNumber,
+                r.Address,
+                r.SwiftCode,
+                r.AccountName,
                 r.CreatedAt))
             .ToListAsync(ct);
 

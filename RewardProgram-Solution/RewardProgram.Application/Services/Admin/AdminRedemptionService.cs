@@ -86,8 +86,10 @@ public class AdminRedemptionService : IAdminRedemptionService
             request.SarRate,
             request.SarAmount,
             request.Iban,
-            request.BankName,
-            request.AccountHolderName,
+            request.AccountNumber,
+            request.Address,
+            request.SwiftCode,
+            request.AccountName,
             request.CashOtpExpiresAt,
             request.CashHandoverBy is not null
                 ? request.CashHandoverBy.Name

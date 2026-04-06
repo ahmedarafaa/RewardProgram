@@ -1121,8 +1121,10 @@ public static class DataSeeder
                 SarRate = sarRate,
                 SarAmount = 100m,
                 Iban = "SA4420000001234567891234",
-                BankName = "الراجحي",
-                AccountHolderName = topSeller.Key,
+                AccountNumber = "1234567891234",
+                Address = "الرياض",
+                SwiftCode = "RJHISARI",
+                AccountName = topSeller.Key,
                 CreatedBy = "DataSeeder"
             };
             context.RedemptionRequests.Add(completedRedemption);

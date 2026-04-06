@@ -57,7 +57,7 @@ public class WalletServiceTests : IDisposable
         _context.Wallets.Add(wallet);
         await _context.SaveChangesAsync();
 
-        var query = new WalletTransactionListQuery(null);
+        var query = new WalletTransactionListQuery(null, null, null);
         var result = await _sut.GetTransactionsAsync("user-1", query);
 
         result.IsSuccess.Should().BeTrue();
@@ -86,7 +86,7 @@ public class WalletServiceTests : IDisposable
         }
         await _context.SaveChangesAsync();
 
-        var query = new WalletTransactionListQuery(null, Page: 1, PageSize: 3);
+        var query = new WalletTransactionListQuery(null, null, null, Page: 1, PageSize: 3);
         var result = await _sut.GetTransactionsAsync("user-1", query);
 
         result.IsSuccess.Should().BeTrue();
@@ -115,7 +115,7 @@ public class WalletServiceTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        var query = new WalletTransactionListQuery(WalletTransactionType.Earned);
+        var query = new WalletTransactionListQuery(WalletTransactionType.Earned, null, null);
         var result = await _sut.GetTransactionsAsync("user-1", query);
 
         result.IsSuccess.Should().BeTrue();

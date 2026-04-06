@@ -14,8 +14,10 @@ public class RedemptionRequest : TrackableEntity
 
     // Bank transfer fields
     public string? Iban { get; set; }
-    public string? BankName { get; set; }
-    public string? AccountHolderName { get; set; }
+    public string? AccountNumber { get; set; }
+    public string? Address { get; set; }
+    public string? SwiftCode { get; set; }
+    public string? AccountName { get; set; }
 
     // Cash handover fields
     public string? CashOtpHash { get; set; }
