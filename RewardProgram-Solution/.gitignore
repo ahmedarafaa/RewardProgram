@@ -57,6 +57,7 @@ nunit-*.xml
 appsettings.Production.json
 appsettings.Staging.json
 appsettings.UAT.json
+web.config
 
 # Temp files
 *~

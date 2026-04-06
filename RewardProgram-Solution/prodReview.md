@@ -98,10 +98,8 @@
 - Hardcoded `1000` ignores admin-configurable `MinimumRedemptionPoints`.
 - **Fix:** Read from `RewardSettings` dynamically.
 
-### H6. ShopOwner excluded from redemption
-- **File:** `RedemptionController.cs:13`
-- Only `Seller` and `Technician` allowed. ShopOwners who earn points cannot redeem.
-- **Fix:** Confirm business rules; add `ShopOwner` if they should redeem.
+### ~~H6. ShopOwner excluded from redemption~~ — NOT AN ISSUE
+- ShopOwners don't scan, earn points, or redeem. Correct as-is.
 
 ### H7. ExpireOldPointsAsync called outside transaction in GetAvailableBalance
 - **File:** `RedemptionService.cs:167`
@@ -118,10 +116,8 @@
 - After 5 failed OTP attempts, cash request is stuck forever — no regeneration or cancellation.
 - **Fix:** Add admin endpoint for OTP regeneration or auto-cancel on lockout.
 
-### H10. ShopOwner cannot see wallet/scan endpoints
-- **File:** `WalletController.cs:13`, `ScanController.cs:13`
-- Only `Seller` and `Technician`. Dashboard includes `ShopOwner` but wallet/scan do not.
-- **Fix:** Align role access across controllers.
+### ~~H10. ShopOwner cannot see wallet/scan endpoints~~ — NOT AN ISSUE
+- ShopOwners don't earn points. Correct as-is. Dashboard also updated to exclude ShopOwner.
 
 ### H11. ScanRecord.Id used as ReferenceId before SaveChanges
 - **File:** `ScanService.cs:149,169`
