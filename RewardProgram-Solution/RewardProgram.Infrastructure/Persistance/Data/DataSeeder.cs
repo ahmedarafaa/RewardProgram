@@ -852,6 +852,23 @@ public static class DataSeeder
             await userManager.UpdateAsync(user);
         }
 
+        // Ahmed Kamal test seller (Staging only)
+        await CreateUser(userManager, createdUsers, logger, "احمد كمال", UserType.Seller, [UserRoles.Seller], mobileOverride: "+201008928356");
+        if (createdUsers.TryGetValue("احمد كمال", out var ahmedSeller))
+        {
+            ahmedSeller.AssignedSalesManId = smRiyadh1.Id;
+            ahmedSeller.NationalAddress = new NationalAddress
+            {
+                CityId = riyadhCity.Id,
+                Street = "شارع التحلية",
+                BuildingNumber = 1234,
+                PostalCode = "12345",
+                SubNumber = 1000,
+                District = "العليا"
+            };
+            await userManager.UpdateAsync(ahmedSeller);
+        }
+
         // Set invitation link: seller1 invited seller2
         var seller1 = createdUsers["بائع الرياض"];
         var seller2 = createdUsers["بائع الرياض ٢"];
@@ -877,6 +894,10 @@ public static class DataSeeder
                 context.TechnicianProfiles.Add(new TechnicianProfile { UserId = user.Id, CreatedBy = "DataSeeder" });
         }
 
+        // Ahmed Kamal profile
+        if (createdUsers.TryGetValue("احمد كمال", out var ahmedUser) && !existingSellerIds.Contains(ahmedUser.Id))
+            context.SellerProfiles.Add(new SellerProfile { UserId = ahmedUser.Id, CustomerCode = erpCodes[8], CreatedBy = "DataSeeder" });
+
         await context.SaveChangesAsync();
 
         // --- 2. Create ShopData (skip existing) ---
@@ -888,6 +909,7 @@ public static class DataSeeder
             (erpCodes[3], "محل الرائد - الدمام", "300000000000043", "1000000003", "SEED0003", dammamCity.Id, createdUsers["بائع الدمام"].Id),
             (erpCodes[6], "محل صاحب المحل - الرياض", "300000000000063", "1000000004", "SEED0004", riyadhCity.Id, createdUsers["صاحب محل الرياض"].Id),
             (erpCodes[7], "محل صاحب المحل - جدة", "300000000000083", "1000000005", "SEED0005", jeddahCity.Id, createdUsers["صاحب محل جدة"].Id),
+            (erpCodes[8], "محل احمد كمال", "300000000000103", "1000000006", "SEED0006", riyadhCity.Id, createdUsers["احمد كمال"].Id),
         };
 
         foreach (var (custCode, storeName, vat, crn, shortAddr, cityId, enteredBy) in shopDataEntries)
