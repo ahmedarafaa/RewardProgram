@@ -950,6 +950,18 @@
                 {
                   "key": "pageSize",
                   "value": "20"
+                },
+                {
+                  "key": "fromDate",
+                  "value": "2026-01-01",
+                  "disabled": true,
+                  "description": "From date (ISO 8601, inclusive)"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2026-12-31",
+                  "disabled": true,
+                  "description": "To date (ISO 8601, inclusive)"
                 }
               ]
             },
@@ -1012,6 +1024,18 @@
                 {
                   "key": "pageSize",
                   "value": "20"
+                },
+                {
+                  "key": "fromDate",
+                  "value": "2026-01-01",
+                  "disabled": true,
+                  "description": "From date (ISO 8601, inclusive)"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2026-12-31",
+                  "disabled": true,
+                  "description": "To date (ISO 8601, inclusive)"
                 }
               ]
             },
@@ -1262,7 +1286,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"\",\n  \"bankName\": \"\",\n  \"accountHolderName\": \"\"\n}",
+              "raw": "{\n  \"method\": 1,\n  \"pointsAmount\": 1000,\n  \"iban\": \"SA4420000001234567891234\",\n  \"accountNumber\": \"1234567891234\",\n  \"address\": \"\",\n  \"swiftCode\": \"RJHISARI\",\n  \"accountName\": \"Test User\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1471,6 +1495,107 @@
             "description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method redemptions in PendingCashHandover status.\nThe OTP is sent to the requesting user's WhatsApp.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get current user profile (name, mobile, wallet balance, address, photo URL)"
+          }
+        },
+        {
+          "name": "Update Profile Photo",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/photo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "photo"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "",
+                  "description": "Profile image (JPG/PNG, max 5MB)"
+                }
+              ]
+            },
+            "description": "Upload or replace profile photo. Allowed: .jpg, .jpeg, .png. Max size: 5MB."
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Soft-delete account (disables user, revokes all tokens). Blocked if user has pending redemption requests."
+          }
         }
       ]
     },
