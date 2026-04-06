@@ -47,6 +47,12 @@ public class WalletService : IWalletService
         if (query.Type.HasValue)
             dbQuery = dbQuery.Where(t => t.Type == query.Type.Value);
 
+        if (query.FromDate.HasValue)
+            dbQuery = dbQuery.Where(t => t.CreatedAt >= query.FromDate.Value.Date);
+
+        if (query.ToDate.HasValue)
+            dbQuery = dbQuery.Where(t => t.CreatedAt < query.ToDate.Value.Date.AddDays(1));
+
         var totalCount = await dbQuery.CountAsync(ct);
 
         var items = await dbQuery
