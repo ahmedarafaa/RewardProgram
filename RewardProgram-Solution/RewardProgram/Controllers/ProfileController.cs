@@ -40,4 +40,16 @@ public class ProfileController : ControllerBase
             ? Ok(new { profileImageUrl = result.Value })
             : result.ToProblem();
     }
+
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteAccount(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _profileService.DeleteAccountAsync(userId, ct);
+        return result.IsSuccess
+            ? Ok(new { message = "تم حذف الحساب بنجاح" })
+            : result.ToProblem();
+    }
 }

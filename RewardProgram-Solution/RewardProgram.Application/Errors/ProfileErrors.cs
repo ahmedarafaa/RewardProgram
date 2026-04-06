@@ -9,4 +9,7 @@ public static class ProfileErrors
 
     public static readonly Error ImageTooLarge =
         new("Profile.ImageTooLarge", "حجم الصورة يتجاوز الحد المسموح (5 ميجابايت)", 400);
+
+    public static readonly Error HasPendingRedemptions =
+        new("Profile.HasPendingRedemptions", "لا يمكن حذف الحساب أثناء وجود طلبات استبدال معلقة", 400);
 }

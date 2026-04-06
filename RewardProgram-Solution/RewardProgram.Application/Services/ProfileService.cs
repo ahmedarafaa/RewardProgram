@@ -101,4 +101,34 @@ public class ProfileService : IProfileService
 
         return Result.Success(uploadResult.Value);
     }
+
+    public async Task<Result> DeleteAccountAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user is null)
+            return Result.Failure(AuthErrors.UserNotFound);
+
+        // Check for pending redemption requests
+        var hasPendingRedemptions = await _context.RedemptionRequests
+            .AnyAsync(r => r.UserId == userId
+                && r.Status != Domain.Enums.RedemptionRequestStatus.Completed
+                && r.Status != Domain.Enums.RedemptionRequestStatus.Rejected
+                && r.Status != Domain.Enums.RedemptionRequestStatus.Cancelled, ct);
+
+        if (hasPendingRedemptions)
+            return Result.Failure(ProfileErrors.HasPendingRedemptions);
+
+        // Disable account
+        user.IsDisabled = true;
+
+        // Revoke all refresh tokens
+        foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
+            token.RevokedOn = DateTime.UtcNow;
+
+        await _userRepository.UpdateAsync(user);
+
+        _logger.LogInformation("Account deleted (disabled) for user {UserId}", userId);
+
+        return Result.Success();
+    }
 }
