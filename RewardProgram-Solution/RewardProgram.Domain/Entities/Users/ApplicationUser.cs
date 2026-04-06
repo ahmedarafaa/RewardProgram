@@ -13,6 +13,7 @@ public class ApplicationUser : IdentityUser
     }
     public string Name { get; set; } = string.Empty;
     public string MobileNumber { get; set; } = string.Empty;
+    public string? ProfileImageUrl { get; set; }
     public bool IsDisabled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public UserType UserType { get; set; }

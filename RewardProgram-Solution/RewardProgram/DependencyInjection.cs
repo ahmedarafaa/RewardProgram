@@ -99,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IProfileService, ProfileService>();
         services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
         services.AddHostedService<PointsExpiryBackgroundService>();
