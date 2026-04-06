@@ -243,6 +243,16 @@ public class TwilioService : ITwilioService
         if (mobileNumber.StartsWith("+966"))
             return mobileNumber;
 
+        // Egyptian numbers: 01XX → +20XX, 20XX → +20XX, +20XX → as-is
+        if (mobileNumber.StartsWith("01") && mobileNumber.Length == 11)
+            return $"+2{mobileNumber}";
+
+        if (mobileNumber.StartsWith("20") && !mobileNumber.StartsWith("+"))
+            return $"+{mobileNumber}";
+
+        if (mobileNumber.StartsWith("+20"))
+            return mobileNumber;
+
         throw new ArgumentException($"Unrecognized mobile number format: {mobileNumber[..Math.Min(4, mobileNumber.Length)]}***");
     }
 
