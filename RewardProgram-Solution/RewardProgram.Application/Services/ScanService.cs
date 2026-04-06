@@ -239,6 +239,12 @@ public class ScanService : IScanService
                 .ThenInclude(b => b.Product)
             .Where(s => s.UserId == userId);
 
+        if (query.FromDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt >= query.FromDate.Value.Date);
+
+        if (query.ToDate.HasValue)
+            dbQuery = dbQuery.Where(s => s.CreatedAt < query.ToDate.Value.Date.AddDays(1));
+
         var totalCount = await dbQuery.CountAsync(ct);
 
         var items = await dbQuery
