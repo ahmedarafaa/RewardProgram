@@ -32,6 +32,8 @@ public class ScanService : IScanService
         _logger = logger;
     }
 
+    private const int MaxRetries = 2;
+
     public async Task<Result<ScanBarcodeResponse>> ScanBarcodeAsync(
         ScanBarcodeRequest request, string userId, CancellationToken ct = default)
     {
@@ -54,6 +56,24 @@ public class ScanService : IScanService
         else
             return Result.Failure<ScanBarcodeResponse>(ScanErrors.UnauthorizedRole);
 
+        // Retry loop: RowVersion concurrency on ProductBarcode/Wallet may cause
+        // DbUpdateConcurrencyException on legitimate concurrent scans. Retry once.
+        for (var attempt = 0; attempt <= MaxRetries; attempt++)
+        {
+            var result = await TryScanBarcodeAsync(request, userId, scannerRole, ct);
+            if (result.IsSuccess || result.Error != BarcodeErrors.ConcurrencyConflict)
+                return result;
+
+            _logger.LogInformation("Retrying scan for barcode '{Code}' by user {UserId} (attempt {Attempt})",
+                request.BarcodeCode, userId, attempt + 2);
+        }
+
+        return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.ConcurrencyConflict);
+    }
+
+    private async Task<Result<ScanBarcodeResponse>> TryScanBarcodeAsync(
+        ScanBarcodeRequest request, string userId, ScannerRole scannerRole, CancellationToken ct)
+    {
         // 3. Find barcode
         var barcode = await _context.ProductBarcodes
             .Include(b => b.Product)

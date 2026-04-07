@@ -273,7 +273,9 @@ public class ApprovalService : IApprovalService
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
                 approverId, userId);
 
-            // Credit invitation rewards (if user was invited)
+            // Credit invitation rewards in a separate transaction (after approval is committed)
+            // This ensures approval succeeds even if reward crediting fails,
+            // while CreditInvitationRewardsAsync manages its own transaction internally.
             if (user.InvitedByUserId is not null)
             {
                 try
@@ -282,7 +284,8 @@ public class ApprovalService : IApprovalService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to credit invitation rewards for user {UserId}", user.Id);
+                    // Log as error so monitoring catches it — rewards can be manually credited later
+                    _logger.LogError(ex, "REWARD_CREDITING_FAILED: Invitation rewards not credited for approved user {UserId}. Manual intervention may be needed.", user.Id);
                 }
             }
 

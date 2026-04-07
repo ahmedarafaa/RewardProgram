@@ -285,11 +285,12 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             return Result.Failure(RedemptionErrors.OtpMaxAttemptsExceeded);
         }
 
-        // Validate OTP (hash comparison)
+        // Validate OTP — increment attempt counter BEFORE checking to prevent race conditions
+        redemptionRequest.CashOtpAttempts++;
+        await _context.SaveChangesAsync(ct);
+
         if (redemptionRequest.CashOtpHash != HashOtp(request.Otp))
         {
-            redemptionRequest.CashOtpAttempts++;
-            await _context.SaveChangesAsync(ct);
             return Result.Failure(RedemptionErrors.InvalidOtp);
         }
 
@@ -416,7 +417,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         }
 
         if (remaining > 0)
-            _logger.LogWarning("FIFO shortfall: {Remaining} points could not be consumed from earned transactions for request {Id}",
+            _logger.LogError("FIFO_SHORTFALL: {Remaining} points could not be consumed from earned transactions for request {Id}. Wallet integrity may be compromised.",
                 remaining, redemptionRequest.Id);
 
         // Deduct from wallet

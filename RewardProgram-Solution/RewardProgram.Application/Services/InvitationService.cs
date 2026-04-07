@@ -237,6 +237,9 @@ public class InvitationService : IInvitationService
             Balance = 0
         };
 
+        // Note: If concurrent calls race to create the wallet, the unique constraint
+        // on UserId will cause DbUpdateException. The caller (CreditInvitationRewardsAsync)
+        // catches DbUpdateException and logs it as a duplicate — safe.
         await _context.Wallets.AddAsync(wallet, ct);
         return wallet;
     }
