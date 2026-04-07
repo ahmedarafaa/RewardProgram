@@ -9,7 +9,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
+[Authorize]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
@@ -20,12 +20,24 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician}")]
     [ProducesResponseType(typeof(DashboardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDashboard(CancellationToken ct)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _dashboardService.GetDashboardAsync(userId, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("shop-owner")]
+    [Authorize(Roles = UserRoles.ShopOwner)]
+    [ProducesResponseType(typeof(ShopOwnerDashboardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetShopOwnerDashboard(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _dashboardService.GetShopOwnerDashboardAsync(userId, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 }

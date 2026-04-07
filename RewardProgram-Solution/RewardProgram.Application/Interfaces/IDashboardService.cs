@@ -6,4 +6,5 @@ namespace RewardProgram.Application.Interfaces;
 public interface IDashboardService
 {
     Task<Result<DashboardResponse>> GetDashboardAsync(string userId, CancellationToken ct = default);
+    Task<Result<ShopOwnerDashboardResponse>> GetShopOwnerDashboardAsync(string userId, CancellationToken ct = default);
 }
