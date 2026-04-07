@@ -120,6 +120,10 @@
   <data name="Notification.Body.NotEmpty"><value>Notification body is required</value></data>
   <data name="Notification.Body.MaxLength"><value>Notification body must not exceed 1,000 characters</value></data>
 
+  <!-- FCM Token -->
+  <data name="FcmToken.NotEmpty"><value>Device token is required</value></data>
+  <data name="FcmToken.MaxLength"><value>Device token must not exceed 512 characters</value></data>
+
   <!-- Content -->
   <data name="Content.Phone.NotEmpty"><value>Phone number is required</value></data>
   <data name="Content.Phone.MaxLength"><value>Phone number must not exceed 20 characters</value></data>

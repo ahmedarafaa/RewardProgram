@@ -143,6 +143,48 @@ public class NotificationServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
     }
 
+    // ── MarkAllAsRead ──
+    // Note: MarkAllAsReadAsync uses ExecuteUpdateAsync (bulk update) which is not
+    // supported by EF InMemory provider. This method is tested via API integration tests.
+
+    // ── RegisterDevice ──
+
+    [Fact]
+    public async Task RegisterDevice_UserNotFound_ShouldFail()
+    {
+        _userRepo.FindByIdAsync("bad", Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
+
+        var result = await _sut.RegisterDeviceAsync("bad", "fcm-token-123", default);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(NotificationErrors.UserNotFound);
+    }
+
+    [Fact]
+    public async Task RegisterDevice_Valid_ShouldUpdateFcmToken()
+    {
+        var user = new ApplicationUser { Id = "u1", Name = "Test", MobileNumber = "+966500000001" };
+        _userRepo.FindByIdAsync("u1", Arg.Any<CancellationToken>()).Returns(user);
+
+        var result = await _sut.RegisterDeviceAsync("u1", "fcm-token-abc", default);
+
+        result.IsSuccess.Should().BeTrue();
+        user.FcmToken.Should().Be("fcm-token-abc");
+        await _userRepo.Received(1).UpdateAsync(user);
+    }
+
+    [Fact]
+    public async Task RegisterDevice_ShouldTrimToken()
+    {
+        var user = new ApplicationUser { Id = "u1", Name = "Test", MobileNumber = "+966500000001" };
+        _userRepo.FindByIdAsync("u1", Arg.Any<CancellationToken>()).Returns(user);
+
+        var result = await _sut.RegisterDeviceAsync("u1", "  fcm-token-abc  ", default);
+
+        result.IsSuccess.Should().BeTrue();
+        user.FcmToken.Should().Be("fcm-token-abc");
+    }
+
     // ── CreateAsync ──
 
     [Fact]

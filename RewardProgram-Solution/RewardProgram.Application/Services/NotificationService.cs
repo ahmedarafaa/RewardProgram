@@ -36,7 +36,7 @@ public class NotificationService : INotificationService
         if (user is null)
             return Result.Failure(NotificationErrors.UserNotFound);
 
-        user.FcmToken = fcmToken;
+        user.FcmToken = fcmToken.Trim();
         await _userRepository.UpdateAsync(user);
 
         _logger.LogInformation("FCM token registered for user {UserId}", userId);
@@ -125,8 +125,8 @@ public class NotificationService : INotificationService
 
         _logger.LogInformation("Notification created: {Type} for user {UserId}", type, userId);
 
-        // Send FCM push
-        await SendPushToUserAsync(userId, title, body, type, referenceId);
+        // Send FCM push (fire-and-forget — don't block the caller)
+        _ = SendPushToUserAsync(userId, title, body, type, referenceId);
     }
 
     private async Task SendPushToUserAsync(string userId, string title, string body,
@@ -151,7 +151,8 @@ public class NotificationService : INotificationService
         }
     }
 
-    private async Task SendPushToUsersAsync(IReadOnlyList<string> userIds, string title, string body)
+    private async Task SendPushToUsersAsync(IReadOnlyList<string> userIds, string title, string body,
+        NotificationType type = NotificationType.AdminMessage, string? referenceId = null)
     {
         try
         {
@@ -161,7 +162,14 @@ public class NotificationService : INotificationService
                 .ToListAsync();
 
             if (tokens.Count > 0)
-                await _fcm.SendToMultipleAsync(tokens, title, body);
+            {
+                var data = new Dictionary<string, string>
+                {
+                    ["type"] = type.ToString(),
+                    ["referenceId"] = referenceId ?? ""
+                };
+                await _fcm.SendToMultipleAsync(tokens, title, body, data);
+            }
         }
         catch (Exception ex)
         {
@@ -205,8 +213,8 @@ public class NotificationService : INotificationService
 
         await _context.SaveChangesAsync(ct);
 
-        // Send FCM push to all users in role
-        await SendPushToUsersAsync(activeUserIds, title, body);
+        // Send FCM push to all users in role (fire-and-forget)
+        _ = SendPushToUsersAsync(activeUserIds, title, body);
 
         _logger.LogInformation("Admin {AdminId} sent notification to role {Role}, {Count} users",
             sentByAdminId, roleName, activeUserIds.Count);
@@ -235,8 +243,8 @@ public class NotificationService : INotificationService
 
         await _context.SaveChangesAsync(ct);
 
-        // Send FCM push to all active users
-        await SendPushToUsersAsync(userIds, title, body);
+        // Send FCM push to all active users (fire-and-forget)
+        _ = SendPushToUsersAsync(userIds, title, body);
 
         _logger.LogInformation("Admin {AdminId} broadcast notification to {Count} users",
             sentByAdminId, userIds.Count);

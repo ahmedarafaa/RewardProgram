@@ -16,6 +16,7 @@ public class FirebaseOptions
 
 public class FirebaseMessagingService : IFirebaseMessagingService
 {
+    private static readonly object _initLock = new();
     private readonly ILogger<FirebaseMessagingService> _logger;
     private readonly bool _enabled;
 
@@ -26,19 +27,25 @@ public class FirebaseMessagingService : IFirebaseMessagingService
 
         if (_enabled && FirebaseApp.DefaultInstance is null)
         {
-            var keyPath = options.Value.ServiceAccountKeyPath;
-            if (!string.IsNullOrWhiteSpace(keyPath) && File.Exists(keyPath))
+            lock (_initLock)
             {
-                FirebaseApp.Create(new AppOptions
+                if (FirebaseApp.DefaultInstance is null)
                 {
-                    Credential = GoogleCredential.FromFile(keyPath)
-                });
-                _logger.LogInformation("Firebase initialized from {Path}", keyPath);
-            }
-            else
-            {
-                _enabled = false;
-                _logger.LogWarning("Firebase service account key not found at '{Path}'. FCM push disabled.", keyPath);
+                    var keyPath = options.Value.ServiceAccountKeyPath;
+                    if (!string.IsNullOrWhiteSpace(keyPath) && File.Exists(keyPath))
+                    {
+                        FirebaseApp.Create(new AppOptions
+                        {
+                            Credential = GoogleCredential.FromFile(keyPath)
+                        });
+                        _logger.LogInformation("Firebase initialized from {Path}", keyPath);
+                    }
+                    else
+                    {
+                        _enabled = false;
+                        _logger.LogWarning("Firebase service account key not found at '{Path}'. FCM push disabled.", keyPath);
+                    }
+                }
             }
         }
     }

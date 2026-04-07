@@ -120,6 +120,10 @@
   <data name="Notification.Body.NotEmpty"><value>نص الإشعار مطلوب</value></data>
   <data name="Notification.Body.MaxLength"><value>نص الإشعار يجب ألا يتجاوز 1000 حرف</value></data>
 
+  <!-- FCM Token -->
+  <data name="FcmToken.NotEmpty"><value>رمز الجهاز مطلوب</value></data>
+  <data name="FcmToken.MaxLength"><value>رمز الجهاز يجب ألا يتجاوز 512 حرف</value></data>
+
   <!-- Content -->
   <data name="Content.Phone.NotEmpty"><value>رقم الهاتف مطلوب</value></data>
   <data name="Content.Phone.MaxLength"><value>رقم الهاتف يجب ألا يتجاوز 20 حرف</value></data>

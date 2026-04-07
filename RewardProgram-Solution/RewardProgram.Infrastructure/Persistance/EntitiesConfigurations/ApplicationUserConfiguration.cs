@@ -72,6 +72,10 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 
         // Region.ZoneManagerId → ApplicationUser.ManagedRegion is configured in RegionConfiguration
 
+        // FCM Push Notifications
+        builder.Property(x => x.FcmToken)
+            .HasMaxLength(512);
+
         // Invitation
         builder.Property(x => x.InvitationCode)
             .HasMaxLength(8);
