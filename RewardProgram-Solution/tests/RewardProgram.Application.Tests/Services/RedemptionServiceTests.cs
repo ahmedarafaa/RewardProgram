@@ -298,6 +298,7 @@ public class RedemptionServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         await _sut.ExpireOldPointsAsync(wallet);
+        await _context.SaveChangesAsync(); // ExpireOldPointsAsync doesn't save — caller owns the save
 
         wallet.Balance.Should().Be(100); // 300 - 200 expired
         wallet.SarBalance.Should().Be(10); // 30 - 20 expired
@@ -391,6 +392,7 @@ public class RedemptionServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         await _sut.ExpireOldPointsAsync(wallet);
+        await _context.SaveChangesAsync(); // ExpireOldPointsAsync doesn't save — caller owns the save
 
         wallet.Balance.Should().Be(200); // 500 - 300 expired
         _context.WalletTransactions.Count(t => t.Type == WalletTransactionType.Expired).Should().Be(2);
