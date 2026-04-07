@@ -27,6 +27,7 @@ public interface IApplicationDbContext
     DbSet<RedemptionRequest> RedemptionRequests { get; }
     DbSet<RedemptionApproval> RedemptionApprovals { get; }
     DbSet<Notification> Notifications { get; }
+    DbSet<UserNotificationPreference> UserNotificationPreferences { get; }
     DbSet<ContactUsContent> ContactUsContents { get; }
     DbSet<AboutAppContent> AboutAppContents { get; }
 

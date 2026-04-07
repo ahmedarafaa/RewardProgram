@@ -50,9 +50,9 @@ public class FirebaseMessagingService : IFirebaseMessagingService
         }
     }
 
-    public async Task SendToUserAsync(string fcmToken, string title, string body, Dictionary<string, string>? data = null)
+    public async Task<bool> SendToUserAsync(string fcmToken, string title, string body, Dictionary<string, string>? data = null)
     {
-        if (!_enabled) return;
+        if (!_enabled) return true;
 
         var message = new Message
         {
@@ -65,22 +65,26 @@ public class FirebaseMessagingService : IFirebaseMessagingService
         {
             var messageId = await FirebaseMessaging.DefaultInstance.SendAsync(message);
             _logger.LogDebug("FCM sent: {MessageId}", messageId);
+            return true;
         }
         catch (FirebaseMessagingException ex) when (ex.MessagingErrorCode == MessagingErrorCode.Unregistered)
         {
-            _logger.LogInformation("FCM token expired/unregistered, skipping");
+            _logger.LogInformation("FCM token expired/unregistered — token should be cleared");
+            return false;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "FCM send failed");
+            return true; // Don't clear token on transient errors
         }
     }
 
-    public async Task SendToMultipleAsync(IReadOnlyList<string> fcmTokens, string title, string body, Dictionary<string, string>? data = null)
+    public async Task<IReadOnlyList<string>> SendToMultipleAsync(IReadOnlyList<string> fcmTokens, string title, string body, Dictionary<string, string>? data = null)
     {
-        if (!_enabled || fcmTokens.Count == 0) return;
+        if (!_enabled || fcmTokens.Count == 0) return [];
 
-        // Firebase supports up to 500 tokens per multicast
+        var expiredTokens = new List<string>();
+
         foreach (var batch in fcmTokens.Chunk(500))
         {
             var message = new MulticastMessage
@@ -95,11 +99,23 @@ public class FirebaseMessagingService : IFirebaseMessagingService
                 var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
                 _logger.LogDebug("FCM multicast: {Success}/{Total} succeeded",
                     response.SuccessCount, batch.Length);
+
+                // Collect expired/unregistered tokens
+                for (var i = 0; i < response.Responses.Count; i++)
+                {
+                    var r = response.Responses[i];
+                    if (!r.IsSuccess && r.Exception?.MessagingErrorCode == MessagingErrorCode.Unregistered)
+                    {
+                        expiredTokens.Add(batch[i]);
+                    }
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "FCM multicast failed for batch of {Count}", batch.Length);
             }
         }
+
+        return expiredTokens;
     }
 }

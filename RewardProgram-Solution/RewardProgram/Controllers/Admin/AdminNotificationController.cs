@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Notifications;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Constants;
@@ -47,5 +48,13 @@ public class AdminNotificationController : ControllerBase
         return broadcastResult.IsSuccess
             ? Ok(new AdminSendNotificationResponse(broadcastResult.Value))
             : broadcastResult.ToProblem();
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(PaginatedResult<AdminNotificationHistoryItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetNotificationHistory([FromQuery] AdminNotificationListQuery query, CancellationToken ct)
+    {
+        var result = await _notificationService.GetNotificationHistoryAsync(query, ct);
+        return Ok(result);
     }
 }

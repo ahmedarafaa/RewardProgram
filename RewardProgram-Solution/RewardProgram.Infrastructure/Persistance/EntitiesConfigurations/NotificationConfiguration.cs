@@ -41,7 +41,7 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(x => x.DeletedBy).HasMaxLength(450);
 
         // Relationships
-        builder.HasOne<RewardProgram.Domain.Entities.Users.ApplicationUser>()
+        builder.HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);

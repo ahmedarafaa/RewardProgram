@@ -966,6 +966,26 @@
 						},
 						"description": "Send notification to users.\n\n**Targeting:**\n- `targetUserId`: Send to specific user (set others to null)\n- `roleName`: Send to all users with this role (e.g. \"Seller\", \"Technician\")\n- Both null: Broadcast to ALL users\n\n**Response:**\n- `sentCount`: Number of notifications created\n\n**Examples:**\n- To one user: `{\"targetUserId\": \"user-id\", \"roleName\": null, ...}`\n- To all Sellers: `{\"targetUserId\": null, \"roleName\": \"Seller\", ...}`\n- Broadcast: `{\"targetUserId\": null, \"roleName\": null, ...}`"
 					}
+				},
+				{
+					"name": "Notification History",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/notifications?page=1&pageSize=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "notifications"],
+							"query": [
+								{ "key": "targetUserId", "value": "", "disabled": true, "description": "Filter by target user ID" },
+								{ "key": "type", "value": "1", "disabled": true, "description": "Notification type (int)" },
+								{ "key": "fromDate", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
+								{ "key": "toDate", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "List notification history with optional filters.\n\n**Query parameters:**\n- `targetUserId`: Filter by recipient user\n- `type`: Filter by notification type\n- `fromDate` / `toDate`: Date range filter (ISO 8601)\n- `page` / `pageSize`: Pagination\n\nReturns paginated list of sent notifications."
+					}
 				}
 			]
 		},

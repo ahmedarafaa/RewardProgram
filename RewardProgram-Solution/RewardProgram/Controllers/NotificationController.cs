@@ -29,6 +29,16 @@ public class NotificationController : ControllerBase
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 
+    [HttpDelete("register-device")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UnregisterDevice(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _notificationService.UnregisterDeviceAsync(userId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<NotificationResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications([FromQuery] NotificationListQuery query, CancellationToken ct)
@@ -63,6 +73,34 @@ public class NotificationController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _notificationService.MarkAllAsReadAsync(userId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteNotification(string id, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _notificationService.DeleteNotificationAsync(id, userId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    [HttpGet("preferences")]
+    [ProducesResponseType(typeof(List<NotificationPreferenceItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPreferences(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _notificationService.GetPreferencesAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("preferences")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdateNotificationPreferencesRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _notificationService.UpdatePreferencesAsync(userId, request, ct);
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 }

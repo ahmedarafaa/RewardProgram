@@ -30,6 +30,7 @@ public class TestDbContext : DbContext, IApplicationDbContext
     public DbSet<RedemptionRequest> RedemptionRequests => Set<RedemptionRequest>();
     public DbSet<RedemptionApproval> RedemptionApprovals => Set<RedemptionApproval>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
     public DbSet<ContactUsContent> ContactUsContents => Set<ContactUsContent>();
     public DbSet<AboutAppContent> AboutAppContents => Set<AboutAppContent>();
 
@@ -147,7 +148,17 @@ public class TestDbContext : DbContext, IApplicationDbContext
             b.HasOne(e => e.Approver).WithMany().HasForeignKey(e => e.ApproverId);
         });
 
-        modelBuilder.Entity<Notification>(b => b.HasKey(e => e.Id));
+        modelBuilder.Entity<Notification>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
+        });
+
+        modelBuilder.Entity<UserNotificationPreference>(b =>
+        {
+            b.HasKey(e => new { e.UserId, e.NotificationType });
+        });
+
         modelBuilder.Entity<ContactUsContent>(b => b.HasKey(e => e.Id));
         modelBuilder.Entity<AboutAppContent>(b => b.HasKey(e => e.Id));
     }

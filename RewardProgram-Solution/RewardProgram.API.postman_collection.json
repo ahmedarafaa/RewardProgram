@@ -1296,6 +1296,102 @@
             "description": "Register the current user's device for Firebase Cloud Messaging (FCM) push notifications.\n\nSend the FCM device token obtained from the Firebase SDK on the client.\n\nReturns 204 No Content on success, 404 if user not found.\n\nRequires authentication."
           },
           "response": []
+        },
+        {
+          "name": "Unregister Device (FCM)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/register-device",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "register-device"
+              ]
+            },
+            "description": "Unregister the current user's device from FCM push notifications. Clears the stored FCM token.\n\nReturns 204 No Content.\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Notification ID"
+                }
+              ]
+            },
+            "description": "Delete a notification by ID.\n\nReturns 204 No Content on success, 404 if not found.\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "preferences"
+              ]
+            },
+            "description": "Get the current user's notification preferences.\n\nReturns a list of notification types with their push mute status.\n\nRequires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Notification Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferences\": [\n    {\n      \"type\": 1,\n      \"isPushMuted\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "preferences"
+              ]
+            },
+            "description": "Update the current user's notification preferences.\n\nSend a list of notification types with their desired push mute status.\n\nRequires authentication."
+          },
+          "response": []
         }
       ]
     },
