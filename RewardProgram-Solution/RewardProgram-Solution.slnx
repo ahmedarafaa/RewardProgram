@@ -8,5 +8,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/RewardProgram.Domain.Tests/RewardProgram.Domain.Tests.csproj" />
     <Project Path="tests/RewardProgram.Application.Tests/RewardProgram.Application.Tests.csproj" />
+    <Project Path="tests/RewardProgram.Infrastructure.Tests/RewardProgram.Infrastructure.Tests.csproj" />
+    <Project Path="tests/RewardProgram.API.Tests/RewardProgram.API.Tests.csproj" />
   </Folder>
 </Solution>
