@@ -40,6 +40,9 @@ public class ApplicationUser : IdentityUser
     public string? InvitationCode { get; set; }
     public string? InvitedByUserId { get; set; }
     public ApplicationUser? InvitedByUser { get; set; }
+
+    // === FCM Push Notifications ===
+    public string? FcmToken { get; set; }
 }
 
 [Owned]

@@ -1267,6 +1267,35 @@
             "description": "Mark all notifications as read for the current user.\n\nReturns 204 No Content.\n\nRequires authentication."
           },
           "response": []
+        },
+        {
+          "name": "Register Device (FCM)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"YOUR_FCM_DEVICE_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/register-device",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "register-device"
+              ]
+            },
+            "description": "Register the current user's device for Firebase Cloud Messaging (FCM) push notifications.\n\nSend the FCM device token obtained from the Firebase SDK on the client.\n\nReturns 204 No Content on success, 404 if user not found.\n\nRequires authentication."
+          },
+          "response": []
         }
       ]
     },

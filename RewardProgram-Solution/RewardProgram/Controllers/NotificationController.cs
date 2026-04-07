@@ -19,6 +19,16 @@ public class NotificationController : ControllerBase
         _notificationService = notificationService;
     }
 
+    [HttpPost("register-device")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _notificationService.RegisterDeviceAsync(userId, request.FcmToken, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<NotificationResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications([FromQuery] NotificationListQuery query, CancellationToken ct)

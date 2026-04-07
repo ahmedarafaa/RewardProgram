@@ -15,16 +15,32 @@ public class NotificationService : INotificationService
 {
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
+    private readonly IFirebaseMessagingService _fcm;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
+        IFirebaseMessagingService fcm,
         ILogger<NotificationService> logger)
     {
         _context = context;
         _userRepository = userRepository;
+        _fcm = fcm;
         _logger = logger;
+    }
+
+    public async Task<Result> RegisterDeviceAsync(string userId, string fcmToken, CancellationToken ct)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user is null)
+            return Result.Failure(NotificationErrors.UserNotFound);
+
+        user.FcmToken = fcmToken;
+        await _userRepository.UpdateAsync(user);
+
+        _logger.LogInformation("FCM token registered for user {UserId}", userId);
+        return Result.Success();
     }
 
     public async Task<PaginatedResult<NotificationResponse>> GetUserNotificationsAsync(
@@ -108,6 +124,49 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("Notification created: {Type} for user {UserId}", type, userId);
+
+        // Send FCM push
+        await SendPushToUserAsync(userId, title, body, type, referenceId);
+    }
+
+    private async Task SendPushToUserAsync(string userId, string title, string body,
+        NotificationType type, string? referenceId)
+    {
+        try
+        {
+            var user = await _userRepository.FindByIdAsync(userId);
+            if (user?.FcmToken is not null)
+            {
+                var data = new Dictionary<string, string>
+                {
+                    ["type"] = type.ToString(),
+                    ["referenceId"] = referenceId ?? ""
+                };
+                await _fcm.SendToUserAsync(user.FcmToken, title, body, data);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send FCM push to user {UserId}", userId);
+        }
+    }
+
+    private async Task SendPushToUsersAsync(IReadOnlyList<string> userIds, string title, string body)
+    {
+        try
+        {
+            var tokens = await _userRepository.Query()
+                .Where(u => userIds.Contains(u.Id) && u.FcmToken != null)
+                .Select(u => u.FcmToken!)
+                .ToListAsync();
+
+            if (tokens.Count > 0)
+                await _fcm.SendToMultipleAsync(tokens, title, body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send FCM push to {Count} users", userIds.Count);
+        }
     }
 
     public async Task<Result> SendToUserAsync(string targetUserId, string title, string body,
@@ -117,6 +176,7 @@ public class NotificationService : INotificationService
         if (user is null)
             return Result.Failure(NotificationErrors.UserNotFound);
 
+        // CreateAsync already sends FCM push
         await CreateAsync(targetUserId, NotificationType.AdminMessage, title, body, ct: ct);
 
         _logger.LogInformation("Admin {AdminId} sent notification to user {UserId}", sentByAdminId, targetUserId);
@@ -145,6 +205,9 @@ public class NotificationService : INotificationService
 
         await _context.SaveChangesAsync(ct);
 
+        // Send FCM push to all users in role
+        await SendPushToUsersAsync(activeUserIds, title, body);
+
         _logger.LogInformation("Admin {AdminId} sent notification to role {Role}, {Count} users",
             sentByAdminId, roleName, activeUserIds.Count);
 
@@ -171,6 +234,9 @@ public class NotificationService : INotificationService
         }
 
         await _context.SaveChangesAsync(ct);
+
+        // Send FCM push to all active users
+        await SendPushToUsersAsync(userIds, title, body);
 
         _logger.LogInformation("Admin {AdminId} broadcast notification to {Count} users",
             sentByAdminId, userIds.Count);

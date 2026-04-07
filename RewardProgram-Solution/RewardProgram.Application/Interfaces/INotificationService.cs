@@ -8,6 +8,9 @@ namespace RewardProgram.Application.Interfaces;
 
 public interface INotificationService
 {
+    // Device registration
+    Task<Result> RegisterDeviceAsync(string userId, string fcmToken, CancellationToken ct);
+
     // User-facing
     Task<PaginatedResult<NotificationResponse>> GetUserNotificationsAsync(string userId, NotificationListQuery query, CancellationToken ct);
     Task<int> GetUnreadCountAsync(string userId, CancellationToken ct);
