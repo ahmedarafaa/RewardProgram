@@ -1047,10 +1047,10 @@
     },
     {
       "name": "Dashboard",
-      "description": "Mobile app home screen endpoint. Returns user info, points, redemption progress, and recent transactions in a single call.\n\nRequires ShopOwner, Seller, or Technician JWT.",
+      "description": "Mobile app home screen endpoints.\n\n- **Seller/Technician**: Points, wallet, redemption progress, recent transactions\n- **ShopOwner**: Shop info, linked sellers, scan stats (no points/wallet/redemption)",
       "item": [
         {
-          "name": "Get Dashboard",
+          "name": "Get Dashboard (Seller/Technician)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1064,7 +1064,27 @@
                 "dashboard"
               ]
             },
-            "description": "Get the mobile app home screen data.\n\n**Response:**\n- `userName`: Display name\n- `points`: Current point balance\n- `sarBalance`: Current SAR balance\n- `minimumRedemptionPoints`: Admin-configured minimum (default 1000)\n- `pointsToRedeem`: Points remaining to reach minimum\n- `canRedeem`: Whether user has enough points to redeem\n- `recentTransactions`: Last 10 wallet transactions\n\nRequires ShopOwner, Seller, or Technician JWT."
+            "description": "Get the mobile app home screen data for Seller or Technician.\n\n**Response:**\n- `userName`: Display name\n- `points`: Current point balance\n- `sarBalance`: Current SAR balance\n- `minimumRedemptionPoints`: Admin-configured minimum (default 1000)\n- `pointsToRedeem`: Points remaining to reach minimum\n- `canRedeem`: Whether user has enough points to redeem\n- `recentTransactions`: Last 10 wallet transactions\n\nRequires Seller or Technician JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dashboard (ShopOwner)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/shop-owner",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "shop-owner"
+              ]
+            },
+            "description": "Get the mobile app home screen data for ShopOwner.\n\n**Response:**\n- `userName`: Display name\n- `profileImageUrl`: Profile photo URL (nullable)\n- `shop`: Shop details\n  - `customerCode`: ERP customer code\n  - `storeName`: Store display name\n  - `vat`: VAT number (15 digits)\n  - `crn`: Commercial registration number (10 digits)\n  - `shopImageUrl`: Shop image URL\n  - `shortAddress`: 8-char short address\n  - `district`: District name\n  - `cityName`: City name (Arabic)\n  - `street`, `postalCode`, `buildingNumber`, `subNumber`\n- `sellers`: List of sellers linked to same CustomerCode\n  - `id`: Seller user ID\n  - `name`: Seller name\n  - `mobileNumber`: Seller mobile\n  - `joinedAt`: Registration date\n- `totalSellers`: Count of linked sellers\n- `totalScans`: Total barcode scans by linked sellers\n\nNo points, wallet, or redemption data is returned.\n\nRequires ShopOwner JWT."
           },
           "response": []
         }
