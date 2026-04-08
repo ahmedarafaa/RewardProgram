@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "86ac9587-7956-49ac-bdb5-f2bcd9f3949f",
     "name": "RewardProgram — E2E Test Scenarios",
-    "description": "End-to-end test scenarios for Collection Runner.\\n\\nRun folders in order (0→5). Each request saves variables for the next.\\n\\n⚠️ OTP: If Twilio mock is OFF, replace '123456' with real OTP from WhatsApp before running OTP verification steps.\\n\\n**Seeded accounts used:**\\n- Admin: admin / Admin@123\\n- SalesMan (محمود حجازي): 0500000010\\n- ZoneManager (فرحان ممدوح): 0500000002",
+    "description": "End-to-end test scenarios for Collection Runner.\\n\\nRun folders in order (0→5). Each request saves variables for the next.\\n\\n⚠️ OTP: If Twilio mock is OFF, replace '123456' with real OTP from WhatsApp before running OTP verification steps.\\n\\n**Seeded accounts used:**\\n- Admin: admin / Raed@2026\\n- SalesMan (محمود حجازي): +201018535996\\n- ZoneManager (فرحان ممدوح): +201148451237",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -33,7 +33,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Raed@2026\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -442,7 +442,7 @@
                 },
                 {
                   "key": "CustomerCode",
-                  "value": "AB-0001",
+                  "value": "AB-0060",
                   "type": "text",
                   "description": "Must exist in ERP"
                 },
@@ -548,7 +548,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobileNumber\": \"0500000010\"\n}",
+              "raw": "{\n  \"mobileNumber\": \"+201018535996\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -742,7 +742,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobileNumber\": \"0500000002\"\n}",
+              "raw": "{\n  \"mobileNumber\": \"+201148451237\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3831,7 +3831,7 @@
                 },
                 {
                   "key": "CustomerCode",
-                  "value": "AB-0001",
+                  "value": "AB-0060",
                   "type": "text"
                 },
                 {
@@ -6081,7 +6081,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"سالم محمد\", \"mobileNumber\": \"0555200001\", \"cityIds\": [\"{{cityId}}\"]}",
+              "raw": "{\"name\": \"سالم محمد\", \"mobileNumber\": \"0555700001\", \"cityIds\": [\"{{cityId}}\"]}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6129,7 +6129,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"خالد عبدالله\", \"mobileNumber\": \"0555200002\", \"regionId\": \"{{regionId}}\"}",
+              "raw": "{\"name\": \"خالد عبدالله\", \"mobileNumber\": \"0555700002\", \"regionId\": \"{{regionId}}\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6181,12 +6181,12 @@
                 },
                 {
                   "key": "mobileNumber",
-                  "value": "0555200003",
+                  "value": "0555600005",
                   "type": "text"
                 },
                 {
                   "key": "customerCode",
-                  "value": "CUST001",
+                  "value": "AB-0050",
                   "type": "text"
                 },
                 {
@@ -6266,12 +6266,12 @@
                 },
                 {
                   "key": "mobileNumber",
-                  "value": "0555200004",
+                  "value": "0555600006",
                   "type": "text"
                 },
                 {
                   "key": "customerCode",
-                  "value": "CUST002",
+                  "value": "AB-0051",
                   "type": "text"
                 },
                 {
@@ -6347,7 +6347,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"فهد سعود\", \"mobileNumber\": \"0555200005\", \"cityId\": \"{{cityId}}\", \"postalCode\": \"12345\", \"district\": \"حي النسيم\"}",
+              "raw": "{\"name\": \"فهد سعود\", \"mobileNumber\": \"0555700005\", \"cityId\": \"{{cityId}}\", \"postalCode\": \"12345\", \"district\": \"حي النسيم\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -8034,7 +8034,7 @@
     },
     {
       "key": "sellerMobile",
-      "value": "0555100001",
+      "value": "0555600001",
       "type": "string"
     },
     {
@@ -8044,7 +8044,7 @@
     },
     {
       "key": "technicianMobile",
-      "value": "0555100002",
+      "value": "0555600002",
       "type": "string"
     },
     {
@@ -8174,7 +8174,7 @@
     },
     {
       "key": "shopOwnerMobile",
-      "value": "0555100003",
+      "value": "0555600003",
       "type": "string"
     },
     {
@@ -8184,7 +8184,7 @@
     },
     {
       "key": "rejectMobile",
-      "value": "0555100004",
+      "value": "0555600004",
       "type": "string"
     },
     {
