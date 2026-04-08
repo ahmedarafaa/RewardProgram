@@ -43,6 +43,10 @@ public class ApplicationUser : IdentityUser
 
     // === FCM Push Notifications ===
     public string? FcmToken { get; set; }
+
+    // === Account Deletion ===
+    public bool IsAccountDeleted { get; set; }
+    public DateTime? AccountDeletedAt { get; set; }
 }
 
 [Owned]

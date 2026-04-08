@@ -9,6 +9,8 @@ public record AdminUserListItemResponse(
     UserType UserType,
     RegistrationStatus RegistrationStatus,
     bool IsDisabled,
+    bool IsAccountDeleted,
+    DateTime? AccountDeletedAt,
     DateTime CreatedAt,
     string? RegionName,
     string? CityName,

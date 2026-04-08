@@ -12,5 +12,6 @@ public record AdminDashboardResponse(
     int TotalScans,
     int PendingRedemptions,
     int TotalInvitations,
-    int TotalNotificationsSent
+    int TotalNotificationsSent,
+    int TotalDeletedAccounts
 );

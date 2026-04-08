@@ -8,6 +8,7 @@ public record AdminUserListQuery(
     RegistrationStatus? RegistrationStatus,
     string? RegionId,
     bool? IsDisabled,
+    bool? IsDeleted,
     int Page = 1,
     int PageSize = 20
 );

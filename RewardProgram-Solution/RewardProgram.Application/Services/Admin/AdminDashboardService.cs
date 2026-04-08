@@ -73,6 +73,9 @@ public class AdminDashboardService : IAdminDashboardService
 
         var totalNotificationsSent = await _context.Notifications.CountAsync(ct);
 
+        var totalDeletedAccounts = await users
+            .CountAsync(u => u.IsAccountDeleted, ct);
+
         var response = new AdminDashboardResponse(
             totalShopOwners,
             totalSellers,
@@ -85,7 +88,8 @@ public class AdminDashboardService : IAdminDashboardService
             totalScans,
             pendingRedemptions,
             totalInvitations,
-            totalNotificationsSent
+            totalNotificationsSent,
+            totalDeletedAccounts
         );
 
         return Result.Success(response);

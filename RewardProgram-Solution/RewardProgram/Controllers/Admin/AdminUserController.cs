@@ -90,11 +90,12 @@ public class AdminUserController : ControllerBase
         [FromQuery] RegistrationStatus? registrationStatus,
         [FromQuery] string? regionId,
         [FromQuery] bool? isDisabled,
+        [FromQuery] bool? isDeleted,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var query = new AdminUserListQuery(search, userType, registrationStatus, regionId, isDisabled, page, pageSize);
+        var query = new AdminUserListQuery(search, userType, registrationStatus, regionId, isDisabled, isDeleted, page, pageSize);
         var result = await _adminUserService.ListUsersAsync(query, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }

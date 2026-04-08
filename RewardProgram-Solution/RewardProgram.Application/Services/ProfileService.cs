@@ -118,8 +118,10 @@ public class ProfileService : IProfileService
         if (hasPendingRedemptions)
             return Result.Failure(ProfileErrors.HasPendingRedemptions);
 
-        // Disable account
+        // Disable account and mark as deleted
         user.IsDisabled = true;
+        user.IsAccountDeleted = true;
+        user.AccountDeletedAt = DateTime.UtcNow;
 
         // Revoke all refresh tokens
         foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))

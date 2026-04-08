@@ -521,6 +521,9 @@ public class AdminUserService : IAdminUserService
         if (query.IsDisabled.HasValue)
             usersQuery = usersQuery.Where(u => u.IsDisabled == query.IsDisabled.Value);
 
+        if (query.IsDeleted.HasValue)
+            usersQuery = usersQuery.Where(u => u.IsAccountDeleted == query.IsDeleted.Value);
+
         if (!string.IsNullOrWhiteSpace(query.RegionId))
         {
             var cityIdsInRegion = _context.Cities
@@ -548,6 +551,8 @@ public class AdminUserService : IAdminUserService
                 u.UserType,
                 u.RegistrationStatus,
                 u.IsDisabled,
+                u.IsAccountDeleted,
+                u.AccountDeletedAt,
                 u.CreatedAt,
                 CityId = u.NationalAddress != null ? u.NationalAddress.CityId : null
             })
@@ -630,7 +635,8 @@ public class AdminUserService : IAdminUserService
 
             return new AdminUserListItemResponse(
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.RegistrationStatus,
-                u.IsDisabled, u.CreatedAt, regionName, cityName, customerCode, storeName);
+                u.IsDisabled, u.IsAccountDeleted, u.AccountDeletedAt,
+                u.CreatedAt, regionName, cityName, customerCode, storeName);
         }).ToList();
 
         return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));

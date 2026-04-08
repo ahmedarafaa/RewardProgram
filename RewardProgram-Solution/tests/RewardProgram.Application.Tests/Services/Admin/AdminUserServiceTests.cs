@@ -125,7 +125,7 @@ public class AdminUserServiceTests : IDisposable
         };
         _userRepo.Query().Returns(users.AsAsyncQueryable());
 
-        var result = await _sut.ListUsersAsync(new AdminUserListQuery(null, null, null, null, null));
+        var result = await _sut.ListUsersAsync(new AdminUserListQuery(null, null, null, null, null, null));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.TotalCount.Should().Be(1);
@@ -142,7 +142,7 @@ public class AdminUserServiceTests : IDisposable
         _userRepo.Query().Returns(users.AsAsyncQueryable());
 
         var result = await _sut.ListUsersAsync(
-            new AdminUserListQuery(null, UserType.Seller, null, null, null));
+            new AdminUserListQuery(null, UserType.Seller, null, null, null, null));
 
         result.Value.TotalCount.Should().Be(1);
         result.Value.Items.First().UserType.Should().Be(UserType.Seller);
@@ -159,7 +159,7 @@ public class AdminUserServiceTests : IDisposable
         _userRepo.Query().Returns(users.AsAsyncQueryable());
 
         var result = await _sut.ListUsersAsync(
-            new AdminUserListQuery("Ahmed", null, null, null, null));
+            new AdminUserListQuery("Ahmed", null, null, null, null, null));
 
         result.Value.TotalCount.Should().Be(1);
         result.Value.Items.First().Name.Should().Be("Ahmed Mohamed");
@@ -176,7 +176,7 @@ public class AdminUserServiceTests : IDisposable
         _userRepo.Query().Returns(users.AsAsyncQueryable());
 
         var result = await _sut.ListUsersAsync(
-            new AdminUserListQuery(null, null, null, null, true));
+            new AdminUserListQuery(null, null, null, null, true, null));
 
         result.Value.TotalCount.Should().Be(1);
         result.Value.Items.First().IsDisabled.Should().BeTrue();
@@ -193,7 +193,7 @@ public class AdminUserServiceTests : IDisposable
         _userRepo.Query().Returns(users.AsAsyncQueryable());
 
         var result = await _sut.ListUsersAsync(
-            new AdminUserListQuery(null, null, null, null, null, Page: 2, PageSize: 3));
+            new AdminUserListQuery(null, null, null, null, null, null, Page: 2, PageSize: 3));
 
         result.Value.Items.Should().HaveCount(3);
         result.Value.TotalCount.Should().Be(10);
