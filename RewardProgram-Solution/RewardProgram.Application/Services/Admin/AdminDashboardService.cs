@@ -68,6 +68,11 @@ public class AdminDashboardService : IAdminDashboardService
                           && r.Status != RedemptionRequestStatus.Rejected
                           && r.Status != RedemptionRequestStatus.Cancelled, ct);
 
+        var totalInvitations = await users
+            .CountAsync(u => u.InvitedByUserId != null, ct);
+
+        var totalNotificationsSent = await _context.Notifications.CountAsync(ct);
+
         var response = new AdminDashboardResponse(
             totalShopOwners,
             totalSellers,
@@ -78,7 +83,9 @@ public class AdminDashboardService : IAdminDashboardService
             totalSarRedeemed,
             totalActiveBarcodes,
             totalScans,
-            pendingRedemptions
+            pendingRedemptions,
+            totalInvitations,
+            totalNotificationsSent
         );
 
         return Result.Success(response);
@@ -611,5 +618,147 @@ public class AdminDashboardService : IAdminDashboardService
         return Result.Success(new RevenueAnalyticsResponse(
             totalSarLiability, totalSarHeld, totalSarPaidOut,
             totalPointsOutstanding, volumeByType, payoutTrend));
+    }
+
+    public async Task<Result<InvitationAnalyticsResponse>> GetInvitationAnalyticsAsync(
+        int topInviters = 10, CancellationToken ct = default)
+    {
+        topInviters = Math.Clamp(topInviters, 1, 100);
+
+        // All users who were invited (have InvitedByUserId set)
+        var invitedUsers = await _userRepository.Query()
+            .Where(u => u.InvitedByUserId != null)
+            .Select(u => new { u.Id, u.InvitedByUserId, u.RegistrationStatus, u.CreatedAt })
+            .ToListAsync(ct);
+
+        var totalInvitationsSent = invitedUsers.Count;
+        var totalAccepted = invitedUsers.Count(u => u.RegistrationStatus == RegistrationStatus.Approved);
+        var totalPending = invitedUsers.Count(u =>
+            u.RegistrationStatus == RegistrationStatus.PendingSalesman
+            || u.RegistrationStatus == RegistrationStatus.PendingZoneManager);
+        var conversionRate = totalInvitationsSent > 0
+            ? Math.Round((decimal)totalAccepted / totalInvitationsSent * 100, 1)
+            : 0;
+
+        // Top inviters
+        var inviterGroups = invitedUsers
+            .GroupBy(u => u.InvitedByUserId!)
+            .Select(g => new
+            {
+                InviterId = g.Key,
+                TotalInvited = g.Count(),
+                ApprovedCount = g.Count(x => x.RegistrationStatus == RegistrationStatus.Approved)
+            })
+            .OrderByDescending(x => x.ApprovedCount)
+            .Take(topInviters)
+            .ToList();
+
+        var inviterIds = inviterGroups.Select(x => x.InviterId).ToList();
+
+        var inviterUsers = await _userRepository.Query()
+            .Where(u => inviterIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Name, u.MobileNumber })
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        // Points earned from invitation rewards per inviter
+        var inviterRewardPoints = await (
+            from wt in _context.WalletTransactions
+            join w in _context.Wallets on wt.WalletId equals w.Id
+            where wt.Type == WalletTransactionType.InvitationReward
+               && inviterIds.Contains(w.UserId)
+            group wt by w.UserId into g
+            select new { UserId = g.Key, Total = g.Sum(x => x.Amount) }
+        ).ToDictionaryAsync(x => x.UserId, x => x.Total, ct);
+
+        var topInviterItems = inviterGroups.Select(g =>
+        {
+            inviterUsers.TryGetValue(g.InviterId, out var user);
+            inviterRewardPoints.TryGetValue(g.InviterId, out var pts);
+            return new TopInviterItem(
+                g.InviterId,
+                user?.Name ?? string.Empty,
+                user?.MobileNumber ?? string.Empty,
+                g.TotalInvited,
+                g.ApprovedCount,
+                pts
+            );
+        }).ToList();
+
+        // Total reward points & SAR spent on invitation rewards (all users)
+        var rewardTotals = await _context.WalletTransactions
+            .Where(t => t.Type == WalletTransactionType.InvitationReward)
+            .GroupBy(t => 1)
+            .Select(g => new { Points = g.Sum(t => t.Amount), Sar = g.Sum(t => t.SarAmount) })
+            .FirstOrDefaultAsync(ct);
+
+        var totalRewardPoints = rewardTotals?.Points ?? 0;
+        var totalRewardSar = rewardTotals?.Sar ?? 0;
+
+        // Invitation trend — last 12 months
+        var cutoff = DateTime.UtcNow.AddMonths(-12);
+        var trendData = invitedUsers
+            .Where(u => u.CreatedAt >= cutoff)
+            .GroupBy(u => new { u.CreatedAt.Year, u.CreatedAt.Month })
+            .Select(g => new MonthlyCount(g.Key.Year, g.Key.Month, g.Count()))
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .ToList();
+
+        return Result.Success(new InvitationAnalyticsResponse(
+            totalInvitationsSent, totalAccepted, totalPending, conversionRate,
+            topInviterItems, totalRewardPoints, totalRewardSar, trendData));
+    }
+
+    public async Task<Result<NotificationAnalyticsResponse>> GetNotificationAnalyticsAsync(
+        CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var startOfDay = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
+
+        var notifications = _context.Notifications.AsQueryable();
+
+        var totalAllTime = await notifications.CountAsync(ct);
+
+        var totalThisMonth = await notifications
+            .CountAsync(n => n.CreatedAt >= startOfMonth, ct);
+
+        var totalToday = await notifications
+            .CountAsync(n => n.CreatedAt >= startOfDay, ct);
+
+        // Count by type
+        var countByTypeRaw = await notifications
+            .GroupBy(n => n.Type)
+            .Select(g => new { Type = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var countByType = countByTypeRaw
+            .Select(x => new NotificationTypeCount(x.Type, x.Count)).ToList();
+
+        // Read vs unread
+        var totalRead = await notifications.CountAsync(n => n.IsRead, ct);
+        var totalUnread = totalAllTime - totalRead;
+        var readRate = totalAllTime > 0
+            ? Math.Round((decimal)totalRead / totalAllTime * 100, 1)
+            : 0;
+
+        // Admin-sent vs system-triggered
+        // AdminMessage type = admin-sent; everything else = system-triggered
+        var adminSentCount = countByTypeRaw
+            .FirstOrDefault(x => x.Type == Domain.Enums.NotificationType.AdminMessage)?.Count ?? 0;
+        var systemTriggeredCount = totalAllTime - adminSentCount;
+
+        // Notification trend — last 12 months
+        var cutoff = DateTime.UtcNow.AddMonths(-12);
+        var trendRaw = await notifications
+            .Where(n => n.CreatedAt >= cutoff)
+            .GroupBy(n => new { n.CreatedAt.Year, n.CreatedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .ToListAsync(ct);
+        var trend = trendRaw.Select(x => new MonthlyCount(x.Year, x.Month, x.Count)).ToList();
+
+        return Result.Success(new NotificationAnalyticsResponse(
+            totalAllTime, totalThisMonth, totalToday,
+            countByType, totalRead, totalUnread, readRate,
+            adminSentCount, systemTriggeredCount, trend));
     }
 }

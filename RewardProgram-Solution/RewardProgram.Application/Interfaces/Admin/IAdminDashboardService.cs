@@ -20,4 +20,6 @@ public interface IAdminDashboardService
     Task<Result<RedemptionAnalyticsResponse>> GetRedemptionAnalyticsAsync(CancellationToken ct = default);
     Task<Result<SalesManPerformanceResponse>> GetSalesManPerformanceAsync(CancellationToken ct = default);
     Task<Result<RevenueAnalyticsResponse>> GetRevenueAnalyticsAsync(CancellationToken ct = default);
+    Task<Result<InvitationAnalyticsResponse>> GetInvitationAnalyticsAsync(int topInviters = 10, CancellationToken ct = default);
+    Task<Result<NotificationAnalyticsResponse>> GetNotificationAnalyticsAsync(CancellationToken ct = default);
 }

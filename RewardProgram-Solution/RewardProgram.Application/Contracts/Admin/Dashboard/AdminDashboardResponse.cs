@@ -10,5 +10,7 @@ public record AdminDashboardResponse(
     decimal TotalSarRedeemed,
     int TotalActiveBarcodes,
     int TotalScans,
-    int PendingRedemptions
+    int PendingRedemptions,
+    int TotalInvitations,
+    int TotalNotificationsSent
 );

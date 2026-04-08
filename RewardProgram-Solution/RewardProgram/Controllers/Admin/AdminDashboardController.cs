@@ -124,4 +124,22 @@ public class AdminDashboardController : ControllerBase
         var result = await _service.GetRevenueAnalyticsAsync(ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+
+    [HttpGet("analytics/invitations")]
+    [ProducesResponseType(typeof(InvitationAnalyticsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetInvitationAnalytics(
+        [FromQuery] int top = 10,
+        CancellationToken ct = default)
+    {
+        var result = await _service.GetInvitationAnalyticsAsync(top, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("analytics/notifications")]
+    [ProducesResponseType(typeof(NotificationAnalyticsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetNotificationAnalytics(CancellationToken ct)
+    {
+        var result = await _service.GetNotificationAnalyticsAsync(ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
 }

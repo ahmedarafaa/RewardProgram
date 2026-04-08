@@ -801,7 +801,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "dashboard"]
 						},
-						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`"
+						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`\n- `totalInvitations`, `totalNotificationsSent`"
 					}
 				},
 				{
@@ -939,6 +939,33 @@
 							"path": ["api", "admin", "analytics", "revenue"]
 						},
 						"description": "Revenue analytics: SAR liability, held/paid-out amounts, points outstanding, volume by transaction type, payout trend."
+					}
+				},
+				{
+					"name": "Invitation Analytics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/invitations?top=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "invitations"],
+							"query": [
+								{ "key": "top", "value": "10", "description": "Number of top inviters to return" }
+							]
+						},
+						"description": "Invitation analytics: total invitations sent/approved/pending, top inviters, invitation conversion rate."
+					}
+				},
+				{
+					"name": "Notification Analytics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/analytics/notifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "analytics", "notifications"]
+						},
+						"description": "Notification analytics: total sent, by type, read rate, delivery stats."
 					}
 				}
 			]
