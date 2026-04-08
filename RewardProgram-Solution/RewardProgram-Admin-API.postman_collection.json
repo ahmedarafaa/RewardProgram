@@ -237,6 +237,7 @@
 								{ "key": "registrationStatus", "value": "3", "description": "1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected", "disabled": true },
 								{ "key": "regionId", "value": "", "disabled": true },
 								{ "key": "isDisabled", "value": "false", "disabled": true },
+								{ "key": "isDeleted", "value": "", "disabled": true },
 								{ "key": "page", "value": "1" },
 								{ "key": "pageSize", "value": "20" }
 							]
@@ -801,7 +802,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "admin", "dashboard"]
 						},
-						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`\n- `totalInvitations`, `totalNotificationsSent`"
+						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`\n- `totalDeletedAccounts`\n- `totalInvitations`, `totalNotificationsSent`"
 					}
 				},
 				{
@@ -1083,6 +1084,7 @@
 								{ "key": "regionId", "value": "", "disabled": true, "description": "Filter by region GUID" },
 								{ "key": "cityId", "value": "", "disabled": true, "description": "Filter by city GUID" },
 								{ "key": "isDisabled", "value": "false", "disabled": true, "description": "Filter by active/disabled" },
+								{ "key": "isDeleted", "value": "", "disabled": true, "description": "Filter by soft-deleted accounts" },
 								{ "key": "page", "value": "1" },
 								{ "key": "pageSize", "value": "50" }
 							]
