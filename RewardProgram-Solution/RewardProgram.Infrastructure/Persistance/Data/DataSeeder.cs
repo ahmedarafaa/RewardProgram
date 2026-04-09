@@ -33,6 +33,7 @@ public static class DataSeeder
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
+        await SeedContentAsync(context, logger);
 
         // Demo analytics data in Development & Staging (not UAT/Production)
         if (!isUat)
@@ -110,154 +111,184 @@ public static class DataSeeder
         await CreateUser(userManager, users, logger,
             name: "فرحان ممدوح",
             userType: UserType.ZoneManager,
-            roles: [UserRoles.ZoneManager]);
+            roles: [UserRoles.ZoneManager],
+            mobileOverride: "0502329931");
 
         await CreateUser(userManager, users, logger,
             name: "الطيب حسين",
             userType: UserType.ZoneManager,
-            roles: [UserRoles.ZoneManager]);
+            roles: [UserRoles.ZoneManager],
+            mobileOverride: "0507483855");
 
         await CreateUser(userManager, users, logger,
             name: "محمد العجوز",
             userType: UserType.ZoneManager,
-            roles: [UserRoles.ZoneManager]);
+            roles: [UserRoles.ZoneManager],
+            mobileOverride: "0538128382");
 
         await CreateUser(userManager, users, logger,
             name: "نيازي عمر",
             userType: UserType.ZoneManager,
-            roles: [UserRoles.ZoneManager]);
+            roles: [UserRoles.ZoneManager],
+            mobileOverride: "+966557186204");
 
         await CreateUser(userManager, users, logger,
             name: "محمد اسماعيل",
             userType: UserType.ZoneManager,
-            roles: [UserRoles.ZoneManager]);
+            roles: [UserRoles.ZoneManager],
+            mobileOverride: "+966561111407");
 
         // === Dual-role: ZoneManager + SalesMan ===
         await CreateUser(userManager, users, logger,
             name: "نعيم عوض",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan, UserRoles.ZoneManager]);
+            roles: [UserRoles.SalesMan, UserRoles.ZoneManager],
+            mobileOverride: "0555239653");
 
         await CreateUser(userManager, users, logger,
             name: "سيد بخيت",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan, UserRoles.ZoneManager]);
+            roles: [UserRoles.SalesMan, UserRoles.ZoneManager],
+            mobileOverride: "0554744483");
 
         await CreateUser(userManager, users, logger,
             name: "وليد السكري",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan, UserRoles.ZoneManager]);
+            roles: [UserRoles.SalesMan, UserRoles.ZoneManager],
+            mobileOverride: "0582849316");
 
         // === Pure Salesmen ===
         await CreateUser(userManager, users, logger,
             name: "محمود حجازي",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0580603839");
 
         await CreateUser(userManager, users, logger,
-            name: "احمد سمير",
+            name: "أحمد زاهر",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966597353761");
 
         await CreateUser(userManager, users, logger,
             name: "احمد جمال",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966538815521");
 
         await CreateUser(userManager, users, logger,
             name: "عبد الرحمن خالد",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966567601747");
 
         await CreateUser(userManager, users, logger,
             name: "محمد المشير",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0596474802");
 
         await CreateUser(userManager, users, logger,
             name: "محمد اياد",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0555239712");
 
         await CreateUser(userManager, users, logger,
             name: "سعيد عبد القادر",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966501709113");
 
         await CreateUser(userManager, users, logger,
             name: "محمود الزين",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0580347507");
 
         await CreateUser(userManager, users, logger,
             name: "عباس الفاضل",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0504651693");
 
         await CreateUser(userManager, users, logger,
             name: "محمد خميس",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0560292123");
 
         await CreateUser(userManager, users, logger,
             name: "شريف محسن",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0560536983");
 
         await CreateUser(userManager, users, logger,
             name: "عمرو مدبولي",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0541471905");
 
         await CreateUser(userManager, users, logger,
             name: "هشام كشك",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966553989200");
 
         await CreateUser(userManager, users, logger,
             name: "محمد خطاب",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966535757808");
 
         await CreateUser(userManager, users, logger,
             name: "احمد عاطف",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966578981202");
 
         await CreateUser(userManager, users, logger,
-            name: "احمد السيد",
+            name: "احمد سالمان",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966583304849");
 
         await CreateUser(userManager, users, logger,
             name: "محمد جمال",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966507846587");
 
         await CreateUser(userManager, users, logger,
             name: "محمد حسام",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "+966502539897");
 
         await CreateUser(userManager, users, logger,
             name: "عادل امام",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0550905273");
 
         await CreateUser(userManager, users, logger,
             name: "خالد حشيش",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0563998040");
 
         await CreateUser(userManager, users, logger,
             name: "احمد عمر الزيات",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0574050996");
 
         await CreateUser(userManager, users, logger,
             name: "سليمان حبيب",
             userType: UserType.SalesMan,
-            roles: [UserRoles.SalesMan]);
+            roles: [UserRoles.SalesMan],
+            mobileOverride: "0503415240");
 
         return users;
     }
@@ -412,16 +443,16 @@ public static class DataSeeder
         {
             // === الرياض ===
             ("الرياض", "الرياض", "Riyadh", "محمود حجازي"),
-            ("الرياض", "الخرج", "Al Kharj", "احمد سمير"),
-            ("الرياض", "الأفلاج", "Al Aflaj", "احمد سمير"),
+            ("الرياض", "الخرج", "Al Kharj", "أحمد زاهر"),
+            ("الرياض", "الأفلاج", "Al Aflaj", "أحمد زاهر"),
             ("الرياض", "القويعية", "Al Quway'iyah", "احمد جمال"),
             ("الرياض", "عفيف", "Afif", "احمد جمال"),
             ("الرياض", "الدرعية", "Ad Diriyah", "عبد الرحمن خالد"),
             ("الرياض", "حريملاء", "Huraymila", "عبد الرحمن خالد"),
             ("الرياض", "رماح", "Rumah", "عبد الرحمن خالد"),
-            ("الرياض", "السيح", "As Sih", "احمد سمير"),
-            ("الرياض", "الدلم", "Ad Dilam", "احمد سمير"),
-            ("الرياض", "ليلى", "Layla", "احمد سمير"),
+            ("الرياض", "السيح", "As Sih", "أحمد زاهر"),
+            ("الرياض", "الدلم", "Ad Dilam", "أحمد زاهر"),
+            ("الرياض", "ليلى", "Layla", "أحمد زاهر"),
             ("الرياض", "المزاحمية", "Al Muzahimiyah", "محمود حجازي"),
 
             // === المنطقة الغربية ===
@@ -455,7 +486,7 @@ public static class DataSeeder
             ("الشرقية", "الخبر", "Khobar", "محمد خميس"),
             ("الشرقية", "القطيف", "Qatif", "شريف محسن"),
             ("الشرقية", "الأحساء", "Al Ahsa", "عمرو مدبولي"),
-            ("الشرقية", "حفر الباطن", "Hafar Al Batin", "احمد سمير"),
+            ("الشرقية", "حفر الباطن", "Hafar Al Batin", "أحمد زاهر"),
             ("الشرقية", "الجبيل", "Jubail", "شريف محسن"),
             ("الشرقية", "الظهران", "Dhahran", "محمد خميس"),
             ("الشرقية", "بقيق", "Buqayq", "شريف محسن"),
@@ -494,21 +525,21 @@ public static class DataSeeder
             ("المنطقة الجنوبية", "نجران", "Najran", "احمد عاطف"),
             ("المنطقة الجنوبية", "شرورة", "Sharurah", "احمد عاطف"),
             ("المنطقة الجنوبية", "بدر الجنوب", "Badr Al Janoub", "محمد خطاب"),
-            ("المنطقة الجنوبية", "الباحة", "Al Baha", "احمد السيد"),
-            ("المنطقة الجنوبية", "بلجرشي", "Baljurashi", "احمد السيد"),
-            ("المنطقة الجنوبية", "المندق", "Al Mandaq", "احمد السيد"),
-            ("المنطقة الجنوبية", "القنفذة", "Al Qunfudhah", "احمد السيد"),
-            ("المنطقة الجنوبية", "الليث", "Al Lith", "احمد السيد"),
+            ("المنطقة الجنوبية", "الباحة", "Al Baha", "احمد سالمان"),
+            ("المنطقة الجنوبية", "بلجرشي", "Baljurashi", "احمد سالمان"),
+            ("المنطقة الجنوبية", "المندق", "Al Mandaq", "احمد سالمان"),
+            ("المنطقة الجنوبية", "القنفذة", "Al Qunfudhah", "احمد سالمان"),
+            ("المنطقة الجنوبية", "الليث", "Al Lith", "احمد سالمان"),
             ("المنطقة الجنوبية", "وادي الدواسر", "Wadi Ad Dawasir", "محمد جمال"),
             ("المنطقة الجنوبية", "السليل", "As Sulayyil", "محمد جمال"),
             ("المنطقة الجنوبية", "يدمة", "Yadamah", "احمد عاطف"),
             ("المنطقة الجنوبية", "خباش", "Khabash", "احمد عاطف"),
             ("المنطقة الجنوبية", "حبونا", "Habuna", "احمد عاطف"),
             ("المنطقة الجنوبية", "ثار", "Thar", "احمد عاطف"),
-            ("المنطقة الجنوبية", "العقيق", "Al Aqiq", "احمد السيد"),
-            ("المنطقة الجنوبية", "القرى", "Al Qura", "احمد السيد"),
-            ("المنطقة الجنوبية", "بني حسن", "Bani Hasan", "احمد السيد"),
-            ("المنطقة الجنوبية", "غامد الزناد", "Ghamid Az Zinad", "احمد السيد"),
+            ("المنطقة الجنوبية", "العقيق", "Al Aqiq", "احمد سالمان"),
+            ("المنطقة الجنوبية", "القرى", "Al Qura", "احمد سالمان"),
+            ("المنطقة الجنوبية", "بني حسن", "Bani Hasan", "احمد سالمان"),
+            ("المنطقة الجنوبية", "غامد الزناد", "Ghamid Az Zinad", "احمد سالمان"),
 
             // === تبوك و الشمال ===
             ("تبوك و الشمال", "تبوك", "Tabuk", "محمد حسام"),
@@ -802,7 +833,7 @@ public static class DataSeeder
 
         // Lookup existing users by name
         users.TryGetValue("محمود حجازي", out var smRiyadh1);
-        users.TryGetValue("احمد سمير", out var smRiyadh2);
+        users.TryGetValue("أحمد زاهر", out var smRiyadh2);
         users.TryGetValue("محمد اياد", out var smJeddah);
         users.TryGetValue("محمد خميس", out var smDammam);
         users.TryGetValue("وليد السكري", out var smQassim);
@@ -1282,6 +1313,39 @@ public static class DataSeeder
             createdUsers.Count, barcodeIndex, allScanRecords.Count,
             await context.WalletTransactions.CountAsync(),
             notifIndex);
+    }
+
+    #endregion
+
+    #region Content
+
+    private static async Task SeedContentAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (!await context.AboutAppContents.AnyAsync())
+        {
+            context.AboutAppContents.Add(new AboutAppContent
+            {
+                Content = "AL RAED، الشركة الرائدة في مجال تكنولوجيا الإضاءة الخضراء في المملكة العربية السعودية، وهي إحدى شركات AL RAED Enterprises، المتخصصة في تصنيع حلول الإضاءة LED المبتكرة من الجيل التالي والتي تعمل على تحسين جودة الإضاءة وتحسين الكفاءة وتعزيز البيئة من خلال تقليل استهلاك الطاقة. الهدف من RAED هو تلبية الحاجة المتزايدة إلى حلول الإضاءة الذكية والتحكم الذكي الموفرة للطاقة. تتمتع شركة RAED Enterprises بخبرة تزيد عن 30 عامًا في مجال تصنيع الإضاءة وأنتجت العديد من المنتجات المبتكرة التي شكلت صناعة اليوم.",
+                CreatedBy = "DataSeeder"
+            });
+            logger.LogInformation("AboutApp content seeded");
+        }
+
+        if (!await context.ContactUsContents.AnyAsync())
+        {
+            context.ContactUsContents.Add(new ContactUsContent
+            {
+                Phone = "+966555277101",
+                Email = "ALRAED@ALRAED.COM.SA",
+                WhatsApp = string.Empty,
+                Address = "3416، 7251، الرياض 14333، المملكة العربية السعودية",
+                WorkingHours = string.Empty,
+                CreatedBy = "DataSeeder"
+            });
+            logger.LogInformation("ContactUs content seeded");
+        }
+
+        await context.SaveChangesAsync();
     }
 
     #endregion
