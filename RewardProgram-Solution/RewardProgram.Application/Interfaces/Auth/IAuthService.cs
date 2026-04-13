@@ -19,5 +19,6 @@ public interface IAuthService
 
     // Token
     Task<Result<AuthResponse>> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+    Task<Result<AuthResponse>> RefreshAdminTokenAsync(string refreshToken, CancellationToken ct = default);
     Task<Result> RevokeTokenAsync(string refreshToken, string currentUserId, CancellationToken ct = default);
 }

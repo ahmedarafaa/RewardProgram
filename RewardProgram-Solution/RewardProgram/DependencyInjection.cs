@@ -180,7 +180,12 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
 
-        services.AddIdentity<ApplicationUser, ApplicationRole>()
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+            {
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.MaxFailedAccessAttempts = 5;
+            })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
@@ -194,6 +199,12 @@ public static class DependencyInjection
 
         if (string.IsNullOrWhiteSpace(jwtSettings.Key))
             throw new InvalidOperationException("JWT signing key must not be empty. Configure 'Jwt:Key' in appsettings.");
+
+        if (jwtSettings.Key.Contains("REPLACE_WITH_SECURE_KEY", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("JWT signing key is still the placeholder value. Set a real 'Jwt:Key' in environment-specific configuration.");
+
+        if (jwtSettings.Key.Length < 32)
+            throw new InvalidOperationException("JWT signing key must be at least 32 characters (256 bits) for HS256.");
 
         services.AddAuthentication(options =>
         {
@@ -211,7 +222,8 @@ public static class DependencyInjection
                 ValidateLifetime = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience
+                ValidAudiences = new[] { jwtSettings.Audience, jwtSettings.AdminAudience },
+                ClockSkew = TimeSpan.FromSeconds(30)
             };
         });
 

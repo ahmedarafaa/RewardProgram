@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,10 +26,11 @@ public static class DataSeeder
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
         var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var isUat = env.IsEnvironment("UAT");
 
         await SeedRolesAsync(roleManager, logger);
-        var users = await SeedUsersAsync(userManager, logger, isUat);
+        var users = await SeedUsersAsync(userManager, logger, env, config, isUat);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
         await SeedProductsAsync(context, logger);
@@ -82,29 +84,31 @@ public static class DataSeeder
     #region Users
 
     private static async Task<Dictionary<string, ApplicationUser>> SeedUsersAsync(
-        UserManager<ApplicationUser> userManager, ILogger logger, bool isUat)
+        UserManager<ApplicationUser> userManager, ILogger logger, IHostEnvironment env, IConfiguration config, bool isUat)
     {
         var users = new Dictionary<string, ApplicationUser>();
         _mobileCounter = 1;
 
         // === SystemAdmin ===
+        var adminPassword = ResolveAdminPassword(env, config, logger);
         await CreateUser(userManager, users, logger,
             name: "مدير النظام",
             userType: UserType.SystemAdmin,
             roles: [UserRoles.SystemAdmin],
             usernameOverride: "admin",
-            password: "Raed@2026");
+            password: adminPassword);
 
-        // Dev/Staging test admin (not UAT)
-        if (!isUat)
+        // Dev/Staging test admin (not UAT, not Production)
+        if (!isUat && !env.IsProduction())
         {
+            var testAdminPassword = config["Seeder:TestAdminPassword"] ?? "Admin@123";
             await CreateUser(userManager, users, logger,
                 name: "مدير النظام - تست",
                 userType: UserType.SystemAdmin,
                 roles: [UserRoles.SystemAdmin],
                 mobileOverride: "+201121007505",
                 usernameOverride: "admin.test",
-                password: "Admin@123");
+                password: testAdminPassword);
         }
 
         // === Pure ZoneManagers (not also salesmen) ===
@@ -291,6 +295,23 @@ public static class DataSeeder
             mobileOverride: "0503415240");
 
         return users;
+    }
+
+    private static string ResolveAdminPassword(IHostEnvironment env, IConfiguration config, ILogger logger)
+    {
+        // Preferred sources (in order): Seeder:AdminPassword config, ADMIN_SEED_PASSWORD env var
+        var configured = config["Seeder:AdminPassword"]
+            ?? Environment.GetEnvironmentVariable("ADMIN_SEED_PASSWORD");
+
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
+
+        if (env.IsProduction())
+            throw new InvalidOperationException(
+                "Seeder admin password is not configured. Set 'Seeder:AdminPassword' in configuration or the ADMIN_SEED_PASSWORD environment variable before running in Production.");
+
+        logger.LogWarning("Admin password not configured (Seeder:AdminPassword / ADMIN_SEED_PASSWORD) — using non-production fallback. Do NOT deploy this to Production without configuring a secure password.");
+        return "Raed@2026";
     }
 
     private static async Task CreateUser(

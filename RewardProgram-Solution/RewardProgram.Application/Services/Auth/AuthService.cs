@@ -618,6 +618,12 @@ public class AuthService : IAuthService
     #region Token Management
 
     public async Task<Result<AuthResponse>> RefreshTokenAsync(string refreshToken, CancellationToken ct = default)
+        => await RefreshTokenInternalAsync(refreshToken, isAdmin: false, ct);
+
+    public async Task<Result<AuthResponse>> RefreshAdminTokenAsync(string refreshToken, CancellationToken ct = default)
+        => await RefreshTokenInternalAsync(refreshToken, isAdmin: true, ct);
+
+    private async Task<Result<AuthResponse>> RefreshTokenInternalAsync(string refreshToken, bool isAdmin, CancellationToken ct)
     {
         var user = await _userRepository.FindByRefreshTokenAsync(refreshToken, ct);
 
@@ -638,6 +644,17 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
+        // Scope enforcement: admin refresh endpoint only accepts SystemAdmin users;
+        // public refresh endpoint rejects SystemAdmin users (prevents cross-scope refresh).
+        var roles = await _userRepository.GetRolesAsync(user);
+        var isSystemAdmin = roles.Contains(UserRoles.SystemAdmin);
+
+        if (isAdmin && !isSystemAdmin)
+            return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
+
+        if (!isAdmin && isSystemAdmin)
+            return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
+
         // Revoke old token
         token.RevokedOn = DateTime.UtcNow;
 
@@ -646,9 +663,11 @@ public class AuthService : IAuthService
 
         // Generate new auth response (adds new token to user.RefreshTokens)
         // Single UpdateAsync call persists both revocation and new token atomically
-        var authResponse = await _tokenService.GenerateAuthResponseAsync(user);
+        var authResponse = isAdmin
+            ? await _tokenService.GenerateAdminAuthResponseAsync(user)
+            : await _tokenService.GenerateAuthResponseAsync(user);
 
-        _logger.LogInformation("Token refreshed for UserId: {UserId}", user.Id);
+        _logger.LogInformation("Token refreshed for UserId: {UserId} (admin={IsAdmin})", user.Id, isAdmin);
 
         return Result.Success(authResponse);
     }

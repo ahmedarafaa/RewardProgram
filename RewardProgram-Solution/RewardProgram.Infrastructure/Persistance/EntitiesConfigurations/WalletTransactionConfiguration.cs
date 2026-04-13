@@ -57,6 +57,7 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.HasIndex(x => x.WalletId);
         builder.HasIndex(x => x.Type);
         builder.HasIndex(x => x.ReferenceId);
+        builder.HasIndex(x => new { x.WalletId, x.CreatedAt });
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

@@ -221,6 +221,12 @@ public class AdminBarcodeService : IAdminBarcodeService
             .Where(t => t.ReferenceId == scanId)
             .ToListAsync(ct);
 
+        // Batch-fetch affected wallets to avoid N+1 in the reversal loop
+        var walletIds = walletTransactions.Select(wt => wt.WalletId).Distinct().ToList();
+        var walletsById = await _context.Wallets
+            .Where(w => walletIds.Contains(w.Id))
+            .ToDictionaryAsync(w => w.Id, ct);
+
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -231,7 +237,7 @@ public class AdminBarcodeService : IAdminBarcodeService
             // 4. Reverse each wallet transaction — check balance is sufficient
             foreach (var wt in walletTransactions)
             {
-                var wallet = await _context.Wallets.FirstAsync(w => w.Id == wt.WalletId, ct);
+                var wallet = walletsById[wt.WalletId];
 
                 // Available = Balance - HeldBalance. Reversal needs available >= earned amount.
                 var availableBalance = wallet.Balance - wallet.HeldBalance;

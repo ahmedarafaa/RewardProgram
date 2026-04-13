@@ -93,6 +93,7 @@ public class RedemptionRequestConfiguration : IEntityTypeConfiguration<Redemptio
         // Indexes
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.UserId, x.Status });
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

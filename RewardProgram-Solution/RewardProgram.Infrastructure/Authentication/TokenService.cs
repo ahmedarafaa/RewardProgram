@@ -26,6 +26,9 @@ public class TokenService : ITokenService
     }
 
     public async Task<(string Token, int ExpiresIn)> GenerateAccessTokenAsync(ApplicationUser user)
+        => await GenerateAccessTokenInternalAsync(user, isAdmin: false);
+
+    private async Task<(string Token, int ExpiresIn)> GenerateAccessTokenInternalAsync(ApplicationUser user, bool isAdmin)
     {
         var roles = await _userManager.GetRolesAsync(user);
 
@@ -36,10 +39,16 @@ public class TokenService : ITokenService
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Name, user.Name),
-            new(ClaimTypes.MobilePhone, user.MobileNumber),
-            new("UserType", ((int)user.UserType).ToString()),
-            new("RegistrationStatus", ((int)user.RegistrationStatus).ToString())
+            new("scope", isAdmin ? JwtScopes.Admin : JwtScopes.User)
         };
+
+        // Mobile app clients rely on these claims; admin dashboard does not need them
+        if (!isAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.MobilePhone, user.MobileNumber));
+            claims.Add(new Claim("UserType", ((int)user.UserType).ToString()));
+            claims.Add(new Claim("RegistrationStatus", ((int)user.RegistrationStatus).ToString()));
+        }
 
         foreach (var role in roles)
         {
@@ -49,12 +58,15 @@ public class TokenService : ITokenService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var expiresIn = _jwtOptions.AccessTokenExpirationMinutes;
+        var expiresIn = isAdmin
+            ? _jwtOptions.AdminAccessTokenExpirationMinutes
+            : _jwtOptions.AccessTokenExpirationMinutes;
         var expires = DateTime.UtcNow.AddMinutes(expiresIn);
+        var audience = isAdmin ? _jwtOptions.AdminAudience : _jwtOptions.Audience;
 
         var token = new JwtSecurityToken(
             issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
+            audience: audience,
             claims: claims,
             notBefore: DateTime.UtcNow,
             expires: expires,
@@ -67,21 +79,33 @@ public class TokenService : ITokenService
     }
 
     public (string Token, DateTime Expiration) GenerateRefreshToken()
+        => GenerateRefreshTokenInternal(isAdmin: false);
+
+    private (string Token, DateTime Expiration) GenerateRefreshTokenInternal(bool isAdmin)
     {
         var randomBytes = new byte[64];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
 
         var token = Convert.ToBase64String(randomBytes);
-        var expiration = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays);
+        var days = isAdmin
+            ? _jwtOptions.AdminRefreshTokenExpirationDays
+            : _jwtOptions.RefreshTokenExpirationDays;
+        var expiration = DateTime.UtcNow.AddDays(days);
 
         return (token, expiration);
     }
 
-    public async Task<AuthResponse> GenerateAuthResponseAsync(ApplicationUser user)
+    public Task<AuthResponse> GenerateAuthResponseAsync(ApplicationUser user)
+        => GenerateAuthResponseInternalAsync(user, isAdmin: false);
+
+    public Task<AuthResponse> GenerateAdminAuthResponseAsync(ApplicationUser user)
+        => GenerateAuthResponseInternalAsync(user, isAdmin: true);
+
+    private async Task<AuthResponse> GenerateAuthResponseInternalAsync(ApplicationUser user, bool isAdmin)
     {
-        var (accessToken, expiresIn) = await GenerateAccessTokenAsync(user);
-        var (refreshToken, refreshTokenExpiration) = GenerateRefreshToken();
+        var (accessToken, expiresIn) = await GenerateAccessTokenInternalAsync(user, isAdmin);
+        var (refreshToken, refreshTokenExpiration) = GenerateRefreshTokenInternal(isAdmin);
 
         // Store new refresh token
         user.RefreshTokens.Add(new RefreshToken

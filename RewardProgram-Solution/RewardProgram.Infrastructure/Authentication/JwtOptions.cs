@@ -21,4 +21,19 @@ public class JwtOptions
     [Range(1, int.MaxValue)]
     public int AccessTokenExpirationMinutes { get; set; } = 60;
     public int RefreshTokenExpirationDays { get; set; } = 7;
+
+    [Required]
+    public string AdminAudience { get; init; } = string.Empty;
+
+    [Range(1, int.MaxValue)]
+    public int AdminAccessTokenExpirationMinutes { get; set; } = 15;
+
+    [Range(1, int.MaxValue)]
+    public int AdminRefreshTokenExpirationDays { get; set; } = 30;
+}
+
+public static class JwtScopes
+{
+    public const string Admin = "admin";
+    public const string User = "user";
 }
