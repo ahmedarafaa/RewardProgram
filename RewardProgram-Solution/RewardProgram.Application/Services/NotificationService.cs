@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -17,17 +18,20 @@ public class NotificationService : INotificationService
     private readonly IUserRepository _userRepository;
     private readonly IFirebaseMessagingService _fcm;
     private readonly ILogger<NotificationService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public NotificationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IFirebaseMessagingService fcm,
-        ILogger<NotificationService> logger)
+        ILogger<NotificationService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _userRepository = userRepository;
         _fcm = fcm;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     // ── Device Registration ──
@@ -206,8 +210,17 @@ public class NotificationService : INotificationService
 
         _logger.LogInformation("Notification created: {Type} for user {UserId}", type, userId);
 
-        // Send FCM push (fire-and-forget — don't block the caller)
-        _ = SendPushToUserAsync(userId, title, body, type, referenceId);
+        // Pre-fetch mute state + FCM token in the current scope so the
+        // fire-and-forget task doesn't touch a disposed DbContext.
+        var isMuted = await _context.UserNotificationPreferences
+            .AnyAsync(p => p.UserId == userId && p.NotificationType == type && p.IsPushMuted, ct);
+
+        if (isMuted) return;
+
+        var user = await _userRepository.FindByIdAsync(userId);
+        if (user?.FcmToken is null) return;
+
+        _ = FirePushToUserAsync(userId, user.FcmToken, title, body, type, referenceId);
     }
 
     // ── Admin ──
@@ -247,11 +260,16 @@ public class NotificationService : INotificationService
 
         await _context.SaveChangesAsync(ct);
 
-        // Send FCM push to all users in role (fire-and-forget)
-        _ = SendPushToUsersAsync(activeUserIds, title, body);
+        // Pre-fetch tokens in the current scope — background task must not touch _context.
+        var tokens = await _userRepository.Query()
+            .Where(u => activeUserIds.Contains(u.Id) && u.FcmToken != null)
+            .Select(u => u.FcmToken!)
+            .ToListAsync(ct);
 
-        _logger.LogInformation("Admin {AdminId} sent notification to role {Role}, {Count} users",
-            sentByAdminId, roleName, activeUserIds.Count);
+        _ = FirePushToTokensAsync(tokens, title, body, NotificationType.AdminMessage, null);
+
+        _logger.LogInformation("Admin {AdminId} sent notification to role {Role}, {Count} users ({TokenCount} push targets)",
+            sentByAdminId, roleName, activeUserIds.Count, tokens.Count);
 
         return Result.Success(activeUserIds.Count);
     }
@@ -277,11 +295,16 @@ public class NotificationService : INotificationService
 
         await _context.SaveChangesAsync(ct);
 
-        // Send FCM push to all active users (fire-and-forget)
-        _ = SendPushToUsersAsync(userIds, title, body);
+        // Pre-fetch tokens in the current scope — background task must not touch _context.
+        var tokens = await _userRepository.Query()
+            .Where(u => userIds.Contains(u.Id) && u.FcmToken != null)
+            .Select(u => u.FcmToken!)
+            .ToListAsync(ct);
 
-        _logger.LogInformation("Admin {AdminId} broadcast notification to {Count} users",
-            sentByAdminId, userIds.Count);
+        _ = FirePushToTokensAsync(tokens, title, body, NotificationType.AdminMessage, null);
+
+        _logger.LogInformation("Admin {AdminId} broadcast notification to {Count} users ({TokenCount} push targets)",
+            sentByAdminId, userIds.Count, tokens.Count);
 
         return Result.Success(userIds.Count);
     }
@@ -328,34 +351,29 @@ public class NotificationService : INotificationService
         return new PaginatedResult<AdminNotificationHistoryItem>(items, totalCount, page, pageSize);
     }
 
-    // ── Private FCM Helpers ──
+    // ── Private FCM Helpers (scope-safe: callers pre-fetch tokens, DB cleanup uses a fresh scope) ──
 
-    private async Task SendPushToUserAsync(string userId, string title, string body,
+    private async Task FirePushToUserAsync(string userId, string fcmToken, string title, string body,
         NotificationType type, string? referenceId)
     {
         try
         {
-            // Check if user has muted this notification type
-            var isMuted = await _context.UserNotificationPreferences
-                .AnyAsync(p => p.UserId == userId && p.NotificationType == type && p.IsPushMuted);
-
-            if (isMuted) return;
-
-            var user = await _userRepository.FindByIdAsync(userId);
-            if (user?.FcmToken is not null)
+            var data = new Dictionary<string, string>
             {
-                var data = new Dictionary<string, string>
-                {
-                    ["type"] = type.ToString(),
-                    ["referenceId"] = referenceId ?? ""
-                };
-                var tokenValid = await _fcm.SendToUserAsync(user.FcmToken, title, body, data);
+                ["type"] = type.ToString(),
+                ["referenceId"] = referenceId ?? ""
+            };
+            var tokenValid = await _fcm.SendToUserAsync(fcmToken, title, body, data);
 
-                // Clean up expired/unregistered token
-                if (!tokenValid)
+            if (!tokenValid)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+                var user = await repo.FindByIdAsync(userId);
+                if (user is not null)
                 {
                     user.FcmToken = null;
-                    await _userRepository.UpdateAsync(user);
+                    await repo.UpdateAsync(user);
                     _logger.LogInformation("Cleared expired FCM token for user {UserId}", userId);
                 }
             }
@@ -366,39 +384,33 @@ public class NotificationService : INotificationService
         }
     }
 
-    private async Task SendPushToUsersAsync(IReadOnlyList<string> userIds, string title, string body,
-        NotificationType type = NotificationType.AdminMessage, string? referenceId = null)
+    private async Task FirePushToTokensAsync(List<string> tokens, string title, string body,
+        NotificationType type, string? referenceId)
     {
         try
         {
-            var tokens = await _userRepository.Query()
-                .Where(u => userIds.Contains(u.Id) && u.FcmToken != null)
-                .Select(u => u.FcmToken!)
-                .ToListAsync();
+            if (tokens.Count == 0) return;
 
-            if (tokens.Count > 0)
+            var data = new Dictionary<string, string>
             {
-                var data = new Dictionary<string, string>
-                {
-                    ["type"] = type.ToString(),
-                    ["referenceId"] = referenceId ?? ""
-                };
-                var expiredTokens = await _fcm.SendToMultipleAsync(tokens, title, body, data);
+                ["type"] = type.ToString(),
+                ["referenceId"] = referenceId ?? ""
+            };
+            var expiredTokens = await _fcm.SendToMultipleAsync(tokens, title, body, data);
 
-                // Clean up expired/unregistered tokens
-                if (expiredTokens.Count > 0)
-                {
-                    await _userRepository.Query()
-                        .Where(u => u.FcmToken != null && expiredTokens.Contains(u.FcmToken))
-                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.FcmToken, (string?)null));
-
-                    _logger.LogInformation("Cleared {Count} expired FCM tokens", expiredTokens.Count);
-                }
+            if (expiredTokens.Count > 0)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+                await repo.Query()
+                    .Where(u => u.FcmToken != null && expiredTokens.Contains(u.FcmToken))
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.FcmToken, (string?)null));
+                _logger.LogInformation("Cleared {Count} expired FCM tokens", expiredTokens.Count);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to send FCM push to {Count} users", userIds.Count);
+            _logger.LogWarning(ex, "Failed to send FCM multicast to {Count} tokens", tokens.Count);
         }
     }
 }
