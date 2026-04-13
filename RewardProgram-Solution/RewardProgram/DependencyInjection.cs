@@ -177,9 +177,10 @@ public static class DependencyInjection
             throw new InvalidOperationException(
                 "Firebase is enabled but 'Firebase:ServiceAccountKeyPath' is not set. Provide the path to the service-account JSON or set 'Firebase:Enabled' to false.");
 
-        if (!File.Exists(firebase.ServiceAccountKeyPath))
+        var resolved = FirebaseOptions.ResolveKeyPath(firebase.ServiceAccountKeyPath);
+        if (!File.Exists(resolved))
             throw new InvalidOperationException(
-                $"Firebase is enabled but the service-account JSON was not found at '{firebase.ServiceAccountKeyPath}'. Deploy the credentials file or disable Firebase.");
+                $"Firebase is enabled but the service-account JSON was not found at '{resolved}'. Deploy the credentials file or disable Firebase.");
     }
 
     private static IServiceCollection AddFluentValidationConfig(this IServiceCollection services)

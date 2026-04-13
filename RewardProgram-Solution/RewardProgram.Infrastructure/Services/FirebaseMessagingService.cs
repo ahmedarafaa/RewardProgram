@@ -12,6 +12,11 @@ public class FirebaseOptions
     public const string SectionName = "Firebase";
     public string ServiceAccountKeyPath { get; set; } = string.Empty;
     public bool Enabled { get; set; } = true;
+
+    public static string ResolveKeyPath(string path)
+        => Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(AppContext.BaseDirectory, path);
 }
 
 public class FirebaseMessagingService : IFirebaseMessagingService
@@ -39,7 +44,7 @@ public class FirebaseMessagingService : IFirebaseMessagingService
             if (FirebaseApp.DefaultInstance is not null)
                 return;
 
-            var keyPath = options.Value.ServiceAccountKeyPath;
+            var keyPath = FirebaseOptions.ResolveKeyPath(options.Value.ServiceAccountKeyPath);
             FirebaseApp.Create(new AppOptions
             {
                 Credential = GoogleCredential.FromFile(keyPath)

@@ -30,4 +30,11 @@
     <Folder Include="Controllers\Admin\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="App_Data\firebase-credentials.json"
+             Condition="Exists('App_Data\firebase-credentials.json')"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

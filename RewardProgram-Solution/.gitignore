@@ -59,6 +59,10 @@ appsettings.Staging.json
 appsettings.UAT.json
 web.config
 
+# Firebase service-account credentials (never commit)
+**/App_Data/firebase-credentials.json
+**/App_Data/*firebase*.json
+
 # Temp files
 *~
 *.tmp
