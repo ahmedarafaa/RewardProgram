@@ -18,7 +18,6 @@ using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
 using RewardProgram.Infrastructure.Services;
 using RewardProgram.Infrastructure.Services.FileStorage;
-using RewardProgram.Infrastructure.Services;
 using RewardProgram.Infrastructure.Services.WhatsAppService;
 using System.Text;
 
@@ -101,6 +100,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
+        ValidateFirebaseConfig(configuration);
         services.AddSingleton<IFirebaseMessagingService, FirebaseMessagingService>();
         services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
@@ -165,6 +165,21 @@ public static class DependencyInjection
         });
 
         return services;
+    }
+
+    private static void ValidateFirebaseConfig(IConfiguration configuration)
+    {
+        var firebase = configuration.GetSection(FirebaseOptions.SectionName).Get<FirebaseOptions>();
+        if (firebase is null || !firebase.Enabled)
+            return;
+
+        if (string.IsNullOrWhiteSpace(firebase.ServiceAccountKeyPath))
+            throw new InvalidOperationException(
+                "Firebase is enabled but 'Firebase:ServiceAccountKeyPath' is not set. Provide the path to the service-account JSON or set 'Firebase:Enabled' to false.");
+
+        if (!File.Exists(firebase.ServiceAccountKeyPath))
+            throw new InvalidOperationException(
+                $"Firebase is enabled but the service-account JSON was not found at '{firebase.ServiceAccountKeyPath}'. Deploy the credentials file or disable Firebase.");
     }
 
     private static IServiceCollection AddFluentValidationConfig(this IServiceCollection services)

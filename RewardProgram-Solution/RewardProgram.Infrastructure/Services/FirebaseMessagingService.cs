@@ -25,28 +25,26 @@ public class FirebaseMessagingService : IFirebaseMessagingService
         _logger = logger;
         _enabled = options.Value.Enabled;
 
-        if (_enabled && FirebaseApp.DefaultInstance is null)
+        if (!_enabled)
         {
-            lock (_initLock)
+            _logger.LogInformation("Firebase push notifications are disabled via configuration.");
+            return;
+        }
+
+        if (FirebaseApp.DefaultInstance is not null)
+            return;
+
+        lock (_initLock)
+        {
+            if (FirebaseApp.DefaultInstance is not null)
+                return;
+
+            var keyPath = options.Value.ServiceAccountKeyPath;
+            FirebaseApp.Create(new AppOptions
             {
-                if (FirebaseApp.DefaultInstance is null)
-                {
-                    var keyPath = options.Value.ServiceAccountKeyPath;
-                    if (!string.IsNullOrWhiteSpace(keyPath) && File.Exists(keyPath))
-                    {
-                        FirebaseApp.Create(new AppOptions
-                        {
-                            Credential = GoogleCredential.FromFile(keyPath)
-                        });
-                        _logger.LogInformation("Firebase initialized from {Path}", keyPath);
-                    }
-                    else
-                    {
-                        _enabled = false;
-                        _logger.LogWarning("Firebase service account key not found at '{Path}'. FCM push disabled.", keyPath);
-                    }
-                }
-            }
+                Credential = GoogleCredential.FromFile(keyPath)
+            });
+            _logger.LogInformation("Firebase initialized from {Path}", keyPath);
         }
     }
 
@@ -64,18 +62,23 @@ public class FirebaseMessagingService : IFirebaseMessagingService
         try
         {
             var messageId = await FirebaseMessaging.DefaultInstance.SendAsync(message);
-            _logger.LogDebug("FCM sent: {MessageId}", messageId);
+            _logger.LogInformation("FCM send ok MessageId={MessageId}", messageId);
             return true;
         }
         catch (FirebaseMessagingException ex) when (ex.MessagingErrorCode == MessagingErrorCode.Unregistered)
         {
-            _logger.LogInformation("FCM token expired/unregistered — token should be cleared");
+            _logger.LogInformation("FCM token unregistered — clearing token");
             return false;
+        }
+        catch (FirebaseMessagingException ex)
+        {
+            _logger.LogWarning(ex, "FCM send failed Code={Code}", ex.MessagingErrorCode);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "FCM send failed");
-            return true; // Don't clear token on transient errors
+            _logger.LogWarning(ex, "FCM send failed (transient)");
+            return true;
         }
     }
 
@@ -97,18 +100,21 @@ public class FirebaseMessagingService : IFirebaseMessagingService
             try
             {
                 var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
-                _logger.LogDebug("FCM multicast: {Success}/{Total} succeeded",
-                    response.SuccessCount, batch.Length);
 
-                // Collect expired/unregistered tokens
+                var batchExpired = 0;
                 for (var i = 0; i < response.Responses.Count; i++)
                 {
                     var r = response.Responses[i];
                     if (!r.IsSuccess && r.Exception?.MessagingErrorCode == MessagingErrorCode.Unregistered)
                     {
                         expiredTokens.Add(batch[i]);
+                        batchExpired++;
                     }
                 }
+
+                _logger.LogInformation(
+                    "FCM multicast Success={Success} Failure={Failure} Expired={Expired} Total={Total}",
+                    response.SuccessCount, response.FailureCount, batchExpired, batch.Length);
             }
             catch (Exception ex)
             {
