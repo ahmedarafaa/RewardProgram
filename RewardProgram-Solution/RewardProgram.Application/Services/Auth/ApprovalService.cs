@@ -41,7 +41,7 @@ public class ApprovalService : IApprovalService
         _logger = logger;
     }
 
-    public async Task<Result<PaginatedResult<PendingUserResponse>>> GetPendingRequestsAsync(string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    public async Task<Result<PaginatedResult<PendingUserResponse>>> GetPendingRequestsAsync(string approverId, string? search = null, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
         (page, pageSize) = Normalize(page, pageSize, maxPageSize: 50);
 
@@ -57,40 +57,12 @@ public class ApprovalService : IApprovalService
         if (!isSalesMan && !isZoneManager)
             return Result.Failure<PaginatedResult<PendingUserResponse>>(ApprovalErrors.NotAuthorizedToApprove);
 
-        IQueryable<ApplicationUser> query;
+        var query = BuildPendingScopedQuery(approverId, isSalesMan, isZoneManager);
 
-        if (isSalesMan && isZoneManager)
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            // Dual-role: show both SalesMan pending + ZoneManager pending
-            var managedCityIds = _context.Cities
-                .Where(c => c.Region!.ZoneManagerId == approverId)
-                .Select(c => c.Id);
-
-            query = _userRepository.Query()
-                .Where(u =>
-                    (u.AssignedSalesManId == approverId && u.RegistrationStatus == RegistrationStatus.PendingSalesman)
-                    ||
-                    (u.RegistrationStatus == RegistrationStatus.PendingZoneManager
-                     && u.NationalAddress != null
-                     && managedCityIds.Contains(u.NationalAddress.CityId)));
-        }
-        else if (isSalesMan)
-        {
-            query = _userRepository.Query()
-                .Where(u => u.AssignedSalesManId == approverId
-                         && u.RegistrationStatus == RegistrationStatus.PendingSalesman);
-        }
-        else
-        {
-            // Pure ZoneManager
-            var managedCityIds = _context.Cities
-                .Where(c => c.Region!.ZoneManagerId == approverId)
-                .Select(c => c.Id);
-
-            query = _userRepository.Query()
-                .Where(u => u.RegistrationStatus == RegistrationStatus.PendingZoneManager
-                         && u.NationalAddress != null
-                         && managedCityIds.Contains(u.NationalAddress.CityId));
+            var trimmed = search.Trim();
+            query = query.Where(u => u.Name.Contains(trimmed));
         }
 
         var totalCount = await query.CountAsync(ct);
@@ -201,6 +173,166 @@ public class ApprovalService : IApprovalService
         var result = new PaginatedResult<PendingUserResponse>(items, totalCount, page, pageSize);
         return Result.Success(result);
     }
+
+    public async Task<Result<PaginatedResult<ApprovalListItem>>> GetListAsync(
+        string approverId, ApprovalListStatusFilter status, string? search, int page, int pageSize, CancellationToken ct = default)
+    {
+        (page, pageSize) = Normalize(page, pageSize, maxPageSize: 50);
+
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
+        if (approver is null)
+            return Result.Failure<PaginatedResult<ApprovalListItem>>(AuthErrors.UserNotFound);
+
+        var roles = await _userRepository.GetRolesAsync(approver);
+
+        var isSalesMan = roles.Contains(UserRoles.SalesMan);
+        var isZoneManager = roles.Contains(UserRoles.ZoneManager);
+
+        if (!isSalesMan && !isZoneManager)
+            return Result.Failure<PaginatedResult<ApprovalListItem>>(ApprovalErrors.NotAuthorizedToApprove);
+
+        var trimmed = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+        // Pending rows (current pending-for-this-approver users)
+        var includePending = status is ApprovalListStatusFilter.All or ApprovalListStatusFilter.Pending;
+        var pendingRows = new List<ApprovalListRow>();
+        var pendingCount = 0;
+        if (includePending)
+        {
+            var pendingQ = BuildPendingScopedQuery(approverId, isSalesMan, isZoneManager);
+            if (trimmed is not null)
+                pendingQ = pendingQ.Where(u => u.Name.Contains(trimmed));
+
+            pendingCount = await pendingQ.CountAsync(ct);
+            pendingRows = await pendingQ
+                .Select(u => new ApprovalListRow(
+                    u.Id,
+                    u.Name,
+                    u.MobileNumber,
+                    u.UserType,
+                    u.ShopOwnerProfile != null
+                        ? u.ShopOwnerProfile.CustomerCode
+                        : (u.SellerProfile != null ? u.SellerProfile.CustomerCode : null),
+                    ApprovalReviewStatus.Pending,
+                    u.RegistrationStatus,
+                    u.CreatedAt,
+                    null))
+                .ToListAsync(ct);
+        }
+
+        // Reviewed rows (records this approver decided on)
+        var includeApproved = status is ApprovalListStatusFilter.All or ApprovalListStatusFilter.Approved;
+        var includeRejected = status is ApprovalListStatusFilter.All or ApprovalListStatusFilter.Rejected;
+        var reviewedRows = new List<ApprovalListRow>();
+        var reviewedCount = 0;
+        if (includeApproved || includeRejected)
+        {
+            var reviewedQ = _context.ApprovalRecords.Where(r => r.ApproverId == approverId);
+            if (includeApproved && !includeRejected)
+                reviewedQ = reviewedQ.Where(r => r.Action == ApprovalAction.Approved);
+            else if (includeRejected && !includeApproved)
+                reviewedQ = reviewedQ.Where(r => r.Action == ApprovalAction.Rejected);
+
+            if (trimmed is not null)
+                reviewedQ = reviewedQ.Where(r => r.User.Name.Contains(trimmed));
+
+            reviewedCount = await reviewedQ.CountAsync(ct);
+            reviewedRows = await reviewedQ
+                .Select(r => new ApprovalListRow(
+                    r.UserId,
+                    r.User.Name,
+                    r.User.MobileNumber,
+                    r.User.UserType,
+                    r.User.ShopOwnerProfile != null
+                        ? r.User.ShopOwnerProfile.CustomerCode
+                        : (r.User.SellerProfile != null ? r.User.SellerProfile.CustomerCode : null),
+                    r.Action == ApprovalAction.Approved ? ApprovalReviewStatus.Approved : ApprovalReviewStatus.Rejected,
+                    r.User.RegistrationStatus,
+                    r.CreatedAt,
+                    r.RejectionReason))
+                .ToListAsync(ct);
+        }
+
+        var totalCount = pendingCount + reviewedCount;
+
+        var pageRows = pendingRows
+            .Concat(reviewedRows)
+            .OrderByDescending(x => x.ActivityAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        // Resolve StoreName for the page in one batch
+        var customerCodes = pageRows
+            .Where(r => r.CustomerCode != null)
+            .Select(r => r.CustomerCode!)
+            .Distinct()
+            .ToList();
+
+        var storeNameMap = customerCodes.Count > 0
+            ? await _context.ShopData
+                .Where(sd => customerCodes.Contains(sd.CustomerCode))
+                .ToDictionaryAsync(sd => sd.CustomerCode, sd => sd.StoreName, ct)
+            : new Dictionary<string, string>();
+
+        var items = pageRows.Select(r => new ApprovalListItem(
+            r.UserId,
+            r.Name,
+            r.MobileNumber,
+            r.UserType,
+            r.CustomerCode != null && storeNameMap.TryGetValue(r.CustomerCode, out var sn) ? sn : null,
+            r.ReviewStatus,
+            r.CurrentStatus,
+            r.ActivityAt,
+            r.RejectionReason)).ToList();
+
+        return Result.Success(new PaginatedResult<ApprovalListItem>(items, totalCount, page, pageSize));
+    }
+
+    private IQueryable<ApplicationUser> BuildPendingScopedQuery(string approverId, bool isSalesMan, bool isZoneManager)
+    {
+        if (isSalesMan && isZoneManager)
+        {
+            var managedCityIds = _context.Cities
+                .Where(c => c.Region!.ZoneManagerId == approverId)
+                .Select(c => c.Id);
+
+            return _userRepository.Query()
+                .Where(u =>
+                    (u.AssignedSalesManId == approverId && u.RegistrationStatus == RegistrationStatus.PendingSalesman)
+                    ||
+                    (u.RegistrationStatus == RegistrationStatus.PendingZoneManager
+                     && u.NationalAddress != null
+                     && managedCityIds.Contains(u.NationalAddress.CityId)));
+        }
+
+        if (isSalesMan)
+        {
+            return _userRepository.Query()
+                .Where(u => u.AssignedSalesManId == approverId
+                         && u.RegistrationStatus == RegistrationStatus.PendingSalesman);
+        }
+
+        var zmCityIds = _context.Cities
+            .Where(c => c.Region!.ZoneManagerId == approverId)
+            .Select(c => c.Id);
+
+        return _userRepository.Query()
+            .Where(u => u.RegistrationStatus == RegistrationStatus.PendingZoneManager
+                     && u.NationalAddress != null
+                     && zmCityIds.Contains(u.NationalAddress.CityId));
+    }
+
+    private sealed record ApprovalListRow(
+        string UserId,
+        string Name,
+        string MobileNumber,
+        UserType UserType,
+        string? CustomerCode,
+        ApprovalReviewStatus ReviewStatus,
+        RegistrationStatus CurrentStatus,
+        DateTime ActivityAt,
+        string? RejectionReason);
 
     public async Task<Result> ApproveAsync(string userId, string approverId, CancellationToken ct = default)
     {

@@ -40,7 +40,9 @@
 				{
 					"name": "Admin Login",
 					"request": {
-						"auth": { "type": "noauth" },
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -51,12 +53,23 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/auth/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "auth", "login"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"auth",
+								"login"
+							]
 						},
 						"description": "Login with username and password. Only SystemAdmin users can login.\n\n**Seeded accounts:**\n- `admin` / `Admin@123` — مدير النظام\n- `admin.test` / `Admin@123` — مدير النظام - تست\n\n**Response:**\n- `token`: JWT access token\n- `refreshToken`: Refresh token string\n- `expiresIn`: Token expiry in minutes\n- `refreshTokenExpiration`: Refresh token expiry datetime\n- `user`: { id, name, mobileNumber, userType, registrationStatus }"
 					},
@@ -97,12 +110,23 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"أحمد المندوب\",\n  \"mobileNumber\": \"0512345678\",\n  \"cityIds\": [\"city-id-1\", \"city-id-2\"]\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/salesman",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "salesman"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"salesman"
+							]
 						},
 						"description": "Create a new SalesMan and assign cities.\n\nName: 3+ letters only (Arabic/English), no numbers."
 					}
@@ -120,12 +144,23 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"خالد المدير\",\n  \"mobileNumber\": \"0512345679\",\n  \"regionId\": \"region-id-1\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/zone-manager",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "zone-manager"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"zone-manager"
+							]
 						},
 						"description": "Create a new ZoneManager and assign to a region.\n\nName: 3+ letters only (Arabic/English), no numbers."
 					}
@@ -138,26 +173,101 @@
 						"body": {
 							"mode": "formdata",
 							"formdata": [
-								{ "key": "ownerName", "value": "محمد صاحب المحل", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
-								{ "key": "mobileNumber", "value": "0512345680", "type": "text" },
-								{ "key": "customerCode", "value": "10001", "type": "text", "description": "Must exist in ErpCustomer table. Only one ShopOwner per CustomerCode." },
-								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر الرائد", "type": "text", "description": "Required — 5-150 chars" },
-								{ "key": "vat", "value": "300000000000003", "type": "text", "description": "Required — 15-digit VAT (starts & ends with 3)" },
-								{ "key": "crn", "value": "1234567890", "type": "text", "description": "Required — 10-digit CRN" },
-								{ "key": "shortAddress", "value": "ABCD1234", "type": "text", "description": "Required — 4 letters + 4 digits" },
-								{ "key": "shopImage", "type": "file", "src": "", "description": "Required — JPG/PNG, max 5MB" },
-								{ "key": "nationalAddress.buildingNumber", "value": "1234", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "nationalAddress.street", "value": "شارع الملك فهد", "type": "text", "description": "Required — max 100 chars" },
-								{ "key": "nationalAddress.postalCode", "value": "12345", "type": "text", "description": "Required — 5 digits" },
-								{ "key": "nationalAddress.subNumber", "value": "1234", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "nationalAddress.district", "value": "حي النزهة", "type": "text", "description": "Optional — max 100 chars" }
+								{
+									"key": "ownerName",
+									"value": "محمد صاحب المحل",
+									"type": "text",
+									"description": "Required — 3+ letters only (Arabic/English), no numbers"
+								},
+								{
+									"key": "mobileNumber",
+									"value": "0512345680",
+									"type": "text"
+								},
+								{
+									"key": "customerCode",
+									"value": "10001",
+									"type": "text",
+									"description": "Must exist in ErpCustomer table. Only one ShopOwner per CustomerCode."
+								},
+								{
+									"key": "cityId",
+									"value": "city-id-1",
+									"type": "text"
+								},
+								{
+									"key": "storeName",
+									"value": "متجر الرائد",
+									"type": "text",
+									"description": "Required — 5-150 chars"
+								},
+								{
+									"key": "vat",
+									"value": "300000000000003",
+									"type": "text",
+									"description": "Required — 15-digit VAT (starts & ends with 3)"
+								},
+								{
+									"key": "crn",
+									"value": "1234567890",
+									"type": "text",
+									"description": "Required — 10-digit CRN"
+								},
+								{
+									"key": "shortAddress",
+									"value": "ABCD1234",
+									"type": "text",
+									"description": "Required — 4 letters + 4 digits"
+								},
+								{
+									"key": "shopImage",
+									"type": "file",
+									"src": "",
+									"description": "Required — JPG/PNG, max 5MB"
+								},
+								{
+									"key": "nationalAddress.buildingNumber",
+									"value": "1234",
+									"type": "text",
+									"description": "Required — 4 digits (1000-9999)"
+								},
+								{
+									"key": "nationalAddress.street",
+									"value": "شارع الملك فهد",
+									"type": "text",
+									"description": "Required — max 100 chars"
+								},
+								{
+									"key": "nationalAddress.postalCode",
+									"value": "12345",
+									"type": "text",
+									"description": "Required — 5 digits"
+								},
+								{
+									"key": "nationalAddress.subNumber",
+									"value": "1234",
+									"type": "text",
+									"description": "Required — 4 digits (1000-9999)"
+								},
+								{
+									"key": "nationalAddress.district",
+									"value": "حي النزهة",
+									"type": "text",
+									"description": "Optional — max 100 chars"
+								}
 							]
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/shop-owner",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "shop-owner"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"shop-owner"
+							]
 						},
 						"description": "Create a new ShopOwner with ShopData. All shop fields are always required.\nOnly one ShopOwner per CustomerCode allowed.\nIf ShopData exists for this CustomerCode, it will be overwritten.\nUses form-data for file upload."
 					}
@@ -170,26 +280,99 @@
 						"body": {
 							"mode": "formdata",
 							"formdata": [
-								{ "key": "name", "value": "سعد البائع", "type": "text", "description": "Required — 3+ letters only (Arabic/English), no numbers" },
-								{ "key": "mobileNumber", "value": "0512345681", "type": "text" },
-								{ "key": "customerCode", "value": "10002", "type": "text", "description": "Must exist in ErpCustomer table" },
-								{ "key": "cityId", "value": "city-id-1", "type": "text" },
-								{ "key": "storeName", "value": "متجر البائع", "type": "text", "description": "Required if first for this CustomerCode" },
-								{ "key": "vat", "value": "300000000000013", "type": "text" },
-								{ "key": "crn", "value": "1234567891", "type": "text" },
-								{ "key": "shortAddress", "value": "EFGH5678", "type": "text", "description": "4 letters + 4 digits" },
-								{ "key": "shopImage", "type": "file", "src": "", "description": "Optional — JPG/PNG, max 5MB" },
-								{ "key": "nationalAddress.buildingNumber", "value": "5678", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "nationalAddress.street", "value": "شارع العليا", "type": "text", "description": "Required — max 100 chars" },
-								{ "key": "nationalAddress.postalCode", "value": "54321", "type": "text", "description": "Required — 5 digits" },
-								{ "key": "nationalAddress.subNumber", "value": "4321", "type": "text", "description": "Required — 4 digits (1000-9999)" },
-								{ "key": "nationalAddress.district", "value": "حي الورود", "type": "text", "description": "Optional — max 100 chars" }
+								{
+									"key": "name",
+									"value": "سعد البائع",
+									"type": "text",
+									"description": "Required — 3+ letters only (Arabic/English), no numbers"
+								},
+								{
+									"key": "mobileNumber",
+									"value": "0512345681",
+									"type": "text"
+								},
+								{
+									"key": "customerCode",
+									"value": "10002",
+									"type": "text",
+									"description": "Must exist in ErpCustomer table"
+								},
+								{
+									"key": "cityId",
+									"value": "city-id-1",
+									"type": "text"
+								},
+								{
+									"key": "storeName",
+									"value": "متجر البائع",
+									"type": "text",
+									"description": "Required if first for this CustomerCode"
+								},
+								{
+									"key": "vat",
+									"value": "300000000000013",
+									"type": "text"
+								},
+								{
+									"key": "crn",
+									"value": "1234567891",
+									"type": "text"
+								},
+								{
+									"key": "shortAddress",
+									"value": "EFGH5678",
+									"type": "text",
+									"description": "4 letters + 4 digits"
+								},
+								{
+									"key": "shopImage",
+									"type": "file",
+									"src": "",
+									"description": "Optional — JPG/PNG, max 5MB"
+								},
+								{
+									"key": "nationalAddress.buildingNumber",
+									"value": "5678",
+									"type": "text",
+									"description": "Required — 4 digits (1000-9999)"
+								},
+								{
+									"key": "nationalAddress.street",
+									"value": "شارع العليا",
+									"type": "text",
+									"description": "Required — max 100 chars"
+								},
+								{
+									"key": "nationalAddress.postalCode",
+									"value": "54321",
+									"type": "text",
+									"description": "Required — 5 digits"
+								},
+								{
+									"key": "nationalAddress.subNumber",
+									"value": "4321",
+									"type": "text",
+									"description": "Required — 4 digits (1000-9999)"
+								},
+								{
+									"key": "nationalAddress.district",
+									"value": "حي الورود",
+									"type": "text",
+									"description": "Optional — max 100 chars"
+								}
 							]
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/seller",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "seller"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"seller"
+							]
 						},
 						"description": "Create a new Seller with ShopData. Uses form-data for file upload."
 					}
@@ -207,12 +390,23 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"فهد الفني\",\n  \"mobileNumber\": \"0512345682\",\n  \"cityId\": \"city-id-1\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/technician",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "technician"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"technician"
+							]
 						},
 						"description": "Create a new Technician.\n\nName: 3+ letters only (Arabic/English), no numbers.\nPostalCode: 5 digits."
 					}
@@ -229,17 +423,56 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							],
 							"query": [
-								{ "key": "search", "value": "", "disabled": true, "description": "Search by name or mobile" },
-								{ "key": "userType", "value": "1", "description": "1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager", "disabled": true },
-								{ "key": "registrationStatus", "value": "3", "description": "1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected", "disabled": true },
-								{ "key": "regionId", "value": "", "disabled": true },
-								{ "key": "isDisabled", "value": "false", "disabled": true },
-								{ "key": "isDeleted", "value": "", "disabled": true },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true,
+									"description": "Search by name or mobile"
+								},
+								{
+									"key": "userType",
+									"value": "1",
+									"description": "1=ShopOwner, 2=Seller, 3=Technician, 4=SalesMan, 5=ZoneManager",
+									"disabled": true
+								},
+								{
+									"key": "registrationStatus",
+									"value": "3",
+									"description": "1=PendingSalesman, 2=PendingZoneManager, 3=Approved, 4=Rejected",
+									"disabled": true
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "isDisabled",
+									"value": "false",
+									"disabled": true
+								},
+								{
+									"key": "isDeleted",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List/search/filter users with pagination. Enable disabled query params to filter."
@@ -251,12 +484,28 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users?userType=4&page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							],
 							"query": [
-								{ "key": "userType", "value": "4", "description": "SalesMan" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "userType",
+									"value": "4",
+									"description": "SalesMan"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "Example: filter by SalesMan (userType=4)."
@@ -268,12 +517,27 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users?search=أحمد&page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							],
 							"query": [
-								{ "key": "search", "value": "أحمد" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "search",
+									"value": "أحمد"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "Example: search users by name or mobile."
@@ -285,8 +549,16 @@
 						"method": "PATCH",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/:userId/toggle-status",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", ":userId", "toggle-status"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								":userId",
+								"toggle-status"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -317,12 +589,24 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/salesman/:userId",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "salesman", ":userId"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"salesman",
+								":userId"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -347,12 +631,24 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"regionId\": \"region-id-2\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/zone-manager/:userId",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "zone-manager", ":userId"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"zone-manager",
+								":userId"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -369,17 +665,32 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"ownerName\": \"محمد - معدل\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/shop-owner/:userId",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "shop-owner", ":userId"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"shop-owner",
+								":userId"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -396,17 +707,32 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"سعد البائع - معدل\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/seller/:userId",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "seller", ":userId"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"seller",
+								":userId"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -423,17 +749,32 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"فهد الفني - معدل\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/users/technician/:userId",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "users", "technician", ":userId"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"technician",
+								":userId"
+							],
 							"variable": [
 								{
 									"key": "userId",
@@ -456,17 +797,30 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"منتج تجريبي\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 10,\n  \"price\": 99.99,\n  \"category\": \"فئة تجريبية\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products"
+							]
 						},
 						"description": "Add a new product.\n\nName: required, max 200 chars.\nProductCode: required, max 50 chars, unique.\nPointValue: required, > 0.\nPrice: required, >= 0.\nCategory: optional, max 100 chars."
 					},
@@ -494,12 +848,30 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products/categories?page=1&pageSize=50",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products", "categories"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products",
+								"categories"
+							],
 							"query": [
-								{ "key": "search", "value": "", "disabled": true, "description": "Search by category name" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "50" }
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true,
+									"description": "Search by category name"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
 							]
 						},
 						"description": "List product categories with pagination.\n\nUsed as a dropdown source for product category selection."
@@ -511,13 +883,35 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products"
+							],
 							"query": [
-								{ "key": "search", "value": "", "disabled": true, "description": "Search by name or product code" },
-								{ "key": "category", "value": "", "disabled": true, "description": "Filter by category" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true,
+									"description": "Search by name or product code"
+								},
+								{
+									"key": "category",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by category"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List/search/filter products with pagination."
@@ -529,8 +923,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products/:id",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products", ":id"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products",
+								":id"
+							],
 							"variable": [
 								{
 									"key": "id",
@@ -547,17 +948,31 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"منتج معدل\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 15,\n  \"price\": 149.99,\n  \"category\": \"فئة معدلة\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products/:id",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products", ":id"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products",
+								":id"
+							],
 							"variable": [
 								{
 									"key": "id",
@@ -575,8 +990,15 @@
 						"method": "DELETE",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/products/:id",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "products", ":id"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products",
+								":id"
+							],
 							"variable": [
 								{
 									"key": "id",
@@ -599,17 +1021,31 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 10\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/barcodes/generate",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "barcodes", "generate"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"barcodes",
+								"generate"
+							]
 						},
 						"description": "Generate N barcodes for a product (NanoID 12-char codes).\n\nQuantity: 1-10000.\n\nIf quantity <= 500: returns a PDF file with barcode images.\nIf quantity > 500: returns JSON with generated codes."
 					}
@@ -620,13 +1056,35 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/barcodes?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "barcodes"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"barcodes"
+							],
 							"query": [
-								{ "key": "productId", "value": "", "disabled": true, "description": "Filter by product ID" },
-								{ "key": "status", "value": "1", "disabled": true, "description": "1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "productId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by product ID"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"disabled": true,
+									"description": "1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List/filter barcodes with pagination."
@@ -644,17 +1102,59 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/scans?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "scans"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"scans"
+							],
 							"query": [
-								{ "key": "userId", "value": "", "disabled": true, "description": "Filter by user ID" },
-								{ "key": "productId", "value": "", "disabled": true, "description": "Filter by product ID" },
-								{ "key": "scannerRole", "value": "1", "disabled": true, "description": "1=Seller, 2=Technician" },
-								{ "key": "barcodeStatus", "value": "4", "disabled": true, "description": "1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed" },
-								{ "key": "fromDate", "value": "2026-01-01", "disabled": true, "description": "Filter from date (ISO 8601)" },
-								{ "key": "toDate", "value": "2026-12-31", "disabled": true, "description": "Filter to date (ISO 8601)" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "userId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by user ID"
+								},
+								{
+									"key": "productId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by product ID"
+								},
+								{
+									"key": "scannerRole",
+									"value": "1",
+									"disabled": true,
+									"description": "1=Seller, 2=Technician"
+								},
+								{
+									"key": "barcodeStatus",
+									"value": "4",
+									"disabled": true,
+									"description": "1=Available, 2=SellerScanned, 3=TechnicianScanned, 4=Consumed"
+								},
+								{
+									"key": "fromDate",
+									"value": "2026-01-01",
+									"disabled": true,
+									"description": "Filter from date (ISO 8601)"
+								},
+								{
+									"key": "toDate",
+									"value": "2026-12-31",
+									"disabled": true,
+									"description": "Filter to date (ISO 8601)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List/filter scan records with pagination.\n\nShows scanner name, mobile, product info, points awarded, scan location, and timestamp."
@@ -666,8 +1166,16 @@
 						"method": "POST",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/scans/:scanId/cancel",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "scans", ":scanId", "cancel"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"scans",
+								":scanId",
+								"cancel"
+							],
 							"variable": [
 								{
 									"key": "scanId",
@@ -691,8 +1199,14 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/reward-settings",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "reward-settings"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"reward-settings"
+							]
 						},
 						"description": "Get current reward settings: SAR conversion rate, invitation rewards, and minimum redemption threshold.\n\nDefaults: 10 pts = 1 SAR, Inviter = 100 pts, Invitee = 50 pts, Min Redemption = 1000 pts."
 					}
@@ -702,17 +1216,30 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"pointsToSarRate\": 10,\n  \"inviterRewardPoints\": 100,\n  \"inviteeRewardPoints\": 50,\n  \"minimumRedemptionPoints\": 1000\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/reward-settings",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "reward-settings"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"reward-settings"
+							]
 						},
 						"description": "Update reward settings.\n\n- `pointsToSarRate`: must be > 0\n- `inviterRewardPoints`: points awarded to inviter on approved invitation (>= 0)\n- `inviteeRewardPoints`: points awarded to invitee on approved invitation (>= 0)\n- `minimumRedemptionPoints`: minimum points required to redeem (> 0, default 1000)\n\nExisting wallet transactions keep their original rate (immutable).\nInviter reward is capped at 20 approved invitations regardless of this setting."
 					}
@@ -729,8 +1256,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/content/contact-us",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "content", "contact-us"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"content",
+								"contact-us"
+							]
 						},
 						"description": "Get Contact Us content.\n\n**Response:**\n- `phone`, `email`, `whatsApp`, `address`, `workingHours`"
 					}
@@ -740,17 +1274,31 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"phone\": \"+966500000000\",\n  \"email\": \"info@raedrewardapp.com\",\n  \"whatsApp\": \"+966500000000\",\n  \"address\": \"الرياض، المملكة العربية السعودية\",\n  \"workingHours\": \"الأحد - الخميس: 8 صباحاً - 5 مساءً\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/content/contact-us",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "content", "contact-us"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"content",
+								"contact-us"
+							]
 						},
 						"description": "Update Contact Us page content.\n\nAll fields are required."
 					}
@@ -761,8 +1309,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/content/about-app",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "content", "about-app"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"content",
+								"about-app"
+							]
 						},
 						"description": "Get About App content.\n\n**Response:**\n- `content`: About app HTML/text content"
 					}
@@ -772,17 +1327,31 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"content\": \"تطبيق الرائد للمكافآت هو برنامج ولاء يتيح للبائعين والفنيين كسب نقاط من خلال مسح الباركود واستبدالها بمكافآت مالية.\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/content/about-app",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "content", "about-app"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"content",
+								"about-app"
+							]
 						},
 						"description": "Update About App page content."
 					}
@@ -799,8 +1368,14 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/dashboard",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "dashboard"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"dashboard"
+							]
 						},
 						"description": "Get admin dashboard summary.\n\n**Response:**\n- `totalShopOwners`, `totalSellers`, `totalTechnicians`\n- `totalPendingApprovals`\n- `totalPointsEarned`, `totalPointsRedeemed`, `totalSarRedeemed`\n- `totalActiveBarcodes`, `totalScans`\n- `pendingRedemptions`\n- `totalDeletedAccounts`\n- `totalInvitations`, `totalNotificationsSent`"
 					}
@@ -811,8 +1386,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/users",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "users"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"users"
+							]
 						},
 						"description": "User analytics: counts by type, registration status, region, and monthly registration trend."
 					}
@@ -823,8 +1405,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/regions",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "regions"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"regions"
+							]
 						},
 						"description": "Region analytics: per-region user counts, zone manager, city breakdown."
 					}
@@ -835,8 +1424,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/points",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "points"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"points"
+							]
 						},
 						"description": "Points analytics: total earned/redeemed/balance, by region, by representative, monthly trend."
 					}
@@ -847,16 +1443,55 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/points/details?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "points", "details"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"points",
+								"details"
+							],
 							"query": [
-								{ "key": "userId", "value": "", "disabled": true, "description": "Filter by user ID" },
-								{ "key": "regionId", "value": "", "disabled": true, "description": "Filter by region ID" },
-								{ "key": "dateFrom", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
-								{ "key": "dateTo", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
-								{ "key": "type", "value": "1", "disabled": true, "description": "1=Earned, 2=Redeemed, 3=Cancelled, 4=Expired, 5=Refunded, 6=InvitationReward" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "userId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by user ID"
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by region ID"
+								},
+								{
+									"key": "dateFrom",
+									"value": "2026-01-01",
+									"disabled": true,
+									"description": "From date (ISO 8601)"
+								},
+								{
+									"key": "dateTo",
+									"value": "2026-12-31",
+									"disabled": true,
+									"description": "To date (ISO 8601)"
+								},
+								{
+									"key": "type",
+									"value": "1",
+									"disabled": true,
+									"description": "1=Earned, 2=Redeemed, 3=Cancelled, 4=Expired, 5=Refunded, 6=InvitationReward"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "Detailed points/transaction ledger with filters.\n\nReturns paginated transaction details with user info, amounts, SAR, and type."
@@ -868,10 +1503,21 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/top-performers?top=10",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "top-performers"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"top-performers"
+							],
 							"query": [
-								{ "key": "top", "value": "10", "description": "Number of top performers to return (default 10)" }
+								{
+									"key": "top",
+									"value": "10",
+									"description": "Number of top performers to return (default 10)"
+								}
 							]
 						},
 						"description": "Top performing sellers and technicians by points earned and scan count."
@@ -883,12 +1529,29 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/inactive-users?inactiveDays=30&page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "inactive-users"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"inactive-users"
+							],
 							"query": [
-								{ "key": "inactiveDays", "value": "30", "description": "Days since last scan to consider inactive (default 30)" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "inactiveDays",
+									"value": "30",
+									"description": "Days since last scan to consider inactive (default 30)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List users who haven't scanned in N days.\n\nReturns user info, last scan date, and days since last scan."
@@ -900,8 +1563,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/barcodes",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "barcodes"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"barcodes"
+							]
 						},
 						"description": "Barcode analytics: counts by status, scan rate, top products by barcode volume."
 					}
@@ -912,8 +1582,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/redemptions",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "redemptions"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"redemptions"
+							]
 						},
 						"description": "Redemption analytics: counts by status/method, total SAR redeemed, avg processing days, monthly trend."
 					}
@@ -924,8 +1601,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/salesman-performance",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "salesman-performance"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"salesman-performance"
+							]
 						},
 						"description": "SalesMan performance metrics: assigned/approved/pending user counts, total points, city count."
 					}
@@ -936,8 +1620,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/revenue",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "revenue"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"revenue"
+							]
 						},
 						"description": "Revenue analytics: SAR liability, held/paid-out amounts, points outstanding, volume by transaction type, payout trend."
 					}
@@ -948,10 +1639,21 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/invitations?top=10",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "invitations"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"invitations"
+							],
 							"query": [
-								{ "key": "top", "value": "10", "description": "Number of top inviters to return" }
+								{
+									"key": "top",
+									"value": "10",
+									"description": "Number of top inviters to return"
+								}
 							]
 						},
 						"description": "Invitation analytics: total invitations sent/approved/pending, top inviters, invitation conversion rate."
@@ -963,8 +1665,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/analytics/notifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics", "notifications"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"analytics",
+								"notifications"
+							]
 						},
 						"description": "Notification analytics: total sent, by type, read rate, delivery stats."
 					}
@@ -980,17 +1689,31 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"targetUserId\": null,\n  \"roleName\": null,\n  \"title\": \"إشعار تجريبي\",\n  \"body\": \"هذا إشعار تجريبي من لوحة التحكم\"\n}",
-							"options": { "raw": { "language": "json" } }
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/notifications/send",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "notifications", "send"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"notifications",
+								"send"
+							]
 						},
 						"description": "Send notification to users.\n\n**Targeting:**\n- `targetUserId`: Send to specific user (set others to null)\n- `roleName`: Send to all users with this role (e.g. \"Seller\", \"Technician\")\n- Both null: Broadcast to ALL users\n\n**Response:**\n- `sentCount`: Number of notifications created\n\n**Examples:**\n- To one user: `{\"targetUserId\": \"user-id\", \"roleName\": null, ...}`\n- To all Sellers: `{\"targetUserId\": null, \"roleName\": \"Seller\", ...}`\n- Broadcast: `{\"targetUserId\": null, \"roleName\": null, ...}`"
 					}
@@ -1001,15 +1724,47 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/notifications?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "notifications"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"notifications"
+							],
 							"query": [
-								{ "key": "targetUserId", "value": "", "disabled": true, "description": "Filter by target user ID" },
-								{ "key": "type", "value": "1", "disabled": true, "description": "Notification type (int)" },
-								{ "key": "fromDate", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
-								{ "key": "toDate", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "targetUserId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by target user ID"
+								},
+								{
+									"key": "type",
+									"value": "1",
+									"disabled": true,
+									"description": "Notification type (int)"
+								},
+								{
+									"key": "fromDate",
+									"value": "2026-01-01",
+									"disabled": true,
+									"description": "From date (ISO 8601)"
+								},
+								{
+									"key": "toDate",
+									"value": "2026-12-31",
+									"disabled": true,
+									"description": "To date (ISO 8601)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List notification history with optional filters.\n\n**Query parameters:**\n- `targetUserId`: Filter by recipient user\n- `type`: Filter by notification type\n- `fromDate` / `toDate`: Date range filter (ISO 8601)\n- `page` / `pageSize`: Pagination\n\nReturns paginated list of sent notifications."
@@ -1019,7 +1774,7 @@
 		},
 		{
 			"name": "Redemptions",
-			"description": "Admin redemption management — list and view redemption request details. Requires SystemAdmin JWT.",
+			"description": "Admin redemption management — list, view, approve, and reject redemption requests at the admin (final) approval stage. Requires SystemAdmin JWT.",
 			"item": [
 				{
 					"name": "List Redemptions",
@@ -1027,16 +1782,53 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/redemptions?page=1&pageSize=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "redemptions"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"redemptions"
+							],
 							"query": [
-								{ "key": "userId", "value": "", "disabled": true, "description": "Filter by user ID" },
-								{ "key": "method", "value": "1", "disabled": true, "description": "1=Cash, 2=BankTransfer" },
-								{ "key": "status", "value": "1", "disabled": true, "description": "1=PendingSalesman, 2=PendingZoneManager, 3=PendingAdmin, 4=Approved, 5=Rejected, 6=PendingCashHandover, 7=Completed" },
-								{ "key": "fromDate", "value": "2026-01-01", "disabled": true, "description": "From date (ISO 8601)" },
-								{ "key": "toDate", "value": "2026-12-31", "disabled": true, "description": "To date (ISO 8601)" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "20" }
+								{
+									"key": "userId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by user ID"
+								},
+								{
+									"key": "method",
+									"value": "1",
+									"disabled": true,
+									"description": "1=Cash, 2=BankTransfer"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"disabled": true,
+									"description": "1=PendingSalesman, 2=PendingZoneManager, 3=PendingAdmin, 4=Approved, 5=Rejected, 6=PendingCashHandover, 7=Completed"
+								},
+								{
+									"key": "fromDate",
+									"value": "2026-01-01",
+									"disabled": true,
+									"description": "From date (ISO 8601)"
+								},
+								{
+									"key": "toDate",
+									"value": "2026-12-31",
+									"disabled": true,
+									"description": "To date (ISO 8601)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
 							]
 						},
 						"description": "List/filter redemption requests with pagination.\n\nShows user name, mobile, method, status, points, SAR amount."
@@ -1048,8 +1840,15 @@
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/redemptions/:id",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "redemptions", ":id"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"redemptions",
+								":id"
+							],
 							"variable": [
 								{
 									"key": "id",
@@ -1059,6 +1858,74 @@
 							]
 						},
 						"description": "Get full redemption request details including approval history.\n\n**Response includes:**\n- User info, method, status, points, SAR amounts\n- Bank details (for BankTransfer)\n- Cash handover info (for Cash)\n- Rejection reason (if rejected)\n- Full approval trail with approver names and timestamps"
+					}
+				},
+				{
+					"name": "Approve Redemption",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionRequestId\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/redemptions/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"redemptions",
+								"approve"
+							]
+						},
+						"description": "Admin approves a redemption request at the final (PendingAdmin) stage.\n\n**Preconditions:**\n- Request status must be `PendingAdmin` (3). Requests at SalesMan/ZoneManager stages return 403.\n- Caller must hold the `SystemAdmin` role (enforced by controller + service).\n\n**Behavior:**\n- **BankTransfer** method → request auto-completes to `Completed`; points/SAR deducted from wallet via FIFO; `RedemptionCompleted` notification sent.\n- **Cash** method → request moves to `AdminApproved`; a 6-digit OTP is generated, hashed, and stored (14-day expiry, 5-attempt lockout). OTP is delivered to the user via WhatsApp. Handover is completed later via `POST /api/redemption-approvals/confirm-cash`.\n- Audit row inserted in `RedemptionApprovals` (`Action=Approved`, `FromStatus=PendingAdmin`, `ToStatus=AdminApproved`).\n\n**Errors:**\n- 400 `RequestNotFound` — unknown id\n- 403 `NotAuthorizedToApprove` — wrong stage or not SystemAdmin\n- 403 `NotPendingApproval` — already Completed/Rejected/Cancelled/AdminApproved"
+					}
+				},
+				{
+					"name": "Reject Redemption",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionRequestId\": \"\",\n  \"rejectionReason\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/redemptions/reject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"redemptions",
+								"reject"
+							]
+						},
+						"description": "Admin rejects a redemption request at the final (PendingAdmin) stage.\n\n**Preconditions:**\n- Request status must be `PendingAdmin` (3). Requests at earlier stages return 403.\n- `rejectionReason` is required (max 500 chars).\n\n**Behavior:**\n- Request status set to `Rejected`; `RejectedById` + `RejectionReason` recorded on the request.\n- Held points/SAR refunded to the user's wallet via a `Refunded` wallet transaction.\n- Audit row inserted in `RedemptionApprovals` (`Action=Rejected`).\n- `RedemptionRejected` notification sent to the user (with reason).\n\n**Errors:**\n- 400 `RequestNotFound` — unknown id\n- 403 `NotAuthorizedToApprove` — wrong stage or not SystemAdmin\n- 403 `NotPendingApproval` — already Completed/Rejected/Cancelled/AdminApproved"
 					}
 				}
 			]
@@ -1070,23 +1937,77 @@
 				{
 					"name": "Get Seeded Users",
 					"request": {
-						"auth": { "type": "noauth" },
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "GET",
 						"url": {
 							"raw": "{{baseUrl}}/api/dev/seeded-users?page=1&pageSize=50",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "dev", "seeded-users"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dev",
+								"seeded-users"
+							],
 							"query": [
-								{ "key": "id", "value": "", "disabled": true, "description": "Filter by user ID (exact match)" },
-								{ "key": "search", "value": "", "disabled": true, "description": "Search by name or mobile" },
-								{ "key": "userType", "value": "1", "disabled": true, "description": "0=ShopOwner, 1=Seller, 2=Technician, 3=SalesMan, 4=ZoneManager, 5=SystemAdmin" },
-								{ "key": "registrationStatus", "value": "3", "disabled": true, "description": "0=PendingSalesman, 1=PendingZoneManager, 2=Approved, 3=Rejected" },
-								{ "key": "regionId", "value": "", "disabled": true, "description": "Filter by region GUID" },
-								{ "key": "cityId", "value": "", "disabled": true, "description": "Filter by city GUID" },
-								{ "key": "isDisabled", "value": "false", "disabled": true, "description": "Filter by active/disabled" },
-								{ "key": "isDeleted", "value": "", "disabled": true, "description": "Filter by soft-deleted accounts" },
-								{ "key": "page", "value": "1" },
-								{ "key": "pageSize", "value": "50" }
+								{
+									"key": "id",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by user ID (exact match)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true,
+									"description": "Search by name or mobile"
+								},
+								{
+									"key": "userType",
+									"value": "1",
+									"disabled": true,
+									"description": "0=ShopOwner, 1=Seller, 2=Technician, 3=SalesMan, 4=ZoneManager, 5=SystemAdmin"
+								},
+								{
+									"key": "registrationStatus",
+									"value": "3",
+									"disabled": true,
+									"description": "0=PendingSalesman, 1=PendingZoneManager, 2=Approved, 3=Rejected"
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by region GUID"
+								},
+								{
+									"key": "cityId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by city GUID"
+								},
+								{
+									"key": "isDisabled",
+									"value": "false",
+									"disabled": true,
+									"description": "Filter by active/disabled"
+								},
+								{
+									"key": "isDeleted",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by soft-deleted accounts"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
 							]
 						},
 						"description": "List all users with full details, filters, and pagination.\n\nReturns 404 in Production.\n\n**Response:** PaginatedResult of:\n- `id`, `name`, `mobileNumber`, `userType`, `registrationStatus`, `isDisabled`, `createdAt`\n- `cityId`, `cityName`, `regionId`, `regionName` — location\n- `street`, `buildingNumber`, `postalCode`, `subNumber`, `district` — address\n- `customerCode`, `storeName` — ShopOwner/Seller only\n- `managedRegionId`, `managedRegionName` — ZoneManager only\n- `assignedCities` — SalesMan only (array of {id, nameAr})\n- `invitationCode`, `invitedByUserId` — invitation info"

@@ -41,7 +41,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     }
 
     public async Task<Result<PaginatedResult<PendingRedemptionResponse>>> GetPendingAsync(
-        string approverId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+        string approverId, string? search = null, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
         (page, pageSize) = Helpers.PaginationHelper.Normalize(page, pageSize, maxPageSize: 50);
 
@@ -51,48 +51,14 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
         var roles = await _userRepository.GetRolesAsync(approver);
 
-        var query = _context.RedemptionRequests
-            .Include(r => r.User)
-            .AsQueryable();
-
-        // Filter by role-appropriate status and geographic assignment
-        if (roles.Contains(UserRoles.SystemAdmin))
-        {
-            query = query.Where(r => r.Status == RedemptionRequestStatus.PendingAdmin);
-        }
-        else if (roles.Contains(UserRoles.ZoneManager))
-        {
-            // ZoneManager sees requests from users in their region
-            var managedRegion = await _context.Regions
-                .FirstOrDefaultAsync(r => r.ZoneManagerId == approverId, ct);
-
-            if (managedRegion is null)
-                return Result.Success(new PaginatedResult<PendingRedemptionResponse>([], 0, page, pageSize));
-
-            var cityIds = await _context.Cities
-                .Where(c => c.RegionId == managedRegion.Id)
-                .Select(c => c.Id)
-                .ToListAsync(ct);
-
-            query = query.Where(r => r.Status == RedemptionRequestStatus.PendingZoneManager
-                && r.User.NationalAddress != null
-                && cityIds.Contains(r.User.NationalAddress.CityId));
-        }
-        else if (roles.Contains(UserRoles.SalesMan))
-        {
-            // SalesMan sees requests from users in their assigned cities
-            var assignedCityIds = await _context.Cities
-                .Where(c => c.ApprovalSalesManId == approverId)
-                .Select(c => c.Id)
-                .ToListAsync(ct);
-
-            query = query.Where(r => r.Status == RedemptionRequestStatus.PendingSalesMan
-                && r.User.NationalAddress != null
-                && assignedCityIds.Contains(r.User.NationalAddress.CityId));
-        }
-        else
-        {
+        var query = await BuildPendingScopedQueryAsync(approverId, roles, ct);
+        if (query is null)
             return Result.Failure<PaginatedResult<PendingRedemptionResponse>>(RedemptionErrors.NotAuthorizedToApprove);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var trimmed = search.Trim();
+            query = query.Where(r => r.User.Name.Contains(trimmed));
         }
 
         var totalCount = await query.CountAsync(ct);
@@ -120,6 +86,165 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         return Result.Success(new PaginatedResult<PendingRedemptionResponse>(items, totalCount, page, pageSize));
     }
 
+    public async Task<Result<PaginatedResult<RedemptionListItem>>> GetListAsync(
+        string approverId, RedemptionListStatusFilter status, string? search, int page, int pageSize, CancellationToken ct = default)
+    {
+        (page, pageSize) = Helpers.PaginationHelper.Normalize(page, pageSize, maxPageSize: 50);
+
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
+        if (approver is null)
+            return Result.Failure<PaginatedResult<RedemptionListItem>>(RedemptionErrors.NotAuthorizedToApprove);
+
+        var roles = await _userRepository.GetRolesAsync(approver);
+        if (!roles.Contains(UserRoles.SalesMan)
+            && !roles.Contains(UserRoles.ZoneManager)
+            && !roles.Contains(UserRoles.SystemAdmin))
+            return Result.Failure<PaginatedResult<RedemptionListItem>>(RedemptionErrors.NotAuthorizedToApprove);
+
+        var trimmed = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+        // Pending rows
+        var includePending = status is RedemptionListStatusFilter.All or RedemptionListStatusFilter.Pending;
+        var pendingRows = new List<RedemptionListRow>();
+        var pendingCount = 0;
+        if (includePending)
+        {
+            var pendingQ = await BuildPendingScopedQueryAsync(approverId, roles, ct);
+            if (pendingQ is not null)
+            {
+                if (trimmed is not null)
+                    pendingQ = pendingQ.Where(r => r.User.Name.Contains(trimmed));
+
+                pendingCount = await pendingQ.CountAsync(ct);
+                pendingRows = await pendingQ
+                    .Select(r => new RedemptionListRow(
+                        r.Id,
+                        r.UserId,
+                        r.User.Name,
+                        r.User.MobileNumber,
+                        r.Method,
+                        r.PointsAmount,
+                        r.SarAmount,
+                        RedemptionReviewStatus.Pending,
+                        r.Status,
+                        r.CreatedAt,
+                        null))
+                    .ToListAsync(ct);
+            }
+        }
+
+        // Reviewed rows (by this approver)
+        var includeApproved = status is RedemptionListStatusFilter.All or RedemptionListStatusFilter.Approved;
+        var includeRejected = status is RedemptionListStatusFilter.All or RedemptionListStatusFilter.Rejected;
+        var reviewedRows = new List<RedemptionListRow>();
+        var reviewedCount = 0;
+        if (includeApproved || includeRejected)
+        {
+            var reviewedQ = _context.RedemptionApprovals.Where(a => a.ApproverId == approverId);
+            if (includeApproved && !includeRejected)
+                reviewedQ = reviewedQ.Where(a => a.Action == ApprovalAction.Approved);
+            else if (includeRejected && !includeApproved)
+                reviewedQ = reviewedQ.Where(a => a.Action == ApprovalAction.Rejected);
+
+            if (trimmed is not null)
+                reviewedQ = reviewedQ.Where(a => a.RedemptionRequest.User.Name.Contains(trimmed));
+
+            reviewedCount = await reviewedQ.CountAsync(ct);
+            reviewedRows = await reviewedQ
+                .Select(a => new RedemptionListRow(
+                    a.RedemptionRequestId,
+                    a.RedemptionRequest.UserId,
+                    a.RedemptionRequest.User.Name,
+                    a.RedemptionRequest.User.MobileNumber,
+                    a.RedemptionRequest.Method,
+                    a.RedemptionRequest.PointsAmount,
+                    a.RedemptionRequest.SarAmount,
+                    a.Action == ApprovalAction.Approved ? RedemptionReviewStatus.Approved : RedemptionReviewStatus.Rejected,
+                    a.RedemptionRequest.Status,
+                    a.CreatedAt,
+                    a.RejectionReason))
+                .ToListAsync(ct);
+        }
+
+        var totalCount = pendingCount + reviewedCount;
+
+        var pageRows = pendingRows
+            .Concat(reviewedRows)
+            .OrderByDescending(x => x.ActivityAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => new RedemptionListItem(
+                r.RequestId,
+                r.UserId,
+                r.UserName,
+                r.UserMobile,
+                r.Method,
+                r.PointsAmount,
+                r.SarAmount,
+                r.ReviewStatus,
+                r.CurrentStatus,
+                r.ActivityAt,
+                r.RejectionReason))
+            .ToList();
+
+        return Result.Success(new PaginatedResult<RedemptionListItem>(pageRows, totalCount, page, pageSize));
+    }
+
+    private async Task<IQueryable<RedemptionRequest>?> BuildPendingScopedQueryAsync(
+        string approverId, IList<string> roles, CancellationToken ct)
+    {
+        var query = _context.RedemptionRequests.AsQueryable();
+
+        if (roles.Contains(UserRoles.SystemAdmin))
+        {
+            return query.Where(r => r.Status == RedemptionRequestStatus.PendingAdmin);
+        }
+
+        if (roles.Contains(UserRoles.ZoneManager))
+        {
+            var managedRegion = await _context.Regions
+                .FirstOrDefaultAsync(r => r.ZoneManagerId == approverId, ct);
+            if (managedRegion is null)
+                return query.Where(r => false);
+
+            var cityIds = await _context.Cities
+                .Where(c => c.RegionId == managedRegion.Id)
+                .Select(c => c.Id)
+                .ToListAsync(ct);
+
+            return query.Where(r => r.Status == RedemptionRequestStatus.PendingZoneManager
+                && r.User.NationalAddress != null
+                && cityIds.Contains(r.User.NationalAddress.CityId));
+        }
+
+        if (roles.Contains(UserRoles.SalesMan))
+        {
+            var assignedCityIds = await _context.Cities
+                .Where(c => c.ApprovalSalesManId == approverId)
+                .Select(c => c.Id)
+                .ToListAsync(ct);
+
+            return query.Where(r => r.Status == RedemptionRequestStatus.PendingSalesMan
+                && r.User.NationalAddress != null
+                && assignedCityIds.Contains(r.User.NationalAddress.CityId));
+        }
+
+        return null;
+    }
+
+    private sealed record RedemptionListRow(
+        string RequestId,
+        string UserId,
+        string UserName,
+        string UserMobile,
+        RedemptionMethod Method,
+        decimal PointsAmount,
+        decimal SarAmount,
+        RedemptionReviewStatus ReviewStatus,
+        RedemptionRequestStatus CurrentStatus,
+        DateTime ActivityAt,
+        string? RejectionReason);
+
     public async Task<Result> ApproveAsync(
         ApproveRedemptionRequest request, string approverId, CancellationToken ct = default)
     {
@@ -137,8 +262,11 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         if (validationResult.IsFailure)
             return validationResult;
 
+        var approver = await _userRepository.FindByIdAsync(approverId, ct);
+        var approverRoles = approver is null ? [] : await _userRepository.GetRolesAsync(approver);
+
         var fromStatus = redemptionRequest.Status;
-        var toStatus = GetNextApprovalStatus(fromStatus);
+        var toStatus = GetNextApprovalStatus(fromStatus, approverRoles);
 
         redemptionRequest.Status = toStatus;
 
@@ -191,9 +319,19 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         }
         else
         {
+            var (title, body) = fromStatus switch
+            {
+                RedemptionRequestStatus.PendingSalesMan =>
+                    ("تحديث طلب الاستبدال", "تمت موافقة مندوب المبيعات على طلب الاستبدال"),
+                RedemptionRequestStatus.PendingZoneManager =>
+                    ("تحديث طلب الاستبدال", "تمت موافقة مدير المنطقة على طلب الاستبدال"),
+                RedemptionRequestStatus.PendingAdmin =>
+                    ("تمت موافقة الإدارة", "تمت موافقة الإدارة على طلب الاستبدال"),
+                _ => ("تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال")
+            };
+
             await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionApproved,
-                "تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال وانتقل للمرحلة التالية",
-                redemptionRequest.Id, ct);
+                title, body, redemptionRequest.Id, ct);
         }
 
         return Result.Success();
@@ -384,8 +522,12 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         return Result.Success();
     }
 
-    private static RedemptionRequestStatus GetNextApprovalStatus(RedemptionRequestStatus current) => current switch
+    private static RedemptionRequestStatus GetNextApprovalStatus(
+        RedemptionRequestStatus current, IList<string> approverRoles) => current switch
     {
+        // Dual-role SM+ZM approving at SalesMan step skips ZoneManager step
+        RedemptionRequestStatus.PendingSalesMan when approverRoles.Contains(UserRoles.ZoneManager)
+            => RedemptionRequestStatus.PendingAdmin,
         RedemptionRequestStatus.PendingSalesMan => RedemptionRequestStatus.PendingZoneManager,
         RedemptionRequestStatus.PendingZoneManager => RedemptionRequestStatus.PendingAdmin,
         RedemptionRequestStatus.PendingAdmin => RedemptionRequestStatus.AdminApproved,
@@ -417,8 +559,12 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         }
 
         if (remaining > 0)
-            _logger.LogError("FIFO_SHORTFALL: {Remaining} points could not be consumed from earned transactions for request {Id}. Wallet integrity may be compromised.",
+        {
+            _logger.LogError("FIFO_SHORTFALL: {Remaining} points could not be consumed from earned transactions for request {Id}. Wallet integrity compromised — aborting completion.",
                 remaining, redemptionRequest.Id);
+            throw new InvalidOperationException(
+                $"Wallet integrity failure: {remaining} points could not be consumed via FIFO for redemption request {redemptionRequest.Id}.");
+        }
 
         // Deduct from wallet
         wallet.Balance -= redemptionRequest.PointsAmount;

@@ -68,6 +68,10 @@ public class RedemptionRequestConfiguration : IEntityTypeConfiguration<Redemptio
         builder.Property(x => x.RejectedById)
             .HasMaxLength(450);
 
+        // Concurrency control
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         // Audit fields
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);

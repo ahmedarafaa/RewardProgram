@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Redemptions;
+using RewardProgram.Application.Contracts.Redemption;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Constants;
+using System.Security.Claims;
 
 namespace RewardProgram.API.Controllers.Admin;
 
@@ -13,10 +16,14 @@ namespace RewardProgram.API.Controllers.Admin;
 public class AdminRedemptionController : ControllerBase
 {
     private readonly IAdminRedemptionService _adminRedemptionService;
+    private readonly IRedemptionApprovalService _approvalService;
 
-    public AdminRedemptionController(IAdminRedemptionService adminRedemptionService)
+    public AdminRedemptionController(
+        IAdminRedemptionService adminRedemptionService,
+        IRedemptionApprovalService approvalService)
     {
         _adminRedemptionService = adminRedemptionService;
+        _approvalService = approvalService;
     }
 
     [HttpGet]
@@ -34,5 +41,29 @@ public class AdminRedemptionController : ControllerBase
     {
         var result = await _adminRedemptionService.GetByIdAsync(id, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpPost("approve")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Approve([FromBody] ApproveRedemptionRequest request, CancellationToken ct)
+    {
+        var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _approvalService.ApproveAsync(request, approverId, ct);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
+    [HttpPost("reject")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reject([FromBody] RejectRedemptionRequest request, CancellationToken ct)
+    {
+        var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _approvalService.RejectAsync(request, approverId, ct);
+        return result.IsSuccess ? Ok() : result.ToProblem();
     }
 }

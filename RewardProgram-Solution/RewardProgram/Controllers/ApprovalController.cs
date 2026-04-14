@@ -23,10 +23,32 @@ public class ApprovalController : ControllerBase
     [HttpGet("pending")]
     [ProducesResponseType(typeof(PaginatedResult<PendingUserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetPendingRequests([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    public async Task<IActionResult> GetPendingRequests(
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
     {
         var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _approvalService.GetPendingRequestsAsync(approverId, page, pageSize, ct);
+        var result = await _approvalService.GetPendingRequestsAsync(approverId, search, page, pageSize, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
+    [HttpGet("list")]
+    [ProducesResponseType(typeof(PaginatedResult<ApprovalListItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetList(
+        [FromQuery] ApprovalListStatusFilter status = ApprovalListStatusFilter.All,
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _approvalService.GetListAsync(approverId, status, search, page, pageSize, ct);
 
         return result.IsSuccess
             ? Ok(result.Value)

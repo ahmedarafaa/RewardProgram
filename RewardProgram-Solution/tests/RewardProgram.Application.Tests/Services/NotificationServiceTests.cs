@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Notifications;
@@ -23,7 +24,7 @@ public class NotificationServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _sut = new NotificationService(_context, _userRepo, Substitute.For<IFirebaseMessagingService>(), Substitute.For<ILogger<NotificationService>>());
+        _sut = new NotificationService(_context, _userRepo, Substitute.For<IFirebaseMessagingService>(), Substitute.For<ILogger<NotificationService>>(), Substitute.For<IServiceScopeFactory>());
     }
 
     public void Dispose() => _context.Dispose();

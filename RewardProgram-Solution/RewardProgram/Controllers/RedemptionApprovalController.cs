@@ -22,10 +22,28 @@ public class RedemptionApprovalController : ControllerBase
 
     [HttpGet("pending")]
     [ProducesResponseType(typeof(PaginatedResult<PendingRedemptionResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPending([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    public async Task<IActionResult> GetPending(
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
     {
         var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _approvalService.GetPendingAsync(approverId, page, pageSize, ct);
+        var result = await _approvalService.GetPendingAsync(approverId, search, page, pageSize, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    [HttpGet("list")]
+    [ProducesResponseType(typeof(PaginatedResult<RedemptionListItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetList(
+        [FromQuery] RedemptionListStatusFilter status = RedemptionListStatusFilter.All,
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var approverId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _approvalService.GetListAsync(approverId, status, search, page, pageSize, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 

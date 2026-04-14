@@ -30,6 +30,9 @@ public class RedemptionRequest : TrackableEntity
     public string? RejectionReason { get; set; }
     public string? RejectedById { get; set; }
 
+    // Concurrency control
+    public byte[] RowVersion { get; set; } = [];
+
     // Navigation
     public ApplicationUser User { get; set; } = null!;
     public ApplicationUser? CashHandoverBy { get; set; }

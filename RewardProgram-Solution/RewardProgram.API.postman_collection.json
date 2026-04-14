@@ -693,7 +693,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/approvals/pending?page=1&pageSize=20",
+              "raw": "{{baseUrl}}/api/approvals/pending?search=&page=1&pageSize=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -704,6 +704,11 @@
               ],
               "query": [
                 {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — case-insensitive Contains match on user Name."
+                },
+                {
                   "key": "page",
                   "value": "1"
                 },
@@ -713,7 +718,47 @@
                 }
               ]
             },
-            "description": "Get pending registration requests. Requires SalesMan/ZoneManager JWT."
+            "description": "Get pending registration requests in this approver's scope. Supports optional ?search= by user name. Requires SalesMan/ZoneManager JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Approvals List (All / Pending / Approved / Rejected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/list?status=All&search=&page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "approvals",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "All",
+                  "description": "All | Pending | Approved | Rejected. Pending = current open requests in scope. Approved/Rejected = records this approver has decided. All = union."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — case-insensitive Contains match on user Name."
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Unified list endpoint for the approvals screen. Returns a lean card shape (userId, name, mobile, userType, storeName, reviewStatus, currentStatus, activityAt, rejectionReason) ordered by activityAt desc. Scope: SM sees their assigned pending + their own decisions; ZM sees pending in managed region + their own decisions."
           },
           "response": []
         },
@@ -1515,7 +1560,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/redemption-approvals/pending?page=1&pageSize=20",
+              "raw": "{{baseUrl}}/api/redemption-approvals/pending?search=&page=1&pageSize=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1526,6 +1571,11 @@
               ],
               "query": [
                 {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — case-insensitive Contains match on user Name."
+                },
+                {
                   "key": "page",
                   "value": "1"
                 },
@@ -1535,7 +1585,47 @@
                 }
               ]
             },
-            "description": "Get pending redemption requests for the current approver's level.\n\nSalesMan sees PendingSalesman requests.\nZoneManager sees PendingZoneManager requests.\nSystemAdmin sees PendingAdmin requests.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+            "description": "Get pending redemption requests for the current approver's level. Supports ?search= by user name.\n\nSalesMan sees PendingSalesman requests.\nZoneManager sees PendingZoneManager requests.\nSystemAdmin sees PendingAdmin requests.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Redemption List (All / Pending / Approved / Rejected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redemption-approvals/list?status=All&search=&page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-approvals",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "All",
+                  "description": "All | Pending | Approved | Rejected. Pending = open requests awaiting this approver. Approved/Rejected = decisions this approver made. All = union."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — case-insensitive Contains match on user Name."
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Unified redemption list for the approvals screen. Returns lean card shape (requestId, userId, userName, userMobile, method, pointsAmount, sarAmount, reviewStatus, currentStatus, activityAt, rejectionReason) ordered by activityAt desc."
           },
           "response": []
         },
