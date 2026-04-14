@@ -48,7 +48,7 @@
       "item": [
         {
           "name": "Registration",
-          "description": "User registration — OTP-first flow.\n\n1. Send OTP → get pinId\n2. Register with pinId + OTP → user created\n\nOptionally include an `InvitationCode` from an existing user's invite link.",
+          "description": "User registration — OTP-first flow.\n\n1. Send OTP → get pinId\n2. Register with pinId + OTP → user created\n\nOptionally include an `InvitationCode` from an existing user's invite link. When a valid invitation code is used, the response includes `invitationBonusPoints` (e.g. 50) and an Arabic message noting the user will receive that many points upon approval.\n\n**RegisterResponse:** `{ userId, message, invitationBonusPoints? }`",
           "item": [
             {
               "name": "Send OTP",
@@ -622,7 +622,7 @@
                     "refresh-token"
                   ]
                 },
-                "description": "Refresh an expired JWT token. Requires authentication."
+                "description": "Refresh an expired JWT access token.\n\n**Lifetimes:** access token 60 min, refresh token 365 days. Refresh token rotates on every call — old token is revoked, new one is returned.\n\n**Reuse detection:** presenting a revoked refresh token triggers revocation of every active session for that user (family wipe). Clients MUST serialize concurrent refreshes and never retry the same token."
               },
               "response": [],
               "event": [
@@ -1494,7 +1494,7 @@
                 "request"
               ]
             },
-            "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `bankName`, and `accountHolderName` are required.\nFor Cash: bank fields are optional.\n\n**Response:** RedemptionRequestResponse with status, SAR amount, etc.\n\nRequires Seller or Technician JWT."
+            "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `bankName`, and `accountHolderName` are required.\nFor Cash: bank fields are optional.\n\n**Cash method:** A 6-digit OTP is generated server-side and sent to the user's WhatsApp immediately on creation (valid 30 days). The user must present this OTP at cash handover time.\n\n**Response:** RedemptionRequestResponse with status, SAR amount, etc.\n\nRequires Seller or Technician JWT."
           },
           "response": []
         },
@@ -1552,7 +1552,7 @@
     },
     {
       "name": "Redemption Approvals",
-      "description": "Redemption approval endpoints for SalesMan, ZoneManager, and SystemAdmin.\n\n3-level approval flow:\n1. SalesMan approves → PendingZoneManager\n2. ZoneManager approves → PendingAdmin\n3. SystemAdmin approves → Approved (for BankTransfer) or PendingCashHandover (for Cash)\n\nCash method requires OTP confirmation at final handover.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
+      "description": "Redemption approval endpoints for SalesMan, ZoneManager, and SystemAdmin.\n\n3-level approval flow:\n1. SalesMan approves → PendingZoneManager\n2. ZoneManager approves → PendingAdmin\n3. SystemAdmin approves → Completed (for BankTransfer) or AdminApproved (for Cash — awaiting handover)\n\n**Dual-role skip:** If an approver holds both SalesMan and ZoneManager roles AND is the ZoneManager for the user's region, approving at the SM stage skips straight to PendingAdmin.\n\n**Cash OTP:** The OTP is issued on the user's WhatsApp when they create the request (not here). This flow only confirms the handover later via `confirm-cash`.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT.",
       "item": [
         {
           "name": "Get Pending Redemptions",
@@ -1727,7 +1727,7 @@
                 "confirm-cash"
               ]
             },
-            "description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method redemptions in PendingCashHandover status.\nThe OTP is sent to the requesting user's WhatsApp.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
+            "description": "Confirm cash handover with OTP verification.\n\nOnly for Cash method redemptions in AdminApproved status.\n\nThe OTP was sent to the user's WhatsApp when they created the redemption request (valid 30 days). Max 5 wrong attempts locks the request and refunds the hold.\n\nRequires SalesMan, ZoneManager, or SystemAdmin JWT."
           },
           "response": []
         }

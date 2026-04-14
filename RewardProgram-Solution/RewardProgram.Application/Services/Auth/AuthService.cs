@@ -260,10 +260,7 @@ public class AuthService : IAuthService
                 user.Id,
                 MobileNumberHelper.Mask(mobile));
 
-            return Result.Success(new RegisterResponse(
-                UserId: user.Id,
-                Message: "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق"
-            ));
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
         }
         catch (Exception ex)
         {
@@ -439,10 +436,7 @@ public class AuthService : IAuthService
                 MobileNumberHelper.Mask(mobile),
                 request.CustomerCode);
 
-            return Result.Success(new RegisterResponse(
-                UserId: user.Id,
-                Message: "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق"
-            ));
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
         }
         catch (Exception ex)
         {
@@ -533,10 +527,7 @@ public class AuthService : IAuthService
                 user.Id,
                 MobileNumberHelper.Mask(mobile));
 
-            return Result.Success(new RegisterResponse(
-                UserId: user.Id,
-                Message: "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق"
-            ));
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
         }
         catch (Exception ex)
         {
@@ -636,7 +627,23 @@ public class AuthService : IAuthService
             return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
 
         if (token.RevokedOn != null)
+        {
+            // Refresh-token reuse detected — assume the family is compromised and
+            // revoke every active token the user holds. Forces a full re-login on
+            // all devices; kills any parallel attacker session.
+            var activeTokens = user.RefreshTokens.Where(t => t.IsActive).ToList();
+            foreach (var t in activeTokens)
+                t.RevokedOn = DateTime.UtcNow;
+
+            if (activeTokens.Count > 0)
+                await _userRepository.UpdateAsync(user);
+
+            _logger.LogWarning(
+                "REFRESH_TOKEN_REUSE detected for UserId {UserId} (admin={IsAdmin}) — {Count} active tokens revoked",
+                user.Id, isAdmin, activeTokens.Count);
+
             return Result.Failure<AuthResponse>(AuthErrors.RefreshTokenRevoked);
+        }
 
         if (token.IsExpired)
             return Result.Failure<AuthResponse>(AuthErrors.RefreshTokenExpired);
@@ -724,6 +731,22 @@ public class AuthService : IAuthService
             return Result.Failure<string?>(InvitationErrors.InviterNotApproved);
 
         return Result.Success<string?>(inviter.Id);
+    }
+
+    private async Task<RegisterResponse> BuildRegisterResponseAsync(
+        string userId, string? inviterId, CancellationToken ct)
+    {
+        const string baseMessage = "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق";
+
+        if (inviterId is null)
+            return new RegisterResponse(userId, baseMessage);
+
+        var bonus = await _context.RewardSettings
+            .Select(s => (decimal?)s.InviteeRewardPoints)
+            .FirstOrDefaultAsync(ct) ?? 50m;
+
+        var message = $"{baseMessage}. ستحصل على {bonus} نقطة مكافأة تسجيل عند الموافقة على حسابك";
+        return new RegisterResponse(userId, message, bonus);
     }
 
     private async Task<string> GenerateUniqueInvitationCodeAsync(CancellationToken ct)

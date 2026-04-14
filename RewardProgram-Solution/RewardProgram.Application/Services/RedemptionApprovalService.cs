@@ -22,20 +22,17 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
-    private readonly ITwilioService _twilioService;
     private readonly INotificationService _notificationService;
     private readonly ILogger<RedemptionApprovalService> _logger;
 
     public RedemptionApprovalService(
         IApplicationDbContext context,
         IUserRepository userRepository,
-        ITwilioService twilioService,
         INotificationService notificationService,
         ILogger<RedemptionApprovalService> logger)
     {
         _context = context;
         _userRepository = userRepository;
-        _twilioService = twilioService;
         _notificationService = notificationService;
         _logger = logger;
     }
@@ -265,8 +262,20 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         var approver = await _userRepository.FindByIdAsync(approverId, ct);
         var approverRoles = approver is null ? [] : await _userRepository.GetRolesAsync(approver);
 
+        // Dual-role skip fires only when the approver is also the ZoneManager
+        // for this user's region — otherwise the real regional ZM must still review.
+        var canSkipZoneManager = false;
+        if (redemptionRequest.Status == RedemptionRequestStatus.PendingSalesMan
+            && approverRoles.Contains(UserRoles.ZoneManager)
+            && redemptionRequest.User?.NationalAddress is not null)
+        {
+            canSkipZoneManager = await _context.Cities
+                .Where(c => c.Id == redemptionRequest.User.NationalAddress!.CityId)
+                .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
+        }
+
         var fromStatus = redemptionRequest.Status;
-        var toStatus = GetNextApprovalStatus(fromStatus, approverRoles);
+        var toStatus = GetNextApprovalStatus(fromStatus, canSkipZoneManager);
 
         redemptionRequest.Status = toStatus;
 
@@ -280,23 +289,8 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             ToStatus = toStatus
         }, ct);
 
-        // If AdminApproved and Cash method → generate OTP
-        if (toStatus == RedemptionRequestStatus.AdminApproved && redemptionRequest.Method == RedemptionMethod.Cash)
-        {
-            var otp = GenerateOtp();
-            redemptionRequest.CashOtpHash = HashOtp(otp);
-            redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.AddDays(14);
-            redemptionRequest.CashOtpAttempts = 0;
-
-            // Send OTP via WhatsApp
-            var mobile = redemptionRequest.User.MobileNumber;
-            if (!string.IsNullOrEmpty(mobile))
-            {
-                const string cashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
-                var variables = new Dictionary<string, string> { { "1", otp } };
-                await _twilioService.SendWhatsAppMessageAsync(mobile, cashOtpTemplateSid, variables, ct);
-            }
-        }
+        // Cash OTP is issued up-front at request creation (see RedemptionService.CreateRequestAsync).
+        // Admin approval only transitions state — the OTP the user already has remains valid.
 
         // If AdminApproved and BankTransfer → complete immediately
         if (toStatus == RedemptionRequestStatus.AdminApproved && redemptionRequest.Method == RedemptionMethod.BankTransfer)
@@ -523,10 +517,10 @@ public class RedemptionApprovalService : IRedemptionApprovalService
     }
 
     private static RedemptionRequestStatus GetNextApprovalStatus(
-        RedemptionRequestStatus current, IList<string> approverRoles) => current switch
+        RedemptionRequestStatus current, bool canSkipZoneManager) => current switch
     {
-        // Dual-role SM+ZM approving at SalesMan step skips ZoneManager step
-        RedemptionRequestStatus.PendingSalesMan when approverRoles.Contains(UserRoles.ZoneManager)
+        // Dual-role SM+ZM approver (for the user's region) collapses SM+ZM steps
+        RedemptionRequestStatus.PendingSalesMan when canSkipZoneManager
             => RedemptionRequestStatus.PendingAdmin,
         RedemptionRequestStatus.PendingSalesMan => RedemptionRequestStatus.PendingZoneManager,
         RedemptionRequestStatus.PendingZoneManager => RedemptionRequestStatus.PendingAdmin,
@@ -606,11 +600,6 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             SarRate = redemptionRequest.SarRate,
             SarAmount = redemptionRequest.SarAmount
         }, ct);
-    }
-
-    private static string GenerateOtp()
-    {
-        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 
     private static string HashOtp(string otp)

@@ -22,7 +22,6 @@ public class ApprovalService : IApprovalService
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
     private readonly IInvitationService _invitationService;
-    private readonly INotificationService _notificationService;
     private readonly ILogger<ApprovalService> _logger;
 
     public ApprovalService(
@@ -30,14 +29,12 @@ public class ApprovalService : IApprovalService
         IUserRepository userRepository,
         ITwilioService twilioService,
         IInvitationService invitationService,
-        INotificationService notificationService,
         ILogger<ApprovalService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
         _invitationService = invitationService;
-        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -351,32 +348,49 @@ public class ApprovalService : IApprovalService
         var roles = await _userRepository.GetRolesAsync(approver);
 
         // SalesMan approval: PendingSalesman → PendingZoneManager
+        // (or → Approved if approver also manages user's region as ZoneManager)
         if (user.RegistrationStatus == RegistrationStatus.PendingSalesman
             && roles.Contains(UserRoles.SalesMan))
         {
             if (user.AssignedSalesManId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
-            // Verify region has a ZoneManager (derived from user's city → region)
-            var regionHasZoneManager = user.NationalAddress != null
+            // Dual-role skip: if approver also manages user's region as ZM,
+            // collapse SM+ZM steps into one and jump straight to Approved.
+            var isZmForUserRegion = roles.Contains(UserRoles.ZoneManager)
+                && user.NationalAddress != null
                 && await _context.Cities
                     .Where(c => c.Id == user.NationalAddress.CityId)
-                    .Select(c => c.Region!.ZoneManagerId)
-                    .FirstOrDefaultAsync(ct) != null;
+                    .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
 
-            if (!regionHasZoneManager)
-                return Result.Failure(ApprovalErrors.NoZoneManagerForRegion);
+            if (!isZmForUserRegion)
+            {
+                // Standard SM-only path — still need a ZoneManager downstream.
+                var regionHasZoneManager = user.NationalAddress != null
+                    && await _context.Cities
+                        .Where(c => c.Id == user.NationalAddress.CityId)
+                        .Select(c => c.Region!.ZoneManagerId)
+                        .FirstOrDefaultAsync(ct) != null;
+
+                if (!regionHasZoneManager)
+                    return Result.Failure(ApprovalErrors.NoZoneManagerForRegion);
+            }
 
             var fromStatus = user.RegistrationStatus;
-            user.RegistrationStatus = RegistrationStatus.PendingZoneManager;
+            user.RegistrationStatus = isZmForUserRegion
+                ? RegistrationStatus.Approved
+                : RegistrationStatus.PendingZoneManager;
 
             await _userRepository.UpdateAsync(user);
             await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Approved, fromStatus, user.RegistrationStatus, ct: ct);
             await transaction.CommitAsync(ct);
 
             _logger.LogInformation(
-                "SalesMan {ApproverId} approved user {UserId}. Status: PendingSalesman → PendingZoneManager",
-                approverId, userId);
+                "Approver {ApproverId} approved user {UserId} at SalesMan step. Status: {From} → {To}",
+                approverId, userId, fromStatus, user.RegistrationStatus);
+
+            if (isZmForUserRegion)
+                await ApplyApprovedSideEffectsAsync(user, ct);
 
             return Result.Success();
         }
@@ -405,29 +419,7 @@ public class ApprovalService : IApprovalService
                 "ZoneManager {ApproverId} approved user {UserId}. Status: PendingZoneManager → Approved",
                 approverId, userId);
 
-            // Credit invitation rewards in a separate transaction (after approval is committed)
-            // This ensures approval succeeds even if reward crediting fails,
-            // while CreditInvitationRewardsAsync manages its own transaction internally.
-            if (user.InvitedByUserId is not null)
-            {
-                try
-                {
-                    await _invitationService.CreditInvitationRewardsAsync(user.Id, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log as error so monitoring catches it — rewards can be manually credited later
-                    _logger.LogError(ex, "REWARD_CREDITING_FAILED: Invitation rewards not credited for approved user {UserId}. Manual intervention may be needed.", user.Id);
-                }
-            }
-
-            // Send WhatsApp welcome (fire-and-forget with captured data)
-            var welcomeMobile = user.MobileNumber;
-            var welcomeName = user.Name;
-            _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
-
-            await _notificationService.CreateAsync(user.Id, NotificationType.RegistrationApproved,
-                "تم قبول تسجيلك", $"مرحباً {user.Name}، تم قبول طلب تسجيلك بنجاح", ct: ct);
+            await ApplyApprovedSideEffectsAsync(user, ct);
 
             return Result.Success();
         }
@@ -497,13 +489,38 @@ public class ApprovalService : IApprovalService
             "Approver {ApproverId} rejected user {UserId}. Status: {FromStatus} → Rejected. Reason: {Reason}",
             approverId, userId, fromStatus, reason);
 
-        await _notificationService.CreateAsync(user.Id, NotificationType.RegistrationRejected,
-            "تم رفض تسجيلك", $"تم رفض طلب تسجيلك. السبب: {reason}", ct: ct);
+        // Rejection is delivered via WhatsApp (no FCM — rejected users can't log in).
+        var rejectMobile = user.MobileNumber;
+        var rejectName = user.Name;
+        if (!string.IsNullOrEmpty(rejectMobile))
+            _ = SendRejectionMessageAsync(rejectMobile, rejectName, reason);
 
         return Result.Success();
     }
 
     #region Private Helpers
+
+    private async Task ApplyApprovedSideEffectsAsync(ApplicationUser user, CancellationToken ct)
+    {
+        // Credit invitation rewards in a separate transaction (after approval is committed).
+        // Approval must not be rolled back if reward crediting fails; reward service manages its own transaction.
+        if (user.InvitedByUserId is not null)
+        {
+            try
+            {
+                await _invitationService.CreditInvitationRewardsAsync(user.Id, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "REWARD_CREDITING_FAILED: Invitation rewards not credited for approved user {UserId}. Manual intervention may be needed.", user.Id);
+            }
+        }
+
+        // WhatsApp welcome is the user-facing notification on approval (no FCM in-app notification).
+        var welcomeMobile = user.MobileNumber;
+        var welcomeName = user.Name;
+        _ = SendWelcomeMessageAsync(welcomeMobile, welcomeName);
+    }
 
     private async Task LogApprovalRecordAsync(
         string userId,
@@ -540,6 +557,24 @@ public class ApprovalService : IApprovalService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send welcome WhatsApp to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
+        }
+    }
+
+    private async Task SendRejectionMessageAsync(string mobileNumber, string userName, string reason)
+    {
+        try
+        {
+            const string rejectionTemplateSid = "HX7f13ecc96c50972b7bd99095ba691edb";
+            var variables = new Dictionary<string, string>
+            {
+                { "1", userName },
+                { "2", reason }
+            };
+            await _twilioService.SendWhatsAppMessageAsync(mobileNumber, rejectionTemplateSid, variables);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send rejection WhatsApp to {Mobile}", MobileNumberHelper.Mask(mobileNumber));
         }
     }
 

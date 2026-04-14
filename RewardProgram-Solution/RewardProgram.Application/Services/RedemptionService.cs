@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
@@ -5,6 +7,7 @@ using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Redemption;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
+using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Domain.Enums;
@@ -14,20 +17,23 @@ namespace RewardProgram.Application.Services;
 
 public class RedemptionService : IRedemptionService
 {
+    private const string CashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
+    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromDays(30);
+
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
-    private readonly INotificationService _notificationService;
+    private readonly ITwilioService _twilioService;
     private readonly ILogger<RedemptionService> _logger;
 
     public RedemptionService(
         IApplicationDbContext context,
         IUserRepository userRepository,
-        INotificationService notificationService,
+        ITwilioService twilioService,
         ILogger<RedemptionService> logger)
     {
         _context = context;
         _userRepository = userRepository;
-        _notificationService = notificationService;
+        _twilioService = twilioService;
         _logger = logger;
     }
 
@@ -107,6 +113,17 @@ public class RedemptionService : IRedemptionService
             AccountName = request.AccountName
         };
 
+        // For cash redemptions, pre-issue the handover OTP so the user receives it
+        // on WhatsApp up-front; it stays valid through the full approval cycle.
+        string? cashOtp = null;
+        if (request.Method == RedemptionMethod.Cash)
+        {
+            cashOtp = GenerateOtp();
+            redemptionRequest.CashOtpHash = HashOtp(cashOtp);
+            redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.Add(CashOtpLifetime);
+            redemptionRequest.CashOtpAttempts = 0;
+        }
+
         wallet.HeldBalance += request.PointsAmount;
         wallet.HeldSarBalance += sarAmount;
 
@@ -117,9 +134,14 @@ public class RedemptionService : IRedemptionService
         _logger.LogInformation("Redemption request {Id} created by user {UserId} for {Points} points",
             redemptionRequest.Id, userId, request.PointsAmount);
 
-        await _notificationService.CreateAsync(userId, NotificationType.RedemptionCreated,
-            "طلب استبدال جديد", $"تم تقديم طلب استبدال {request.PointsAmount} نقطة",
-            redemptionRequest.Id, ct);
+        if (cashOtp is not null && !string.IsNullOrEmpty(user.MobileNumber))
+        {
+            var variables = new Dictionary<string, string> { { "1", cashOtp } };
+            await _twilioService.SendWhatsAppMessageAsync(
+                user.MobileNumber, CashOtpTemplateSid, variables, ct);
+        }
+
+        // No self-notification — the user sees the new request in their own response/UI.
 
         return Result.Success(MapToResponse(redemptionRequest));
     }
@@ -250,6 +272,17 @@ public class RedemptionService : IRedemptionService
         return await _context.Cities
             .Include(c => c.Region)
             .FirstOrDefaultAsync(c => c.Id == user.NationalAddress.CityId);
+    }
+
+    private static string GenerateOtp()
+    {
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+    }
+
+    private static string HashOtp(string otp)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(otp));
+        return Convert.ToHexStringLower(bytes);
     }
 
     private static RedemptionRequestResponse MapToResponse(RedemptionRequest r) => new(

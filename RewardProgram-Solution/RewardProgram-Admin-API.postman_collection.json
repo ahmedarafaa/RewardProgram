@@ -20,6 +20,10 @@
 		{
 			"key": "productId",
 			"value": ""
+		},
+		{
+			"key": "refreshToken",
+			"value": ""
 		}
 	],
 	"auth": {
@@ -71,7 +75,7 @@
 								"login"
 							]
 						},
-						"description": "Login with username and password. Only SystemAdmin users can login.\n\n**Seeded accounts:**\n- `admin` / `Admin@123` — مدير النظام\n- `admin.test` / `Admin@123` — مدير النظام - تست\n\n**Response:**\n- `token`: JWT access token\n- `refreshToken`: Refresh token string\n- `expiresIn`: Token expiry in minutes\n- `refreshTokenExpiration`: Refresh token expiry datetime\n- `user`: { id, name, mobileNumber, userType, registrationStatus }"
+						"description": "Login with username and password. Only SystemAdmin users can login.\n\n**Seeded accounts:**\n- `admin` / `Admin@123` — مدير النظام\n- `admin.test` / `Admin@123` — مدير النظام - تست\n\n**Response:**\n- `token`: JWT access token (15 min lifetime)\n- `refreshToken`: Refresh token string (365-day lifetime, rotates on every refresh)\n- `expiresIn`: access token expiry in seconds\n- `refreshTokenExpiration`: refresh token expiry datetime (ISO-8601 UTC)\n- `user`: { id, name, mobileNumber, userType, registrationStatus }\n\n**Account lockout:** Repeated wrong passwords lock the admin account temporarily (still returns 401 with a different message)."
 					},
 					"event": [
 						{
@@ -85,11 +89,100 @@
 									"        pm.collectionVariables.set('token', json.token);",
 									"        console.log('Admin token saved');",
 									"    }",
+									"    if (json.refreshToken) {",
+									"        pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    }",
 									"}"
 								]
 							}
 						}
 					]
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh an expired admin access token.\n\n**Lifetimes:** access token 15 min, refresh token 365 days. Refresh token rotates on every call — old token is revoked, new one returned.\n\n**Reuse detection:** presenting a revoked refresh token triggers revocation of every active session for that admin (family wipe). Clients MUST serialize concurrent refreshes and never retry the same token.\n\n**Errors:** `InvalidRefreshToken`, `RefreshTokenRevoked`, `RefreshTokenExpired`, `UserDisabled` — all require re-login."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    if (json.token) pm.collectionVariables.set('token', json.token);",
+									"    if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Admin Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Revoke the current refresh token (logout this device only). Other admin sessions remain active. Requires admin JWT."
+					}
 				}
 			]
 		},
@@ -1891,7 +1984,7 @@
 								"approve"
 							]
 						},
-						"description": "Admin approves a redemption request at the final (PendingAdmin) stage.\n\n**Preconditions:**\n- Request status must be `PendingAdmin` (3). Requests at SalesMan/ZoneManager stages return 403.\n- Caller must hold the `SystemAdmin` role (enforced by controller + service).\n\n**Behavior:**\n- **BankTransfer** method → request auto-completes to `Completed`; points/SAR deducted from wallet via FIFO; `RedemptionCompleted` notification sent.\n- **Cash** method → request moves to `AdminApproved`; a 6-digit OTP is generated, hashed, and stored (14-day expiry, 5-attempt lockout). OTP is delivered to the user via WhatsApp. Handover is completed later via `POST /api/redemption-approvals/confirm-cash`.\n- Audit row inserted in `RedemptionApprovals` (`Action=Approved`, `FromStatus=PendingAdmin`, `ToStatus=AdminApproved`).\n\n**Errors:**\n- 400 `RequestNotFound` — unknown id\n- 403 `NotAuthorizedToApprove` — wrong stage or not SystemAdmin\n- 403 `NotPendingApproval` — already Completed/Rejected/Cancelled/AdminApproved"
+						"description": "Admin approves a redemption request at the final (PendingAdmin) stage.\n\n**Preconditions:**\n- Request status must be `PendingAdmin` (3). Requests at SalesMan/ZoneManager stages return 403.\n- Caller must hold the `SystemAdmin` role (enforced by controller + service).\n\n**Behavior:**\n- **BankTransfer** method → request auto-completes to `Completed`; points/SAR deducted from wallet via FIFO; `RedemptionCompleted` notification sent.\n- **Cash** method → request moves to `AdminApproved`. The cash OTP was already issued to the user on WhatsApp when they created the request (30-day validity, 5-attempt lockout); handover is completed later via `POST /api/redemption-approvals/confirm-cash`.\n- Audit row inserted in `RedemptionApprovals` (`Action=Approved`, `FromStatus=PendingAdmin`, `ToStatus=AdminApproved`).\n\n**Errors:**\n- 400 `RequestNotFound` — unknown id\n- 403 `NotAuthorizedToApprove` — wrong stage or not SystemAdmin\n- 403 `NotPendingApproval` — already Completed/Rejected/Cancelled/AdminApproved"
 					}
 				},
 				{

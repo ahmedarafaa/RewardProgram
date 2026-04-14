@@ -182,12 +182,8 @@ public class InvitationService : IInvitationService
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
-            // Notify invitee
-            if (inviteePoints > 0)
-            {
-                await _notificationService.CreateAsync(invitee.Id, NotificationType.InvitationReward,
-                    "مكافأة تسجيل", $"حصلت على {inviteePoints} نقطة مكافأة تسجيل عبر دعوة", ct: ct);
-            }
+            // Invitee is not notified here — the signup reward is surfaced in the
+            // registration response / wallet balance, not as a push notification.
 
             // Notify inviter (only if reward was actually credited)
             if (inviterRewarded)
