@@ -13,8 +13,5 @@ public class AdminEditSalesManRequestValidator : AbstractValidator<AdminEditSale
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"])
             .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
-
-        RuleFor(x => x.CityIds)
-            .NotEmpty().WithMessage(L["CityIds.NotEmpty"]);
     }
 }

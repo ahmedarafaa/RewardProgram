@@ -58,6 +58,9 @@ appsettings.Production.json
 appsettings.Staging.json
 appsettings.UAT.json
 web.config
+web.UAT.config
+web.Staging.config
+web.Production.config
 
 # Firebase service-account credentials (never commit)
 **/App_Data/firebase-credentials.json

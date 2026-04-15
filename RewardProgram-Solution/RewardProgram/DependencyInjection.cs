@@ -1,6 +1,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RewardProgram.Application.Contracts.Validators;
@@ -32,6 +33,12 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.AddLocalization();
+
+        var keysDirectory = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "App_Data", "keys"));
+        keysDirectory.Create();
+        services.AddDataProtection()
+            .PersistKeysToFileSystem(keysDirectory)
+            .SetApplicationName("RewardProgram");
 
         // CORS
         var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];

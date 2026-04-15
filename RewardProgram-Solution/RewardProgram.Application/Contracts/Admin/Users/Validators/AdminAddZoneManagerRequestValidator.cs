@@ -18,8 +18,5 @@ public class AdminAddZoneManagerRequestValidator : AbstractValidator<AdminAddZon
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
             .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage(L["MobileNumber.InvalidFormat"]);
-
-        RuleFor(x => x.RegionId)
-            .NotEmpty().WithMessage(L["RegionId.NotEmpty"]);
     }
 }

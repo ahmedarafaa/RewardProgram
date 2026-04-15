@@ -221,7 +221,7 @@
 								"salesman"
 							]
 						},
-						"description": "Create a new SalesMan and assign cities.\n\nName: 3+ letters only (Arabic/English), no numbers."
+						"description": "Create a new SalesMan and optionally assign cities.\n\nName: 3+ letters only (Arabic/English), no numbers.\ncityIds is optional — leave empty to create an idle SalesMan. If provided, each target city must have no SalesMan (else 409)."
 					}
 				},
 				{
@@ -255,7 +255,7 @@
 								"zone-manager"
 							]
 						},
-						"description": "Create a new ZoneManager and assign to a region.\n\nName: 3+ letters only (Arabic/English), no numbers."
+						"description": "Create a new ZoneManager and optionally assign to a region.\n\nName: 3+ letters only (Arabic/English), no numbers.\nregionId is optional — leave empty to create an idle ZoneManager. If provided, the target region must have no ZoneManager (else 409)."
 					}
 				},
 				{
@@ -681,7 +681,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"cityIds\": [\"city-id-1\", \"city-id-3\"]\n}",
+							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -708,7 +708,7 @@
 								}
 							]
 						},
-						"description": "Edit a SalesMan and reassign cities.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable — cannot be changed after creation."
+						"description": "Edit a SalesMan — name only.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable. To move cities use POST /api/admin/users/cities/reassign."
 					}
 				},
 				{
@@ -723,7 +723,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"regionId\": \"region-id-2\"\n}",
+							"raw": "{\n  \"name\": \"خالد المدير - معدل\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -750,7 +750,7 @@
 								}
 							]
 						},
-						"description": "Edit a ZoneManager and reassign region.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable — cannot be changed after creation."
+						"description": "Edit a ZoneManager — name only.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable. To move the region use POST /api/admin/users/regions/reassign."
 					}
 				},
 				{
@@ -877,6 +877,166 @@
 							]
 						},
 						"description": "Edit a Technician — only the name can be changed.\n\nName: 3+ letters only (Arabic/English), no numbers.\n\nAll other fields (MobileNumber, CityId, PostalCode, District) are immutable and displayed as read-only."
+					}
+				}
+			]
+		},
+		{
+			"name": "Users — Reassign & Delete",
+			"description": "Reassign cities/regions to different staff, or delete SalesMan/ZoneManager. Requires SystemAdmin JWT.\n\nInvariants enforced: every city has exactly one SalesMan, every region has exactly one ZoneManager.",
+			"item": [
+				{
+					"name": "Reassign Cities",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cityIds\": [\"city-id-1\", \"city-id-2\"],\n  \"toSalesManId\": \"sm-user-id\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/cities/reassign",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"cities",
+								"reassign"
+							]
+						},
+						"description": "Move one or more cities to a different SalesMan. Updates city.ApprovalSalesManId and rewires every user in those cities (AssignedSalesManId) so pending registrations/redemptions route to the new SalesMan. Target user must be a SalesMan."
+					}
+				},
+				{
+					"name": "Reassign Region",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"regionId\": \"region-id-1\",\n  \"toZoneManagerId\": \"zm-user-id\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/regions/reassign",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"regions",
+								"reassign"
+							]
+						},
+						"description": "Move a region to a different ZoneManager. Pending ZM-scope registrations and redemptions resolve dynamically via region.ZoneManagerId, so no user-record update is needed. Target user must be a ZoneManager."
+					}
+				},
+				{
+					"name": "Delete SalesMan",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cityReassignments\": [\n    { \"cityId\": \"city-id-1\", \"newSalesManId\": \"sm-user-id-a\" },\n    { \"cityId\": \"city-id-2\", \"newSalesManId\": \"sm-user-id-b\" }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/salesman/:userId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"salesman",
+								":userId"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "SalesMan user ID to delete"
+								}
+							]
+						},
+						"description": "Soft-delete a SalesMan. If the SalesMan owns any cities, cityReassignments MUST cover every single owned city, mapping each to a different SalesMan. The service rewires city.ApprovalSalesManId + AssignedSalesManId on users in those cities before marking the account deleted. If the SalesMan has zero cities (idle), pass an empty array."
+					}
+				},
+				{
+					"name": "Delete ZoneManager",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newZoneManagerId\": \"zm-user-id-replacement\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/zone-manager/:userId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"zone-manager",
+								":userId"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "ZoneManager user ID to delete"
+								}
+							]
+						},
+						"description": "Soft-delete a ZoneManager. If the ZM manages a region, newZoneManagerId is MANDATORY and must point to another ZoneManager. If the ZM has no region (idle), newZoneManagerId can be null."
 					}
 				}
 			]

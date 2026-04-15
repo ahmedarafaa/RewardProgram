@@ -13,8 +13,5 @@ public class AdminEditZoneManagerRequestValidator : AbstractValidator<AdminEditZ
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"])
             .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
-
-        RuleFor(x => x.RegionId)
-            .NotEmpty().WithMessage(L["RegionId.NotEmpty"]);
     }
 }

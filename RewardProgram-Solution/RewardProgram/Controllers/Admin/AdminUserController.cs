@@ -177,4 +177,56 @@ public class AdminUserController : ControllerBase
     }
 
     #endregion
+
+    #region Reassign
+
+    [HttpPost("cities/reassign")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReassignCities([FromBody] AdminReassignCitiesRequest request, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.ReassignCitiesAsync(request, adminId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    [HttpPost("regions/reassign")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReassignRegion([FromBody] AdminReassignRegionRequest request, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.ReassignRegionAsync(request, adminId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    #endregion
+
+    #region Delete SM/ZM
+
+    [HttpDelete("salesman/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSalesMan(string id, [FromBody] AdminDeleteSalesManRequest request, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.DeleteSalesManAsync(id, request, adminId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    [HttpDelete("zone-manager/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteZoneManager(string id, [FromBody] AdminDeleteZoneManagerRequest request, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.DeleteZoneManagerAsync(id, request, adminId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    #endregion
 }

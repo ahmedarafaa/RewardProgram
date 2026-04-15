@@ -48,4 +48,22 @@ public static class AdminUserErrors
 
     public static readonly Error CustomerCodeAlreadyOwned =
         new("Admin.CustomerCodeAlreadyOwned", "كود العميل مسجل لصاحب محل آخر", 409);
+
+    public static readonly Error CityAlreadyHasSalesMan =
+        new("Admin.CityAlreadyHasSalesMan", "المدينة لديها مندوب مبيعات بالفعل", 409);
+
+    public static readonly Error AllCitiesMustBeReassigned =
+        new("Admin.AllCitiesMustBeReassigned", "يجب إعادة تعيين جميع المدن التابعة للمندوب قبل الحذف", 400);
+
+    public static readonly Error ReplacementZoneManagerRequired =
+        new("Admin.ReplacementZoneManagerRequired", "يجب تحديد مدير منطقة بديل قبل الحذف", 400);
+
+    public static readonly Error ReassignmentTargetNotSalesMan =
+        new("Admin.ReassignmentTargetNotSalesMan", "المستخدم المستهدف ليس مندوب مبيعات", 400);
+
+    public static readonly Error ReassignmentTargetNotZoneManager =
+        new("Admin.ReassignmentTargetNotZoneManager", "المستخدم المستهدف ليس مدير منطقة", 400);
+
+    public static readonly Error CityNotOwnedBySalesMan =
+        new("Admin.CityNotOwnedBySalesMan", "المدينة ليست تابعة لهذا المندوب", 400);
 }

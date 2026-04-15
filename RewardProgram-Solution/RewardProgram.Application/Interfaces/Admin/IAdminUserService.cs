@@ -25,4 +25,12 @@ public interface IAdminUserService
     Task<Result<AdminAddUserResponse>> EditShopOwnerAsync(string userId, AdminEditShopOwnerRequest request, string adminUserId, CancellationToken ct = default);
     Task<Result<AdminAddUserResponse>> EditSellerAsync(string userId, AdminEditSellerRequest request, string adminUserId, CancellationToken ct = default);
     Task<Result<AdminAddUserResponse>> EditTechnicianAsync(string userId, AdminEditTechnicianRequest request, string adminUserId, CancellationToken ct = default);
+
+    // Reassign
+    Task<Result> ReassignCitiesAsync(AdminReassignCitiesRequest request, string adminUserId, CancellationToken ct = default);
+    Task<Result> ReassignRegionAsync(AdminReassignRegionRequest request, string adminUserId, CancellationToken ct = default);
+
+    // Delete SM/ZM
+    Task<Result> DeleteSalesManAsync(string userId, AdminDeleteSalesManRequest request, string adminUserId, CancellationToken ct = default);
+    Task<Result> DeleteZoneManagerAsync(string userId, AdminDeleteZoneManagerRequest request, string adminUserId, CancellationToken ct = default);
 }
