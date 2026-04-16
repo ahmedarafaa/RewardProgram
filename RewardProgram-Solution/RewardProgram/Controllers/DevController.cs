@@ -178,4 +178,74 @@ public class DevController : ControllerBase
             TotalPages = (int)Math.Ceiling(totalCount / (double)normalizedPageSize)
         });
     }
+
+    [HttpGet("users/{userId}/cities")]
+    public async Task<IActionResult> GetUserCities(string userId, CancellationToken ct = default)
+    {
+        if (!_environment.IsDevelopment() && !_environment.IsStaging())
+            return NotFound();
+
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user is null)
+            return NotFound(new { message = "User not found" });
+
+        var cities = await _context.Cities
+            .Where(c => c.ApprovalSalesManId == userId)
+            .Select(c => new
+            {
+                c.Id,
+                c.NameAr,
+                c.NameEn,
+                c.RegionId,
+                RegionName = _context.Regions
+                    .Where(r => r.Id == c.RegionId)
+                    .Select(r => r.NameAr)
+                    .FirstOrDefault(),
+                c.IsActive
+            })
+            .OrderBy(c => c.NameAr)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            UserId = user.Id,
+            UserName = user.Name,
+            UserType = user.UserType.ToString(),
+            Count = cities.Count,
+            Cities = cities
+        });
+    }
+
+    [HttpGet("users/{userId}/regions")]
+    public async Task<IActionResult> GetUserRegions(string userId, CancellationToken ct = default)
+    {
+        if (!_environment.IsDevelopment() && !_environment.IsStaging())
+            return NotFound();
+
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user is null)
+            return NotFound(new { message = "User not found" });
+
+        var regions = await _context.Regions
+            .Where(r => r.ZoneManagerId == userId)
+            .Select(r => new
+            {
+                r.Id,
+                r.NameAr,
+                r.NameEn,
+                r.IsActive,
+                CityCount = _context.Cities.Count(c => c.RegionId == r.Id)
+            })
+            .OrderBy(r => r.NameAr)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            UserId = user.Id,
+            UserName = user.Name,
+            UserType = user.UserType.ToString(),
+            Count = regions.Count,
+            Regions = regions
+        });
+    }
 }

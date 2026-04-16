@@ -66,4 +66,13 @@ public static class AdminUserErrors
 
     public static readonly Error CityNotOwnedBySalesMan =
         new("Admin.CityNotOwnedBySalesMan", "المدينة ليست تابعة لهذا المندوب", 400);
+
+    public static readonly Error ZoneManagerAlreadyAssigned =
+        new("Admin.ZoneManagerAlreadyAssigned", "مدير المنطقة مخصص لمنطقة أخرى بالفعل", 409);
+
+    public static readonly Error CannotReassignToSelf =
+        new("Admin.CannotReassignToSelf", "لا يمكن إعادة التعيين لنفس المستخدم", 400);
+
+    public static readonly Error ConcurrencyConflict =
+        new("Admin.ConcurrencyConflict", "تم تعديل البيانات من مستخدم آخر، حاول مرة أخرى", 409);
 }

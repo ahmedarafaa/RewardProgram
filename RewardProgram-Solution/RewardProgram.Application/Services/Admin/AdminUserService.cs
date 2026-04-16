@@ -114,6 +114,13 @@ public class AdminUserService : IAdminUserService
                 user.Id, user.Name, user.MobileNumber,
                 UserType.SalesMan, "تم إنشاء مندوب المبيعات بنجاح"));
         }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict creating SalesMan for mobile {Mobile} (likely concurrent city assignment)",
+                MobileNumberHelper.Mask(request.MobileNumber));
+            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.ConcurrencyConflict);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
@@ -183,6 +190,13 @@ public class AdminUserService : IAdminUserService
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
                 UserType.ZoneManager, "تم إنشاء مدير المنطقة بنجاح"));
+        }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict creating ZoneManager for mobile {Mobile} (likely region already assigned)",
+                MobileNumberHelper.Mask(request.MobileNumber));
+            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.RegionAlreadyHasZoneManager);
         }
         catch (Exception ex)
         {
@@ -899,6 +913,12 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success();
         }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict reassigning cities to SalesMan {ToSalesManId} (likely concurrent update)", request.ToSalesManId);
+            return Result.Failure(AdminUserErrors.ConcurrencyConflict);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
@@ -923,6 +943,16 @@ public class AdminUserService : IAdminUserService
         if (region == null)
             return Result.Failure(AdminUserErrors.RegionNotFound);
 
+        // No-op: ZM is already assigned to this region
+        if (region.ZoneManagerId == request.ToZoneManagerId)
+            return Result.Success();
+
+        // Enforce Region.ZoneManagerId unique index: the target ZM must not already manage another region
+        var targetAlreadyAssigned = await _context.Regions
+            .AnyAsync(r => r.ZoneManagerId == request.ToZoneManagerId && r.Id != request.RegionId, ct);
+        if (targetAlreadyAssigned)
+            return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
+
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -938,6 +968,13 @@ public class AdminUserService : IAdminUserService
                 adminUserId, request.RegionId, request.ToZoneManagerId);
 
             return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict reassigning region {RegionId} to ZM {ToZoneManagerId} (likely concurrent assignment)",
+                request.RegionId, request.ToZoneManagerId);
+            return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
         }
         catch (Exception ex)
         {
@@ -977,7 +1014,7 @@ public class AdminUserService : IAdminUserService
 
         // No reassignment target can be this SM himself
         if (reassignmentMap.Values.Any(id => id == userId))
-            return Result.Failure(AdminUserErrors.CityNotOwnedBySalesMan);
+            return Result.Failure(AdminUserErrors.CannotReassignToSelf);
 
         // Validate all target SM IDs
         var targetIds = reassignmentMap.Values.Distinct().ToList();
@@ -1037,6 +1074,12 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success();
         }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict deleting SalesMan {UserId} (likely concurrent update)", userId);
+            return Result.Failure(AdminUserErrors.ConcurrencyConflict);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
@@ -1064,7 +1107,7 @@ public class AdminUserService : IAdminUserService
                 return Result.Failure(AdminUserErrors.ReplacementZoneManagerRequired);
 
             if (request.NewZoneManagerId == userId)
-                return Result.Failure(AdminUserErrors.ReassignmentTargetNotZoneManager);
+                return Result.Failure(AdminUserErrors.CannotReassignToSelf);
 
             var replacement = await _userRepository.FindByIdAsync(request.NewZoneManagerId, ct);
             if (replacement == null)
@@ -1072,6 +1115,12 @@ public class AdminUserService : IAdminUserService
 
             if (replacement.UserType != UserType.ZoneManager)
                 return Result.Failure(AdminUserErrors.ReassignmentTargetNotZoneManager);
+
+            // Enforce Region.ZoneManagerId unique index: replacement must not already manage another region
+            var replacementAlreadyAssigned = await _context.Regions
+                .AnyAsync(r => r.ZoneManagerId == request.NewZoneManagerId && r.Id != managedRegion.Id, ct);
+            if (replacementAlreadyAssigned)
+                return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
         }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -1105,6 +1154,12 @@ public class AdminUserService : IAdminUserService
                 adminUserId, userId, managedRegion?.Id ?? "(none)", request.NewZoneManagerId ?? "(none)");
 
             return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict deleting ZoneManager {UserId} (likely replacement ZM already assigned or concurrent update)", userId);
+            return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
         }
         catch (Exception ex)
         {
