@@ -112,7 +112,7 @@ public class ScanService : IScanService
                     // Seller scans first → 50%
                     pointsForScanner = pointValue / 2m;
                     barcode.Status = BarcodeStatus.SellerScanned;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة (50%)";
+                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
                     break;
 
                 case BarcodeStatus.Available when scannerRole == ScannerRole.Technician:
@@ -136,7 +136,7 @@ public class ScanService : IScanService
                     // Seller scans second → 100% directly
                     pointsForScanner = pointValue;
                     barcode.Status = BarcodeStatus.Consumed;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة (100%)";
+                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
                     break;
 
                 default:
