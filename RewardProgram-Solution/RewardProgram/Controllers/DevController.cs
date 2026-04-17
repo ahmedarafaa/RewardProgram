@@ -189,6 +189,9 @@ public class DevController : ControllerBase
         if (user is null)
             return NotFound(new { message = "User not found" });
 
+        if (user.UserType != UserType.SalesMan)
+            return BadRequest(new { message = "This endpoint is only available for SalesMan users" });
+
         var cities = await _context.Cities
             .Where(c => c.ApprovalSalesManId == userId)
             .Select(c => new
@@ -225,6 +228,9 @@ public class DevController : ControllerBase
         var user = await _userRepository.FindByIdAsync(userId, ct);
         if (user is null)
             return NotFound(new { message = "User not found" });
+
+        if (user.UserType != UserType.ZoneManager)
+            return BadRequest(new { message = "This endpoint is only available for ZoneManager users" });
 
         var regions = await _context.Regions
             .Where(r => r.ZoneManagerId == userId)

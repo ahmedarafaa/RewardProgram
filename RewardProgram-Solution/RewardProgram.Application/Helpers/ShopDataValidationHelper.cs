@@ -77,7 +77,7 @@ public static class ShopDataValidationHelper
         ShopData shopData,
         string? storeName, string? vat, string? crn, string? shortAddress,
         string? newImageUrl, string cityId, NationalAddressResponse? nationalAddress,
-        string updatedBy)
+        string updatedBy, ErpCustomer? erpCustomer = null)
     {
         if (!string.IsNullOrEmpty(storeName))
             shopData.StoreName = storeName;
@@ -86,7 +86,11 @@ public static class ShopDataValidationHelper
         if (!string.IsNullOrEmpty(crn))
             shopData.CRN = crn;
         if (!string.IsNullOrEmpty(shortAddress))
+        {
             shopData.ShortAddress = shortAddress;
+            if (erpCustomer != null)
+                erpCustomer.ShortAddress = shortAddress;
+        }
         if (newImageUrl != null)
             shopData.ShopImageUrl = newImageUrl;
         if (nationalAddress != null)

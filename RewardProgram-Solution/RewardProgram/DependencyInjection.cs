@@ -106,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IShopService, ShopService>();
         services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
         ValidateFirebaseConfig(configuration);
         services.AddSingleton<IFirebaseMessagingService, FirebaseMessagingService>();

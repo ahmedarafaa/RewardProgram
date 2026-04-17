@@ -1835,6 +1835,40 @@
       ]
     },
     {
+      "name": "Shop",
+      "description": "Shop endpoints for the trader map feature.",
+      "item": [
+        {
+          "name": "Get Shop Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/map",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shops",
+                "map"
+              ],
+              "query": [
+                {
+                  "key": "cityId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by city GUID"
+                }
+              ]
+            },
+            "description": "Returns shop data for the trader map. Flutter resolves ShortAddress to coordinates client-side.\n\nRequires JWT.\n\n**Response:** Array of:\n- `customerName` — from ErpCustomer\n- `shopImageUrl` — shop image\n- `cityName` — city name (Arabic)\n- `shortAddress` — 8-char Saudi short address"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Dev",
       "description": "Development/staging helper endpoints. Only available in Development and Staging environments.\n\nNo authentication required.",
       "item": [
@@ -1910,6 +1944,56 @@
               ]
             },
             "description": "List all users with full details, filters, and pagination.\n\nReturns 404 in Production.\n\n**Response:** PaginatedResult of:\n- `id`, `name`, `mobileNumber`, `userType`, `registrationStatus`, `isDisabled`, `createdAt`\n- `cityId`, `cityName`, `regionId`, `regionName` — location\n- `street`, `buildingNumber`, `postalCode`, `subNumber`, `district` — address\n- `customerCode`, `storeName` — ShopOwner/Seller only\n- `managedRegionId`, `managedRegionName` — ZoneManager only\n- `assignedCities` — SalesMan only (array of {id, nameAr})\n- `invitationCode`, `invitedByUserId` — invitation info"
+          },
+          "response": []
+        },
+        {
+          "name": "Get SalesMan Cities",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dev/users/{{userId}}/cities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dev",
+                "users",
+                "{{userId}}",
+                "cities"
+              ]
+            },
+            "description": "Get all cities assigned to a SalesMan.\n\nReturns 404 in Production. Returns 400 if user is not a SalesMan.\n\n**Response:**\n- `userId`, `userName`, `userType`\n- `count` — number of assigned cities\n- `cities` — array of {id, nameAr, nameEn, regionId, regionName, isActive}"
+          },
+          "response": []
+        },
+        {
+          "name": "Get ZoneManager Regions",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dev/users/{{userId}}/regions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dev",
+                "users",
+                "{{userId}}",
+                "regions"
+              ]
+            },
+            "description": "Get all regions managed by a ZoneManager.\n\nReturns 404 in Production. Returns 400 if user is not a ZoneManager.\n\n**Response:**\n- `userId`, `userName`, `userType`\n- `count` — number of managed regions\n- `regions` — array of {id, nameAr, nameEn, isActive, cityCount}"
           },
           "response": []
         }

@@ -223,6 +223,7 @@ public class AuthService : IAuthService
                     CreatedBy = user.Id
                 };
                 await _context.ShopData.AddAsync(shopData, ct);
+                erpCustomer.ShortAddress = request.ShortAddress!;
             }
             else
             {
@@ -241,6 +242,7 @@ public class AuthService : IAuthService
                 existingShopData.EnteredByUserId = user.Id;
                 existingShopData.UpdatedBy = user.Id;
                 existingShopData.UpdatedAt = DateTime.UtcNow;
+                erpCustomer.ShortAddress = request.ShortAddress!;
             }
 
             var profile = new ShopOwnerProfile
@@ -415,6 +417,7 @@ public class AuthService : IAuthService
                         CreatedBy = user.Id
                     };
                     await _context.ShopData.AddAsync(shopData, ct);
+                    erpCustomer.ShortAddress = request.ShortAddress!;
                 }
             }
 

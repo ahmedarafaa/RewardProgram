@@ -20,6 +20,9 @@ public class ErpCustomerConfiguration : IEntityTypeConfiguration<ErpCustomer>
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(x => x.ShortAddress)
+            .HasMaxLength(8);
+
         // Audit fields from TrackableEntity
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(450);
@@ -28,6 +31,7 @@ public class ErpCustomerConfiguration : IEntityTypeConfiguration<ErpCustomer>
 
         // Indexes
         builder.HasIndex(x => x.CustomerCode).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.ShortAddress).IsUnique().HasFilter("[IsDeleted] = 0 AND [ShortAddress] IS NOT NULL");
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

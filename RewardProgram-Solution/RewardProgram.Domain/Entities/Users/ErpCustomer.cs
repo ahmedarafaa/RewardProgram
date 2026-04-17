@@ -4,6 +4,7 @@ public class ErpCustomer : TrackableEntity
 {
     public string CustomerCode { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
+    public string? ShortAddress { get; set; }
 
     // Navigation properties
     public ShopData? ShopData { get; set; }
