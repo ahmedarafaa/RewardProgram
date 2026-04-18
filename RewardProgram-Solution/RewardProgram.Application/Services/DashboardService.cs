@@ -135,20 +135,12 @@ public class DashboardService : IDashboardService
             }
         }
 
-        // Total scans by sellers under this CustomerCode
-        var totalScans = sellerUserIds.Count > 0
-            ? await _context.ScanRecords
-                .AsNoTracking()
-                .CountAsync(s => sellerUserIds.Contains(s.UserId), ct)
-            : 0;
-
         return Result.Success(new ShopOwnerDashboardResponse(
             user.Name,
             user.ProfileImageUrl,
             shop,
             sellers,
-            sellers.Count,
-            totalScans
+            sellers.Count
         ));
     }
 }

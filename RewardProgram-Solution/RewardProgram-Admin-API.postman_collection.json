@@ -2311,6 +2311,55 @@
 						},
 						"description": "Get all regions managed by a ZoneManager.\n\nReturns 404 in Production. Returns 400 if user is not a ZoneManager.\n\n**Response:**\n- `userId`, `userName`, `userType`\n- `count` — number of managed regions\n- `regions` — array of {id, nameAr, nameEn, isActive, cityCount}"
 					}
+				},
+				{
+					"name": "Get SalesMen and ZoneManagers",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/dev/salesmen-and-zonemanagers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dev",
+								"salesmen-and-zonemanagers"
+							]
+						},
+						"description": "Returns all SalesMen and ZoneManagers grouped separately.\n\nReturns 404 in Production.\n\n**Response:**\n- `salesMen` — array of {id, name, mobileNumber, userType, registrationStatus, isDisabled, assignedCities: [{id, nameAr}]}\n- `zoneManagers` — array of {id, name, mobileNumber, userType, registrationStatus, isDisabled, managedRegion: {id, nameAr}}\n- `totalSalesMen`, `totalZoneManagers`"
+					}
+				},
+				{
+					"name": "Get ShopOwners With Sellers",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/dev/shop-owners-with-sellers?take=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dev",
+								"shop-owners-with-sellers"
+							],
+							"query": [
+								{
+									"key": "take",
+									"value": "10",
+									"description": "Max number of shop-owners to return (default 10, max 100)"
+								}
+							]
+						},
+						"description": "Returns shop-owners whose CustomerCode has at least one linked seller.\n\nReturns 404 in Production.\n\n**Response:**\n- `items` — array of {shopOwnerId, shopOwnerName, mobileNumber, registrationStatus, isDisabled, customerCode, storeName, totalSellers, sellers: [{id, name, mobileNumber, registrationStatus, isDisabled}]}\n- `count` — number of shop-owners returned"
+					}
 				}
 			]
 		}

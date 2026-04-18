@@ -5,8 +5,7 @@ public record ShopOwnerDashboardResponse(
     string? ProfileImageUrl,
     ShopOwnerShopInfo Shop,
     List<ShopOwnerSellerItem> Sellers,
-    int TotalSellers,
-    int TotalScans
+    int TotalSellers
 );
 
 public record ShopOwnerShopInfo(

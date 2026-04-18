@@ -219,6 +219,120 @@ public class DevController : ControllerBase
         });
     }
 
+    [HttpGet("salesmen-and-zonemanagers")]
+    public async Task<IActionResult> GetSalesmenAndZoneManagers(CancellationToken ct = default)
+    {
+        if (!_environment.IsDevelopment() && !_environment.IsStaging())
+            return NotFound();
+
+        var users = await _userRepository.Query()
+            .Where(u => u.UserType == UserType.SalesMan || u.UserType == UserType.ZoneManager)
+            .OrderBy(u => u.UserType)
+            .ThenBy(u => u.Name)
+            .Select(u => new
+            {
+                u.Id,
+                u.Name,
+                u.MobileNumber,
+                UserType = u.UserType.ToString(),
+                RegistrationStatus = u.RegistrationStatus.ToString(),
+                u.IsDisabled,
+
+                AssignedCities = u.UserType == UserType.SalesMan
+                    ? _context.Cities
+                        .Where(c => c.ApprovalSalesManId == u.Id)
+                        .Select(c => new { c.Id, c.NameAr })
+                        .ToList()
+                    : null,
+
+                ManagedRegion = u.UserType == UserType.ZoneManager
+                    ? _context.Regions
+                        .Where(r => r.ZoneManagerId == u.Id)
+                        .Select(r => new { r.Id, r.NameAr })
+                        .FirstOrDefault()
+                    : null
+            })
+            .ToListAsync(ct);
+
+        var salesmen = users.Where(u => u.UserType == nameof(UserType.SalesMan)).ToList();
+        var zoneManagers = users.Where(u => u.UserType == nameof(UserType.ZoneManager)).ToList();
+
+        return Ok(new
+        {
+            SalesMen = salesmen,
+            ZoneManagers = zoneManagers,
+            TotalSalesMen = salesmen.Count,
+            TotalZoneManagers = zoneManagers.Count
+        });
+    }
+
+    [HttpGet("shop-owners-with-sellers")]
+    public async Task<IActionResult> GetShopOwnersWithSellers(
+        [FromQuery] int take = 10,
+        CancellationToken ct = default)
+    {
+        if (!_environment.IsDevelopment() && !_environment.IsStaging())
+            return NotFound();
+
+        var normalizedTake = take <= 0 ? 10 : Math.Min(take, 100);
+
+        var sellerCustomerCodes = await _context.SellerProfiles
+            .AsNoTracking()
+            .Select(s => s.CustomerCode)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var shopOwners = await (
+            from p in _context.ShopOwnerProfiles.AsNoTracking()
+            join u in _userRepository.Query() on p.UserId equals u.Id
+            where sellerCustomerCodes.Contains(p.CustomerCode)
+            select new
+            {
+                ShopOwnerId = u.Id,
+                ShopOwnerName = u.Name,
+                u.MobileNumber,
+                RegistrationStatus = u.RegistrationStatus.ToString(),
+                u.IsDisabled,
+                p.CustomerCode,
+                StoreName = _context.ShopData
+                    .Where(sd => sd.CustomerCode == p.CustomerCode)
+                    .Select(sd => sd.StoreName)
+                    .FirstOrDefault(),
+                Sellers = (
+                    from sp in _context.SellerProfiles
+                    join su in _userRepository.Query() on sp.UserId equals su.Id
+                    where sp.CustomerCode == p.CustomerCode
+                    select new
+                    {
+                        su.Id,
+                        su.Name,
+                        su.MobileNumber,
+                        RegistrationStatus = su.RegistrationStatus.ToString(),
+                        su.IsDisabled
+                    }).ToList()
+            })
+            .OrderBy(x => x.ShopOwnerName)
+            .Take(normalizedTake)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            Items = shopOwners.Select(x => new
+            {
+                x.ShopOwnerId,
+                x.ShopOwnerName,
+                x.MobileNumber,
+                x.RegistrationStatus,
+                x.IsDisabled,
+                x.CustomerCode,
+                x.StoreName,
+                TotalSellers = x.Sellers.Count,
+                x.Sellers
+            }),
+            Count = shopOwners.Count
+        });
+    }
+
     [HttpGet("users/{userId}/regions")]
     public async Task<IActionResult> GetUserRegions(string userId, CancellationToken ct = default)
     {
