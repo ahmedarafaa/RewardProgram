@@ -22,16 +22,19 @@ public class ShopService : IShopService
         if (!string.IsNullOrWhiteSpace(cityId))
             query = query.Where(e => e.ShopData != null && e.ShopData.CityId == cityId);
 
-        var shops = await query
-            .Select(e => new ShopMapItemResponse(
+        var rows = await query
+            .OrderBy(e => e.CustomerName)
+            .Select(e => new
+            {
                 e.CustomerName,
-                e.ShopData != null ? e.ShopData.ShopImageUrl : "",
-                e.ShopData != null ? e.ShopData.City.NameAr : "",
-                e.ShortAddress!
-            ))
-            .OrderBy(s => s.CustomerName)
+                ShopImageUrl = e.ShopData != null ? e.ShopData.ShopImageUrl : "",
+                CityName = e.ShopData != null && e.ShopData.City != null ? e.ShopData.City.NameAr : "",
+                ShortAddress = e.ShortAddress!
+            })
             .ToListAsync(ct);
 
-        return shops;
+        return rows
+            .Select(r => new ShopMapItemResponse(r.CustomerName, r.ShopImageUrl, r.CityName, r.ShortAddress))
+            .ToList();
     }
 }

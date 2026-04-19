@@ -48,7 +48,27 @@
       "Bash(dotnet user-secrets:*)",
       "Bash(curl:*)",
       "Bash(grep -r \"ContentSid\\\\|template.*[Ss]id\\\\|WhatsApp.*template\" 'M:\\\\DS\\\\AL-Raed RewardProgram\\\\RewardProgram-Solution' --include=*.cs --include=*.json)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(grep -n \"_notificationService\" \"/m/DS/AL-Raed RewardProgram/RewardProgram-Solution/RewardProgram.Application/Services/\"*.cs)",
+      "Bash(python3 generate_e2e_collection.py)",
+      "Bash(python3 -c ':*)",
+      "Bash(rm:*)",
+      "Bash(python3)",
+      "Bash(npx newman:*)",
+      "Bash(python3 update_collection.py)",
+      "Bash(python3 add_scenarios.py)",
+      "Bash(python3 fix_scenarios.py)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d\\)\")",
+      "Bash(dotnet run:*)",
+      "Bash(node -e ':*)",
+      "Bash(node:*)",
+      "Bash(python -c ':*)",
+      "Bash(python update_postman.py)",
+      "Bash(python -c \"import sys,json; [print\\(f'{u[\\\\\"name\\\\\"]} | {u[\\\\\"mobileNumber\\\\\"]} | city={u.get\\(\\\\\"cityName\\\\\",\\\\\"\\\\\"\\)}'\\) for u in json.load\\(sys.stdin\\)['items']]\")",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(grep:*)",
+      "Bash(python -c \"import sys; f=open\\('RewardProgram-Admin-API.postman_collection.json','rb'\\); d=f.read\\(\\); f.close\\(\\); print\\(b'\\\\t' in d\\)\")",
+      "Bash(python *)"
     ]
   }
 }
