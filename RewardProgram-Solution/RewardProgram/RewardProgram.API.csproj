@@ -37,4 +37,27 @@
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!--
+    Swap the correct environment web.config template into the publish output based
+    on the active publish profile. Prevents the "Staging overrides UAT" mistake
+    where whichever template was last copied onto web.config locally leaks into the
+    other environment. Templates are gitignored and live next to this csproj.
+  -->
+  <Target Name="SwapEnvironmentWebConfig" AfterTargets="PrepareForPublish">
+    <PropertyGroup>
+      <_EnvTemplate Condition="'$(FtpSitePath)' == 'staging' Or $(PublishProfile.Contains('subsite4'))">web.Staging.config</_EnvTemplate>
+      <_EnvTemplate Condition="'$(FtpSitePath)' == 'uat' Or $(PublishProfile.Contains('subsite5'))">web.UAT.config</_EnvTemplate>
+    </PropertyGroup>
+    <Message Text="Swapping $(_EnvTemplate) into web.config for publish" Importance="High" Condition="'$(_EnvTemplate)' != ''" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\$(_EnvTemplate)"
+          DestinationFiles="$(PublishDir)web.config"
+          OverwriteReadOnlyFiles="true"
+          Condition="'$(_EnvTemplate)' != '' And Exists('$(MSBuildProjectDirectory)\$(_EnvTemplate)')" />
+  </Target>
+
+  <Target Name="RemoveExtraEnvConfigs" AfterTargets="SwapEnvironmentWebConfig">
+    <Delete Files="$(PublishDir)web.Staging.config" Condition="Exists('$(PublishDir)web.Staging.config')" />
+    <Delete Files="$(PublishDir)web.UAT.config" Condition="Exists('$(PublishDir)web.UAT.config')" />
+  </Target>
+
 </Project>
