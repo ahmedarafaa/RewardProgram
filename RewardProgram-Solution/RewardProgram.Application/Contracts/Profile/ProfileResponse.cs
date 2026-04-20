@@ -8,7 +8,7 @@ public record ProfileResponse(
     string MobileNumber,
     UserType UserType,
     string? ProfileImageUrl,
-    decimal Points,
+    decimal? Points,
     string? CityName,
     string? District,
     string? Street,

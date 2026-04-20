@@ -9,7 +9,7 @@ namespace RewardProgram.API.Controllers;
 
 [ApiController]
 [Route("api/profile")]
-[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician},{UserRoles.ShopOwner}")]
+[Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician},{UserRoles.ShopOwner},{UserRoles.SalesMan},{UserRoles.ZoneManager}")]
 public class ProfileController : ControllerBase
 {
     private readonly IProfileService _profileService;
@@ -42,6 +42,7 @@ public class ProfileController : ControllerBase
     }
 
     [HttpDelete]
+    [Authorize(Roles = $"{UserRoles.Seller},{UserRoles.Technician},{UserRoles.ShopOwner}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DeleteAccount(CancellationToken ct)

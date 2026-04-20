@@ -37,9 +37,17 @@ public class ProfileService : IProfileService
         if (user is null)
             return Result.Failure<ProfileResponse>(AuthErrors.UserNotFound);
 
-        var wallet = await _context.Wallets
-            .AsNoTracking()
-            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+        var isStaff = user.UserType is Domain.Enums.UserEnums.UserType.SalesMan
+            or Domain.Enums.UserEnums.UserType.ZoneManager;
+
+        decimal? points = null;
+        if (!isStaff)
+        {
+            var wallet = await _context.Wallets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+            points = wallet?.Balance ?? 0;
+        }
 
         string? cityName = null;
         if (user.NationalAddress is not null)
@@ -57,7 +65,7 @@ public class ProfileService : IProfileService
             user.MobileNumber,
             user.UserType,
             user.ProfileImageUrl,
-            wallet?.Balance ?? 0,
+            points,
             cityName,
             user.NationalAddress?.District,
             user.NationalAddress?.Street,
