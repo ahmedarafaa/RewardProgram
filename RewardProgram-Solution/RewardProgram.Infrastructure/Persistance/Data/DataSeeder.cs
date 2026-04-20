@@ -33,6 +33,7 @@ public static class DataSeeder
         var users = await SeedUsersAsync(userManager, logger, env, config, isUat);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
+        await PatchErpCustomerShortAddressesAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
         await SeedContentAsync(context, logger);
@@ -709,6 +710,62 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         logger.LogInformation("Seeded {Count} ErpCustomers", customers.Count);
+    }
+
+    private static async Task PatchErpCustomerShortAddressesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("ErpCustomerShortAddresses.csv", StringComparison.OrdinalIgnoreCase));
+
+        if (resourceName is null)
+        {
+            logger.LogWarning("ErpCustomerShortAddresses.csv embedded resource not found, skipping ShortAddress patch");
+            return;
+        }
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        var overlay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            var parts = line.Split(';', 2);
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[1]))
+            {
+                logger.LogWarning("Skipping malformed ShortAddress CSV line {LineNumber}: {Line}", i + 1, line);
+                continue;
+            }
+
+            overlay[parts[0].Trim()] = parts[1].Trim();
+        }
+
+        if (overlay.Count == 0) return;
+
+        var codes = overlay.Keys.ToList();
+        var targets = await context.ErpCustomers
+            .Where(c => c.ShortAddress == null && codes.Contains(c.CustomerCode))
+            .ToListAsync();
+
+        if (targets.Count == 0)
+        {
+            logger.LogInformation("ErpCustomer ShortAddresses already patched, skipping");
+            return;
+        }
+
+        foreach (var customer in targets)
+        {
+            customer.ShortAddress = overlay[customer.CustomerCode];
+            customer.UpdatedBy = "DataSeeder";
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Patched ShortAddress on {Count} ErpCustomers", targets.Count);
     }
 
     #endregion
