@@ -17,24 +17,36 @@ public class ShopService : IShopService
     {
         var query = _context.ErpCustomers
             .AsNoTracking()
-            .Where(e => e.ShortAddress != null);
+            .Where(e => e.ShortAddress != null && e.ShopData != null);
 
         if (!string.IsNullOrWhiteSpace(cityId))
-            query = query.Where(e => e.ShopData != null && e.ShopData.CityId == cityId);
+            query = query.Where(e => e.ShopData!.CityId == cityId);
 
         var rows = await query
             .OrderBy(e => e.CustomerName)
             .Select(e => new
             {
                 e.CustomerName,
-                ShopImageUrl = e.ShopData != null ? e.ShopData.ShopImageUrl : "",
-                CityName = e.ShopData != null && e.ShopData.City != null ? e.ShopData.City.NameAr : "",
-                ShortAddress = e.ShortAddress!
+                ShopImageUrl = e.ShopData!.ShopImageUrl,
+                CityName = e.ShopData.City != null ? e.ShopData.City.NameAr : "",
+                ShortAddress = e.ShortAddress!,
+                e.ShopData.Street,
+                e.ShopData.District,
+                e.ShopData.BuildingNumber,
+                Phone = e.ShopData.EnteredByUser != null ? e.ShopData.EnteredByUser.MobileNumber : null
             })
             .ToListAsync(ct);
 
         return rows
-            .Select(r => new ShopMapItemResponse(r.CustomerName, r.ShopImageUrl, r.CityName, r.ShortAddress))
+            .Select(r => new ShopMapItemResponse(
+                r.CustomerName,
+                r.ShopImageUrl,
+                r.CityName,
+                r.ShortAddress,
+                r.Street,
+                r.District,
+                r.BuildingNumber,
+                r.Phone))
             .ToList();
     }
 }

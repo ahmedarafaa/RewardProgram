@@ -1862,7 +1862,7 @@
                 }
               ]
             },
-            "description": "Returns shop data for the trader map. Flutter resolves ShortAddress to coordinates client-side.\n\nRequires JWT.\n\n**Response:** Array of:\n- `customerName` — from ErpCustomer\n- `shopImageUrl` — shop image\n- `cityName` — city name (Arabic)\n- `shortAddress` — 8-char Saudi short address"
+            "description": "Returns shop data for the trader map. Flutter resolves ShortAddress to coordinates client-side.\n\nRequires JWT. Only customers that have registered ShopData are returned.\n\n**Response:** Array of:\n- `customerName` — from ErpCustomer\n- `shopImageUrl` — single shop image\n- `cityName` — city name (Arabic)\n- `shortAddress` — 8-char Saudi short address\n- `street` — street name\n- `district` — district name\n- `buildingNumber` — 4-digit building number\n- `phone` — mobile number of the user who registered the shop data (null if user removed)"
           },
           "response": []
         }
