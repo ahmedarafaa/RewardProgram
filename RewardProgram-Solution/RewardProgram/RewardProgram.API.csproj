@@ -6,9 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>9ee13453-4cf0-4b15-a585-7667ea4463e6</UserSecretsId>
     <!--
-      Disable the Web SDK's automatic web.config rewriting. Our per-env templates
-      (web.Staging.config, web.UAT.config) are already complete; the transform
-      would otherwise overwrite them with InProcess/dotnet defaults after publish.
+      Disable the Web SDK's _TransformWebConfig target. We deploy one of the
+      per-env templates (web.Staging.config / web.UAT.config) verbatim via the
+      SwapEnvironmentWebConfig target below, so we need the transform OFF to
+      keep it from reading the placeholder web.config and overwriting our swap.
+      Templates already carry the known-working InProcess + dotnet + dll form.
     -->
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
