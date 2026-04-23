@@ -481,6 +481,11 @@ public class ApprovalService : IApprovalService
         var fromStatus = user.RegistrationStatus;
         user.RegistrationStatus = RegistrationStatus.Rejected;
 
+        // Revoke all active refresh tokens — prevents rejected users from continuing
+        // to mint access tokens via the refresh endpoint for up to 365 days.
+        foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
+            token.RevokedOn = DateTime.UtcNow;
+
         await _userRepository.UpdateAsync(user);
         await LogApprovalRecordAsync(userId, approverId, ApprovalAction.Rejected, fromStatus, RegistrationStatus.Rejected, reason, ct);
         await transaction.CommitAsync(ct);

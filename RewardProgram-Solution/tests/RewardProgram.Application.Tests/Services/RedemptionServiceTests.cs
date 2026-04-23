@@ -5,6 +5,7 @@ using NSubstitute;
 using RewardProgram.Application.Contracts.Redemption;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
+using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Services;
 using RewardProgram.Application.Tests.TestHelpers;
 using RewardProgram.Domain.Constants;
@@ -27,7 +28,7 @@ public class RedemptionServiceTests : IDisposable
         _userRepo = Substitute.For<IUserRepository>();
         _sut = new RedemptionService(
             _context, _userRepo,
-            Substitute.For<INotificationService>(),
+            Substitute.For<ITwilioService>(),
             Substitute.For<ILogger<RedemptionService>>());
     }
 

@@ -197,36 +197,45 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             return query.Where(r => r.Status == RedemptionRequestStatus.PendingAdmin);
         }
 
-        if (roles.Contains(UserRoles.ZoneManager))
+        var hasSalesMan = roles.Contains(UserRoles.SalesMan);
+        var hasZoneManager = roles.Contains(UserRoles.ZoneManager);
+
+        if (!hasSalesMan && !hasZoneManager)
+            return null;
+
+        List<string> salesManCityIds = [];
+        List<string> zoneManagerCityIds = [];
+
+        if (hasSalesMan)
         {
-            var managedRegion = await _context.Regions
-                .FirstOrDefaultAsync(r => r.ZoneManagerId == approverId, ct);
-            if (managedRegion is null)
-                return query.Where(r => false);
-
-            var cityIds = await _context.Cities
-                .Where(c => c.RegionId == managedRegion.Id)
-                .Select(c => c.Id)
-                .ToListAsync(ct);
-
-            return query.Where(r => r.Status == RedemptionRequestStatus.PendingZoneManager
-                && r.User.NationalAddress != null
-                && cityIds.Contains(r.User.NationalAddress.CityId));
-        }
-
-        if (roles.Contains(UserRoles.SalesMan))
-        {
-            var assignedCityIds = await _context.Cities
+            salesManCityIds = await _context.Cities
                 .Where(c => c.ApprovalSalesManId == approverId)
                 .Select(c => c.Id)
                 .ToListAsync(ct);
-
-            return query.Where(r => r.Status == RedemptionRequestStatus.PendingSalesMan
-                && r.User.NationalAddress != null
-                && assignedCityIds.Contains(r.User.NationalAddress.CityId));
         }
 
-        return null;
+        if (hasZoneManager)
+        {
+            var managedRegion = await _context.Regions
+                .FirstOrDefaultAsync(r => r.ZoneManagerId == approverId, ct);
+            if (managedRegion is not null)
+            {
+                zoneManagerCityIds = await _context.Cities
+                    .Where(c => c.RegionId == managedRegion.Id)
+                    .Select(c => c.Id)
+                    .ToListAsync(ct);
+            }
+        }
+
+        // Dual-role users see BOTH queues: SM-pending from their SM cities
+        // plus ZM-pending from their region's cities. The dual-role skip in
+        // ApproveAsync still collapses SM+ZM into a single approval click.
+        return query.Where(r =>
+            r.User.NationalAddress != null &&
+            ((r.Status == RedemptionRequestStatus.PendingSalesMan
+                && salesManCityIds.Contains(r.User.NationalAddress.CityId))
+             || (r.Status == RedemptionRequestStatus.PendingZoneManager
+                && zoneManagerCityIds.Contains(r.User.NationalAddress.CityId))));
     }
 
     private sealed record RedemptionListRow(
@@ -383,6 +392,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         ConfirmCashHandoverRequest request, string handoverById, CancellationToken ct = default)
     {
         var redemptionRequest = await _context.RedemptionRequests
+            .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == request.RedemptionRequestId, ct);
 
         if (redemptionRequest is null)
@@ -391,6 +401,16 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         if (redemptionRequest.Status != RedemptionRequestStatus.AdminApproved
             || redemptionRequest.Method != RedemptionMethod.Cash)
             return Result.Failure(RedemptionErrors.NotInCashHandoverState);
+
+        // Scope check: only the SM for the user's city, the ZM for the user's region,
+        // or a SystemAdmin may execute the cash handover.
+        var handover = await _userRepository.FindByIdAsync(handoverById, ct);
+        if (handover is null)
+            return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
+
+        var handoverRoles = await _userRepository.GetRolesAsync(handover);
+        if (!await IsApproverInScopeAsync(redemptionRequest.UserId, handoverById, handoverRoles, ct))
+            return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
 
         // Check OTP expiry
         if (redemptionRequest.CashOtpExpiresAt.HasValue && DateTime.UtcNow > redemptionRequest.CashOtpExpiresAt.Value)
@@ -600,6 +620,41 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             SarRate = redemptionRequest.SarRate,
             SarAmount = redemptionRequest.SarAmount
         }, ct);
+    }
+
+    private async Task<bool> IsApproverInScopeAsync(
+        string userId, string approverId, IList<string> approverRoles, CancellationToken ct)
+    {
+        if (approverRoles.Contains(UserRoles.SystemAdmin))
+            return true;
+
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        var cityId = user?.NationalAddress?.CityId;
+        if (cityId is null)
+            return false;
+
+        if (approverRoles.Contains(UserRoles.SalesMan))
+        {
+            var isSalesman = await _context.Cities
+                .AnyAsync(c => c.Id == cityId && c.ApprovalSalesManId == approverId, ct);
+            if (isSalesman) return true;
+        }
+
+        if (approverRoles.Contains(UserRoles.ZoneManager))
+        {
+            var regionId = await _context.Cities
+                .Where(c => c.Id == cityId)
+                .Select(c => c.RegionId)
+                .FirstOrDefaultAsync(ct);
+            if (regionId is not null)
+            {
+                var isZoneManager = await _context.Regions
+                    .AnyAsync(r => r.Id == regionId && r.ZoneManagerId == approverId, ct);
+                if (isZoneManager) return true;
+            }
+        }
+
+        return false;
     }
 
     private static string HashOtp(string otp)

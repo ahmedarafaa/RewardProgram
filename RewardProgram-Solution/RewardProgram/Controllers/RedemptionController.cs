@@ -58,4 +58,16 @@ public class RedemptionController : ControllerBase
         var result = await _redemptionService.GetAvailableBalanceAsync(userId, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+
+    [HttpPost("resend-cash-otp")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
+    public async Task<IActionResult> ResendCashOtp(CancellationToken ct)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _redemptionService.ResendCashOtpAsync(userId, ct);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
 }

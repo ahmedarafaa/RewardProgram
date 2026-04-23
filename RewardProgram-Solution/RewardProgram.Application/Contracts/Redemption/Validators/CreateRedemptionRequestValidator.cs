@@ -12,8 +12,10 @@ public class CreateRedemptionRequestValidator : AbstractValidator<CreateRedempti
         RuleFor(x => x.Method)
             .IsInEnum().WithMessage(L["Redemption.Method.Invalid"]);
 
+        // Minimum threshold is enforced in the service using RewardSettings.MinimumRedemptionPoints
+        // (admin-configurable). Here we only guard against zero/negative values.
         RuleFor(x => x.PointsAmount)
-            .GreaterThanOrEqualTo(1000).WithMessage(L["Redemption.PointsAmount.Minimum"]);
+            .GreaterThan(0).WithMessage(L["Redemption.PointsAmount.Minimum"]);
 
         // Bank transfer fields — required only for BankTransfer method
         When(x => x.Method == RedemptionMethod.BankTransfer, () =>

@@ -20,16 +20,14 @@ public class RedemptionApprovalServiceTests : IDisposable
 {
     private readonly TestDbContext _context;
     private readonly IUserRepository _userRepo;
-    private readonly ITwilioService _twilioService;
     private readonly RedemptionApprovalService _sut;
 
     public RedemptionApprovalServiceTests()
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _twilioService = Substitute.For<ITwilioService>();
         _sut = new RedemptionApprovalService(
-            _context, _userRepo, _twilioService,
+            _context, _userRepo,
             Substitute.For<INotificationService>(),
             Substitute.For<ILogger<RedemptionApprovalService>>());
     }
@@ -248,13 +246,6 @@ public class RedemptionApprovalServiceTests : IDisposable
         updated.CashOtpHash.Should().NotBeNullOrEmpty();
         updated.CashOtpHash!.Length.Should().Be(64); // SHA256 hex
         updated.CashOtpExpiresAt.Should().BeAfter(DateTime.UtcNow.AddDays(13));
-
-        // WhatsApp OTP should have been sent
-        await _twilioService.Received(1).SendWhatsAppMessageAsync(
-            "+966500000001",
-            Arg.Any<string>(),
-            Arg.Is<Dictionary<string, string>>(d => d.ContainsKey("1")),
-            Arg.Any<CancellationToken>());
     }
 
     // ── FIFO Point Consumption ──

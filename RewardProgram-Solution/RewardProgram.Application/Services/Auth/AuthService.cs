@@ -654,6 +654,12 @@ public class AuthService : IAuthService
         if (user.IsDisabled)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
+        if (user.RegistrationStatus == RegistrationStatus.Rejected)
+            return Result.Failure<AuthResponse>(AuthErrors.UserRejected);
+
+        if (user.RegistrationStatus != RegistrationStatus.Approved)
+            return Result.Failure<AuthResponse>(AuthErrors.UserNotApproved);
+
         // Scope enforcement: admin refresh endpoint only accepts SystemAdmin users;
         // public refresh endpoint rejects SystemAdmin users (prevents cross-scope refresh).
         var roles = await _userRepository.GetRolesAsync(user);

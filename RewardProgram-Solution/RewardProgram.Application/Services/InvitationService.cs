@@ -6,6 +6,7 @@ using RewardProgram.Application.Contracts.Invitation;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
+using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services;
 
@@ -93,6 +94,20 @@ public class InvitationService : IInvitationService
         var inviterPoints = settings?.InviterRewardPoints ?? 100m;
         var inviteePoints = settings?.InviteeRewardPoints ?? 50m;
         var sarRate = settings?.PointsToSarRate ?? 10m;
+
+        // Skip inviter reward if they are disabled, self-deleted, or no longer approved.
+        // Invitee still gets their signup reward — it's a user acquisition incentive.
+        var inviterEligible = !inviter.IsDisabled
+            && !inviter.IsAccountDeleted
+            && inviter.RegistrationStatus == RegistrationStatus.Approved;
+
+        if (!inviterEligible)
+        {
+            _logger.LogInformation(
+                "Inviter {InviterId} is not eligible for reward (disabled/deleted/not-approved) — invitee {InviteeId} will still receive signup reward",
+                inviter.Id, invitee.Id);
+            inviterPoints = 0m;
+        }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 

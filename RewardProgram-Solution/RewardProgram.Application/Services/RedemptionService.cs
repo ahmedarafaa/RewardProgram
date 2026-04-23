@@ -18,7 +18,7 @@ namespace RewardProgram.Application.Services;
 public class RedemptionService : IRedemptionService
 {
     private const string CashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
-    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromDays(30);
+    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromDays(14);
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
@@ -129,17 +129,34 @@ public class RedemptionService : IRedemptionService
 
         await _context.RedemptionRequests.AddAsync(redemptionRequest, ct);
         await _context.SaveChangesAsync(ct);
+
+        // Send WhatsApp OTP BEFORE commit. If delivery fails, roll back so the user
+        // never sees a "created" request they can't act on.
+        if (cashOtp is not null && !string.IsNullOrEmpty(user.MobileNumber))
+        {
+            var variables = new Dictionary<string, string>
+            {
+                { "1", cashOtp },
+                { "2", request.PointsAmount.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) },
+                { "3", sarAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) }
+            };
+            var sendResult = await _twilioService.SendWhatsAppMessageAsync(
+                user.MobileNumber, CashOtpTemplateSid, variables, ct);
+
+            if (sendResult.IsFailure)
+            {
+                await transaction.RollbackAsync(ct);
+                _logger.LogWarning(
+                    "Cash OTP WhatsApp send failed for user {UserId}; redemption request rolled back. Error: {Error}",
+                    userId, sendResult.Error.Code);
+                return Result.Failure<RedemptionRequestResponse>(sendResult.Error);
+            }
+        }
+
         await transaction.CommitAsync(ct);
 
         _logger.LogInformation("Redemption request {Id} created by user {UserId} for {Points} points",
             redemptionRequest.Id, userId, request.PointsAmount);
-
-        if (cashOtp is not null && !string.IsNullOrEmpty(user.MobileNumber))
-        {
-            var variables = new Dictionary<string, string> { { "1", cashOtp } };
-            await _twilioService.SendWhatsAppMessageAsync(
-                user.MobileNumber, CashOtpTemplateSid, variables, ct);
-        }
 
         // No self-notification — the user sees the new request in their own response/UI.
 
@@ -206,6 +223,64 @@ public class RedemptionService : IRedemptionService
             wallet.HeldBalance,
             available,
             availableSar));
+    }
+
+    public async Task<Result> ResendCashOtpAsync(string userId, CancellationToken ct = default)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user is null || user.IsDisabled || user.RegistrationStatus != RegistrationStatus.Approved)
+            return Result.Failure(RedemptionErrors.UserNotApproved);
+
+        if (string.IsNullOrEmpty(user.MobileNumber))
+            return Result.Failure(RedemptionErrors.OtpSendFailed);
+
+        var redemptionRequest = await _context.RedemptionRequests
+            .Where(r => r.UserId == userId
+                && r.Method == RedemptionMethod.Cash
+                && r.Status != RedemptionRequestStatus.Completed
+                && r.Status != RedemptionRequestStatus.Rejected
+                && r.Status != RedemptionRequestStatus.Cancelled)
+            .FirstOrDefaultAsync(ct);
+
+        if (redemptionRequest is null)
+            return Result.Failure(RedemptionErrors.NoActiveCashRequest);
+
+        // Cooldown: 30s since last mutation (UpdatedAt). Prevents accidental double-taps
+        // and spam without requiring a dedicated last-sent-at column.
+        var lastTouch = redemptionRequest.UpdatedAt ?? redemptionRequest.CreatedAt;
+        if (DateTime.UtcNow - lastTouch < TimeSpan.FromSeconds(30))
+            return Result.Failure(RedemptionErrors.ResendCooldown);
+
+        var newOtp = GenerateOtp();
+        redemptionRequest.CashOtpHash = HashOtp(newOtp);
+        redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.Add(CashOtpLifetime);
+        redemptionRequest.CashOtpAttempts = 0;
+
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+        await _context.SaveChangesAsync(ct);
+
+        var variables = new Dictionary<string, string>
+        {
+            { "1", newOtp },
+            { "2", redemptionRequest.PointsAmount.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) },
+            { "3", redemptionRequest.SarAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) }
+        };
+        var sendResult = await _twilioService.SendWhatsAppMessageAsync(
+            user.MobileNumber, CashOtpTemplateSid, variables, ct);
+
+        if (sendResult.IsFailure)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(
+                "Cash OTP resend failed for user {UserId}, request {RequestId}. Error: {Error}",
+                userId, redemptionRequest.Id, sendResult.Error.Code);
+            return Result.Failure(RedemptionErrors.OtpSendFailed);
+        }
+
+        await transaction.CommitAsync(ct);
+        _logger.LogInformation("Cash OTP resent for request {RequestId}", redemptionRequest.Id);
+
+        return Result.Success();
     }
 
     // --- Helpers ---

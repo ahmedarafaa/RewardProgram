@@ -42,4 +42,13 @@ public static class RedemptionErrors
 
     public static readonly Error CannotCancelScanWithInsufficientBalance =
         new("Redemption.CannotCancelScanWithInsufficientBalance", "لا يمكن إلغاء المسح — الرصيد المتاح غير كافٍ (قد تكون النقاط مسترداة أو محتجزة)", 400);
+
+    public static readonly Error NoActiveCashRequest =
+        new("Redemption.NoActiveCashRequest", "لا يوجد طلب استبدال نقدي نشط لإعادة إرسال الرمز", 404);
+
+    public static readonly Error ResendCooldown =
+        new("Redemption.ResendCooldown", "يرجى الانتظار قبل طلب إعادة إرسال الرمز", 429);
+
+    public static readonly Error OtpSendFailed =
+        new("Redemption.OtpSendFailed", "فشل إرسال رمز التحقق — يرجى المحاولة لاحقاً", 502);
 }
