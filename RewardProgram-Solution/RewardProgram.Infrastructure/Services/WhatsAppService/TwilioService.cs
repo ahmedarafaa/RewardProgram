@@ -197,10 +197,14 @@ public class TwilioService : ITwilioService
                 return Result.Success();
             }
 
+            // Twilio MessageResource requires From and To to declare the same channel.
+            // The To is prefixed with "whatsapp:" above, so From must be too — otherwise
+            // Twilio rejects with "Invalid From and To pair. From and To should be of the
+            // same channel".
             var messageOptions = new CreateMessageOptions(
                 new PhoneNumber($"whatsapp:{formattedNumber}"))
             {
-                From = new PhoneNumber(_options.WhatsAppFromNumber),
+                From = new PhoneNumber($"whatsapp:{_options.WhatsAppFromNumber}"),
                 ContentSid = contentSid
             };
 
