@@ -48,21 +48,21 @@
   </ItemGroup>
 
   <!--
-    Swap the correct environment web.config template into the publish output based
-    on the active publish profile. Runs after ComputeFilesToPublish so our copy
-    wins against the normal content-copy for web.config. Templates themselves are
-    excluded from publish via CopyToPublishDirectory="Never" above.
+    Swap the correct environment web.config template into the publish output.
+    Each publish profile (.pubxml) declares <EnvTemplate>web.Staging.config</EnvTemplate>
+    or <EnvTemplate>web.UAT.config</EnvTemplate> — no inference, no silent fallback.
+    Publish fails if EnvTemplate is missing or the template file is not on disk,
+    so we never ship the placeholder web.config to a real environment.
   -->
   <Target Name="SwapEnvironmentWebConfig" AfterTargets="CopyFilesToPublishDirectory">
-    <PropertyGroup>
-      <_EnvTemplate Condition="'$(FtpSitePath)' == 'staging' Or $(PublishProfile.Contains('subsite4'))">web.Staging.config</_EnvTemplate>
-      <_EnvTemplate Condition="'$(FtpSitePath)' == 'uat' Or $(PublishProfile.Contains('subsite5'))">web.UAT.config</_EnvTemplate>
-    </PropertyGroup>
-    <Message Text="Swapping $(_EnvTemplate) into web.config for publish" Importance="High" Condition="'$(_EnvTemplate)' != ''" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\$(_EnvTemplate)"
+    <Error Text="EnvTemplate is not set for this publish profile. Add &lt;EnvTemplate&gt;web.Staging.config&lt;/EnvTemplate&gt; (or web.UAT.config) to the .pubxml before publishing."
+           Condition="'$(EnvTemplate)' == ''" />
+    <Error Text="EnvTemplate '$(EnvTemplate)' was not found next to the csproj. Confirm the file exists and is not gitignored away on this machine."
+           Condition="'$(EnvTemplate)' != '' And !Exists('$(MSBuildProjectDirectory)\$(EnvTemplate)')" />
+    <Message Text="Swapping $(EnvTemplate) into web.config for publish" Importance="High" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\$(EnvTemplate)"
           DestinationFiles="$(PublishDir)web.config"
-          OverwriteReadOnlyFiles="true"
-          Condition="'$(_EnvTemplate)' != '' And Exists('$(MSBuildProjectDirectory)\$(_EnvTemplate)')" />
+          OverwriteReadOnlyFiles="true" />
   </Target>
 
 </Project>
