@@ -5,6 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>9ee13453-4cf0-4b15-a585-7667ea4463e6</UserSecretsId>
+    <!--
+      Disable the Web SDK's automatic web.config rewriting. Our per-env templates
+      (web.Staging.config, web.UAT.config) are already complete; the transform
+      would otherwise overwrite them with InProcess/dotnet defaults after publish.
+    -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,15 +41,19 @@
              Condition="Exists('App_Data\firebase-credentials.json')"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="web.Staging.config" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+    <Content Update="web.UAT.config"     CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+    <None Update="web.Staging.config" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+    <None Update="web.UAT.config"     CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
   </ItemGroup>
 
   <!--
     Swap the correct environment web.config template into the publish output based
-    on the active publish profile. Prevents the "Staging overrides UAT" mistake
-    where whichever template was last copied onto web.config locally leaks into the
-    other environment. Templates are gitignored and live next to this csproj.
+    on the active publish profile. Runs after ComputeFilesToPublish so our copy
+    wins against the normal content-copy for web.config. Templates themselves are
+    excluded from publish via CopyToPublishDirectory="Never" above.
   -->
-  <Target Name="SwapEnvironmentWebConfig" AfterTargets="PrepareForPublish">
+  <Target Name="SwapEnvironmentWebConfig" AfterTargets="CopyFilesToPublishDirectory">
     <PropertyGroup>
       <_EnvTemplate Condition="'$(FtpSitePath)' == 'staging' Or $(PublishProfile.Contains('subsite4'))">web.Staging.config</_EnvTemplate>
       <_EnvTemplate Condition="'$(FtpSitePath)' == 'uat' Or $(PublishProfile.Contains('subsite5'))">web.UAT.config</_EnvTemplate>
@@ -53,11 +63,6 @@
           DestinationFiles="$(PublishDir)web.config"
           OverwriteReadOnlyFiles="true"
           Condition="'$(_EnvTemplate)' != '' And Exists('$(MSBuildProjectDirectory)\$(_EnvTemplate)')" />
-  </Target>
-
-  <Target Name="RemoveExtraEnvConfigs" AfterTargets="SwapEnvironmentWebConfig">
-    <Delete Files="$(PublishDir)web.Staging.config" Condition="Exists('$(PublishDir)web.Staging.config')" />
-    <Delete Files="$(PublishDir)web.UAT.config" Condition="Exists('$(PublishDir)web.UAT.config')" />
   </Target>
 
 </Project>
