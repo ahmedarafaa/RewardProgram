@@ -134,7 +134,12 @@ public class RedemptionService : IRedemptionService
         // never sees a "created" request they can't act on.
         if (cashOtp is not null && !string.IsNullOrEmpty(user.MobileNumber))
         {
-            var variables = new Dictionary<string, string> { { "1", cashOtp } };
+            var variables = new Dictionary<string, string>
+            {
+                { "1", cashOtp },
+                { "2", request.PointsAmount.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) },
+                { "3", sarAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) }
+            };
             var sendResult = await _twilioService.SendWhatsAppMessageAsync(
                 user.MobileNumber, CashOtpTemplateSid, variables, ct);
 
@@ -254,7 +259,12 @@ public class RedemptionService : IRedemptionService
         await using var transaction = await _context.BeginTransactionAsync(ct);
         await _context.SaveChangesAsync(ct);
 
-        var variables = new Dictionary<string, string> { { "1", newOtp } };
+        var variables = new Dictionary<string, string>
+        {
+            { "1", newOtp },
+            { "2", redemptionRequest.PointsAmount.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) },
+            { "3", redemptionRequest.SarAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) }
+        };
         var sendResult = await _twilioService.SendWhatsAppMessageAsync(
             user.MobileNumber, CashOtpTemplateSid, variables, ct);
 
