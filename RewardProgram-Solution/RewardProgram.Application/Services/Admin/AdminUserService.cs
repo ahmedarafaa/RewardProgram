@@ -550,6 +550,13 @@ public class AdminUserService : IAdminUserService
         var usersQuery = _userRepository.Query()
             .Where(u => u.UserType != UserType.SystemAdmin);
 
+        // Pre-load role memberships so dual-role users (SM + ZM) appear in BOTH tabs
+        // and so the response carries the full role list per user.
+        var zmRoleUserIds = (await _userRepository.GetUsersInRoleAsync(UserRoles.ZoneManager))
+            .Select(u => u.Id).ToHashSet();
+        var smRoleUserIds = (await _userRepository.GetUsersInRoleAsync(UserRoles.SalesMan))
+            .Select(u => u.Id).ToHashSet();
+
         // Apply filters
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -559,7 +566,16 @@ public class AdminUserService : IAdminUserService
         }
 
         if (query.UserType.HasValue)
-            usersQuery = usersQuery.Where(u => u.UserType == query.UserType.Value);
+        {
+            // Filter by role membership (not just primary UserType) for SM/ZM, so dual-role
+            // users surface under both tabs. Other user types match exactly.
+            if (query.UserType.Value == UserType.ZoneManager)
+                usersQuery = usersQuery.Where(u => zmRoleUserIds.Contains(u.Id));
+            else if (query.UserType.Value == UserType.SalesMan)
+                usersQuery = usersQuery.Where(u => smRoleUserIds.Contains(u.Id));
+            else
+                usersQuery = usersQuery.Where(u => u.UserType == query.UserType.Value);
+        }
 
         if (query.RegistrationStatus.HasValue)
             usersQuery = usersQuery.Where(u => u.RegistrationStatus == query.RegistrationStatus.Value);
@@ -679,10 +695,15 @@ public class AdminUserService : IAdminUserService
                 shopDataMap.TryGetValue(sellerCode, out storeName);
             }
 
+            var roles = new List<string>(2);
+            if (zmRoleUserIds.Contains(u.Id)) roles.Add(UserRoles.ZoneManager);
+            if (smRoleUserIds.Contains(u.Id)) roles.Add(UserRoles.SalesMan);
+            if (roles.Count == 0) roles.Add(u.UserType.ToString());
+
             return new AdminUserListItemResponse(
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.RegistrationStatus,
                 u.IsDisabled, u.IsAccountDeleted, u.AccountDeletedAt,
-                u.CreatedAt, regionName, cityName, customerCode, storeName);
+                u.CreatedAt, regionName, cityName, customerCode, storeName, roles);
         }).ToList();
 
         return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));
@@ -704,6 +725,16 @@ public class AdminUserService : IAdminUserService
             return Result.Failure<AdminToggleStatusResponse>(AdminUserErrors.UserIsSystemAdmin);
 
         user.IsDisabled = !user.IsDisabled;
+
+        // When disabling, revoke refresh tokens + clear push token so the user
+        // can't keep a session alive (or receive push) for up to the 365-day
+        // refresh lifetime until the access token naturally expires.
+        if (user.IsDisabled)
+        {
+            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
+                token.RevokedOn = DateTime.UtcNow;
+            user.FcmToken = null;
+        }
 
         var updateResult = await _userRepository.UpdateAsync(user);
         if (!updateResult.Succeeded)
@@ -1057,6 +1088,12 @@ public class AdminUserService : IAdminUserService
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
 
+            // Kill any active session — otherwise a deleted SM keeps refreshing
+            // access tokens and receiving push notifications until tokens expire.
+            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
+                token.RevokedOn = DateTime.UtcNow;
+            user.FcmToken = null;
+
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)
             {
@@ -1137,6 +1174,12 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled = true;
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
+
+            // Kill any active session — otherwise a deleted ZM keeps refreshing
+            // access tokens and receiving push notifications until tokens expire.
+            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
+                token.RevokedOn = DateTime.UtcNow;
+            user.FcmToken = null;
 
             var updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult.Succeeded)

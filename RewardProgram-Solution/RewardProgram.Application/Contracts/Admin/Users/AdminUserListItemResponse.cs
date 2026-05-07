@@ -15,5 +15,6 @@ public record AdminUserListItemResponse(
     string? RegionName,
     string? CityName,
     string? CustomerCode,
-    string? StoreName
+    string? StoreName,
+    IReadOnlyList<string> Roles
 );
