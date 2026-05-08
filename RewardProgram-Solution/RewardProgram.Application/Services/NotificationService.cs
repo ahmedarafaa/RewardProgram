@@ -9,11 +9,16 @@ using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
+using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Application.Services;
 
 public class NotificationService : INotificationService
 {
+    // Chunk size for bulk Notification inserts. Keeps a single SaveChanges
+    // batch from holding row locks while also bounding change-tracker memory.
+    private const int BroadcastChunkSize = 500;
+
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IFirebaseMessagingService _fcm;
@@ -243,22 +248,11 @@ public class NotificationService : INotificationService
     {
         var usersInRole = await _userRepository.GetUsersInRoleAsync(roleName);
         var activeUserIds = usersInRole
-            .Where(u => !u.IsDisabled)
+            .Where(u => !u.IsDisabled && !u.IsAccountDeleted)
             .Select(u => u.Id)
             .ToList();
 
-        foreach (var userId in activeUserIds)
-        {
-            _context.Notifications.Add(new Notification
-            {
-                UserId = userId,
-                Type = NotificationType.AdminMessage,
-                Title = title,
-                Body = body
-            });
-        }
-
-        await _context.SaveChangesAsync(ct);
+        await InsertNotificationsInChunksAsync(activeUserIds, title, body, ct);
 
         // Pre-fetch tokens in the current scope — background task must not touch _context.
         var tokens = await _userRepository.Query()
@@ -277,23 +271,15 @@ public class NotificationService : INotificationService
     public async Task<Result<int>> BroadcastAsync(string title, string body,
         string sentByAdminId, CancellationToken ct)
     {
+        // Exclude SystemAdmin from broadcasts so admins don't receive their own messages.
         var userIds = await _userRepository.Query()
-            .Where(u => !u.IsDisabled)
+            .Where(u => !u.IsDisabled
+                && !u.IsAccountDeleted
+                && u.UserType != UserType.SystemAdmin)
             .Select(u => u.Id)
             .ToListAsync(ct);
 
-        foreach (var userId in userIds)
-        {
-            _context.Notifications.Add(new Notification
-            {
-                UserId = userId,
-                Type = NotificationType.AdminMessage,
-                Title = title,
-                Body = body
-            });
-        }
-
-        await _context.SaveChangesAsync(ct);
+        await InsertNotificationsInChunksAsync(userIds, title, body, ct);
 
         // Pre-fetch tokens in the current scope — background task must not touch _context.
         var tokens = await _userRepository.Query()
@@ -307,6 +293,32 @@ public class NotificationService : INotificationService
             sentByAdminId, userIds.Count, tokens.Count);
 
         return Result.Success(userIds.Count);
+    }
+
+    // Inserts AdminMessage notifications for the given user ids in chunks so a
+    // 30k-user broadcast doesn't take a single multi-second transaction lock.
+    // Each chunk is its own SaveChanges + change-tracker clear.
+    private async Task InsertNotificationsInChunksAsync(
+        IReadOnlyList<string> userIds, string title, string body, CancellationToken ct)
+    {
+        if (userIds.Count == 0) return;
+
+        for (var offset = 0; offset < userIds.Count; offset += BroadcastChunkSize)
+        {
+            var slice = userIds.Skip(offset).Take(BroadcastChunkSize);
+            foreach (var userId in slice)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = userId,
+                    Type = NotificationType.AdminMessage,
+                    Title = title,
+                    Body = body
+                });
+            }
+
+            await _context.SaveChangesAsync(ct);
+        }
     }
 
     public async Task<PaginatedResult<AdminNotificationHistoryItem>> GetNotificationHistoryAsync(

@@ -308,8 +308,20 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             await CompleteRedemptionAsync(redemptionRequest, ct);
         }
 
-        await _context.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another approver/admin moved this request between our load and save.
+            // RedemptionRequest.RowVersion (or Wallet.RowVersion in Complete) caught it.
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning("Concurrency conflict approving redemption {Id} by {ApproverId}",
+                request.RedemptionRequestId, approverId);
+            return Result.Failure(RedemptionErrors.ConcurrencyConflict);
+        }
 
         _logger.LogInformation("Redemption request {Id} approved by {ApproverId}: {From} → {To}",
             redemptionRequest.Id, approverId, fromStatus, redemptionRequest.Status);
@@ -375,8 +387,18 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         // Refund held points
         await RefundPointsAsync(redemptionRequest, ct);
 
-        await _context.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning("Concurrency conflict rejecting redemption {Id} by {ApproverId}",
+                request.RedemptionRequestId, approverId);
+            return Result.Failure(RedemptionErrors.ConcurrencyConflict);
+        }
 
         _logger.LogInformation("Redemption request {Id} rejected by {ApproverId}",
             redemptionRequest.Id, approverId);
@@ -425,22 +447,44 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             return Result.Failure(RedemptionErrors.OtpExpired);
         }
 
-        // Check brute-force limit — auto-cancel and refund on lockout
-        if (redemptionRequest.CashOtpAttempts >= MaxOtpAttempts)
+        // ATOMIC attempt-counter increment — single SQL statement that only succeeds
+        // if attempts are still under the cap. Replaces the previous read-then-write
+        // pattern where two concurrent attempts could both pass the cap check before
+        // either persisted the increment.
+        var incrementedRows = await _context.RedemptionRequests
+            .Where(r => r.Id == redemptionRequest.Id
+                && r.CashOtpAttempts < MaxOtpAttempts)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(r => r.CashOtpAttempts, r => r.CashOtpAttempts + 1),
+                ct);
+
+        if (incrementedRows == 0)
         {
+            // Already at the cap (either pre-existing or due to a concurrent attempt
+            // that incremented while we were validating). Auto-cancel + refund.
             await using var lockoutTx = await _context.BeginTransactionAsync(ct);
-            redemptionRequest.Status = RedemptionRequestStatus.Cancelled;
-            await RefundPointsAsync(redemptionRequest, ct);
-            await _context.SaveChangesAsync(ct);
-            await lockoutTx.CommitAsync(ct);
+            var current = await _context.RedemptionRequests
+                .FirstOrDefaultAsync(r => r.Id == redemptionRequest.Id, ct);
+            if (current is { Status: RedemptionRequestStatus.AdminApproved })
+            {
+                current.Status = RedemptionRequestStatus.Cancelled;
+                await RefundPointsAsync(current, ct);
+                try
+                {
+                    await _context.SaveChangesAsync(ct);
+                    await lockoutTx.CommitAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    await lockoutTx.RollbackAsync(ct);
+                    // Another flow already cancelled — that's fine, still report lockout.
+                }
+            }
 
             return Result.Failure(RedemptionErrors.OtpMaxAttemptsExceeded);
         }
 
-        // Validate OTP — increment attempt counter BEFORE checking to prevent race conditions
-        redemptionRequest.CashOtpAttempts++;
-        await _context.SaveChangesAsync(ct);
-
+        // OTP hash hasn't changed since load; safe to compare against the in-memory value.
         if (redemptionRequest.CashOtpHash != HashOtp(request.Otp))
         {
             return Result.Failure(RedemptionErrors.InvalidOtp);
@@ -448,21 +492,43 @@ public class RedemptionApprovalService : IRedemptionApprovalService
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
-        redemptionRequest.Status = RedemptionRequestStatus.Completed;
-        redemptionRequest.CashHandoverById = handoverById;
-        redemptionRequest.CashHandoverAt = DateTime.UtcNow;
+        // Reload inside the transaction so that the wallet RowVersion check below
+        // sees the freshest state (the ExecuteUpdate above bypassed the tracker).
+        var freshRequest = await _context.RedemptionRequests
+            .FirstAsync(r => r.Id == redemptionRequest.Id, ct);
 
-        await CompleteRedemptionAsync(redemptionRequest, ct);
+        if (freshRequest.Status != RedemptionRequestStatus.AdminApproved)
+        {
+            await transaction.RollbackAsync(ct);
+            return Result.Failure(RedemptionErrors.NotInCashHandoverState);
+        }
 
-        await _context.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+        freshRequest.Status = RedemptionRequestStatus.Completed;
+        freshRequest.CashHandoverById = handoverById;
+        freshRequest.CashHandoverAt = DateTime.UtcNow;
+
+        await CompleteRedemptionAsync(freshRequest, ct);
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Wallet RowVersion or RedemptionRequest RowVersion caught a concurrent edit.
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning("Concurrency conflict completing cash handover {Id} by {HandoverBy}",
+                freshRequest.Id, handoverById);
+            return Result.Failure(RedemptionErrors.ConcurrencyConflict);
+        }
 
         _logger.LogInformation("Cash handover confirmed for request {Id} by {HandoverBy}",
-            redemptionRequest.Id, handoverById);
+            freshRequest.Id, handoverById);
 
-        await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionCompleted,
+        await _notificationService.CreateAsync(freshRequest.UserId, NotificationType.RedemptionCompleted,
             "اكتمل طلب الاستبدال", "تم تسليم المبلغ بنجاح",
-            redemptionRequest.Id, ct);
+            freshRequest.Id, ct);
 
         return Result.Success();
     }

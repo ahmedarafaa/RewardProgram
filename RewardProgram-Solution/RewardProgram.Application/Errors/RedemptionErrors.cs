@@ -51,4 +51,7 @@ public static class RedemptionErrors
 
     public static readonly Error OtpSendFailed =
         new("Redemption.OtpSendFailed", "فشل إرسال رمز التحقق — يرجى المحاولة لاحقاً", 502);
+
+    public static readonly Error ConcurrencyConflict =
+        new("Redemption.ConcurrencyConflict", "تم تحديث الطلب من قبل مستخدم آخر — يرجى تحديث الصفحة وإعادة المحاولة", 409);
 }

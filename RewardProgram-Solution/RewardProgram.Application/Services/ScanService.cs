@@ -56,7 +56,13 @@ public class ScanService : IScanService
         else
             return Result.Failure<ScanBarcodeResponse>(ScanErrors.UnauthorizedRole);
 
-        // Retry loop: RowVersion concurrency on ProductBarcode/Wallet may cause
+        // Pre-create the scanner's wallet in its own save so the unique-constraint
+        // race on first-scan-ever is resolved outside the scan transaction. Otherwise
+        // a losing concurrent insert leaves an Added entity in the change tracker
+        // that poisons the retry loop below.
+        await EnsureWalletAsync(userId, ct);
+
+        // Retry loop: RowVersion concurrency on ProductBarcode may cause
         // DbUpdateConcurrencyException on legitimate concurrent scans. Retry once.
         for (var attempt = 0; attempt <= MaxRetries; attempt++)
         {
@@ -157,7 +163,8 @@ public class ScanService : IScanService
 
             // 9. Credit scanner's wallet
             var scannerSarAmount = pointsForScanner / sarRate;
-            var scannerWallet = await GetOrCreateWalletAsync(userId, ct);
+            var scannerWallet = await _context.Wallets
+                .FirstAsync(w => w.UserId == userId, ct);
             scannerWallet.Balance += pointsForScanner;
             scannerWallet.SarBalance += scannerSarAmount;
 
@@ -177,7 +184,9 @@ public class ScanService : IScanService
             if (deferredPointsForFirstScanner.HasValue && firstScannerUserId is not null)
             {
                 var deferredSarAmount = deferredPointsForFirstScanner.Value / sarRate;
-                var firstScannerWallet = await GetOrCreateWalletAsync(firstScannerUserId, ct);
+                // First scanner already earned points on their prior scan, so their wallet exists.
+                var firstScannerWallet = await _context.Wallets
+                    .FirstAsync(w => w.UserId == firstScannerUserId, ct);
                 firstScannerWallet.Balance += deferredPointsForFirstScanner.Value;
                 firstScannerWallet.SarBalance += deferredSarAmount;
 
@@ -222,7 +231,8 @@ public class ScanService : IScanService
                 barcode.Product.Name,
                 pointsForScanner,
                 scannerWallet.Balance,
-                message
+                message,
+                barcode.Id
             ));
         }
         catch (DbUpdateConcurrencyException)
@@ -231,10 +241,10 @@ public class ScanService : IScanService
             _logger.LogWarning("Concurrency conflict scanning barcode '{Code}' by user {UserId}", request.BarcodeCode, userId);
             return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.ConcurrencyConflict);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
             await transaction.RollbackAsync(ct);
-            _logger.LogWarning("Duplicate key conflict scanning barcode '{Code}' by user {UserId} (likely concurrent wallet creation)", request.BarcodeCode, userId);
+            _logger.LogWarning(ex, "Duplicate key conflict scanning barcode '{Code}' by user {UserId}", request.BarcodeCode, userId);
             return Result.Failure<ScanBarcodeResponse>(BarcodeErrors.ConcurrencyConflict);
         }
         catch (Exception ex)
@@ -286,21 +296,51 @@ public class ScanService : IScanService
         return Result.Success(new PaginatedResult<ScanHistoryItemResponse>(items, totalCount, page, pageSize));
     }
 
-    private async Task<Wallet> GetOrCreateWalletAsync(string userId, CancellationToken ct)
+    private async Task EnsureWalletAsync(string userId, CancellationToken ct)
     {
-        var wallet = await _context.Wallets
-            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+        if (await _context.Wallets.AnyAsync(w => w.UserId == userId, ct))
+            return;
 
-        if (wallet is not null)
-            return wallet;
-
-        wallet = new Wallet
+        var wallet = new Wallet
         {
             UserId = userId,
             Balance = 0
         };
 
         await _context.Wallets.AddAsync(wallet, ct);
-        return wallet;
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Concurrent creator won the unique-index race — detach the failed
+            // insert so it doesn't get replayed by the next SaveChanges in this scope.
+            // Remove() on an Added entity detaches rather than marks Deleted.
+            _context.Wallets.Remove(wallet);
+        }
+    }
+
+    // SQL Server: 2627 = primary-key violation, 2601 = unique-index violation.
+    // Other DbUpdateException causes (FK, timeout, deadlock) should bubble up rather
+    // than be silently treated as "concurrent creator won".
+    // Duck-typed by name to avoid pulling Microsoft.Data.SqlClient into the
+    // Application layer.
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        while (inner is not null)
+        {
+            if (inner.GetType().Name == "SqlException")
+            {
+                var numberProp = inner.GetType().GetProperty("Number");
+                if (numberProp?.GetValue(inner) is int number
+                    && (number == 2627 || number == 2601))
+                    return true;
+            }
+            inner = inner.InnerException;
+        }
+        return false;
     }
 }
