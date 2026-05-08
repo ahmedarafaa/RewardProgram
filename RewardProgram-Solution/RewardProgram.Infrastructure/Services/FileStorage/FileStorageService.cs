@@ -54,11 +54,19 @@ public class FileStorageService(IWebHostEnvironment environment, ILogger<FileSto
     {
         try
         {
-            var filePath = Path.Combine(GetWebRootPath(), fileUrl.TrimStart('/'));
+            var webRoot = GetWebRootPath();
+            var resolved = Path.GetFullPath(Path.Combine(webRoot, fileUrl.TrimStart('/')));
 
-            if (File.Exists(filePath))
+            // Defense-in-depth: refuse anything that escapes the web root.
+            if (!resolved.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase))
             {
-                File.Delete(filePath);
+                _logger.LogWarning("Refusing to delete file outside webroot: {FileUrl}", fileUrl);
+                return Task.FromResult(Result.Failure(new Error("File.DeleteFailed", "فشل حذف الملف", 500)));
+            }
+
+            if (File.Exists(resolved))
+            {
+                File.Delete(resolved);
             }
 
             return Task.FromResult(Result.Success());

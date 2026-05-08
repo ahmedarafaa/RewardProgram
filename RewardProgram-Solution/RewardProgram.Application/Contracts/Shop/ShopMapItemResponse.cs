@@ -7,6 +7,5 @@ public record ShopMapItemResponse(
     string ShortAddress,
     string Street,
     string District,
-    int BuildingNumber,
-    string? Phone
+    int BuildingNumber
 );

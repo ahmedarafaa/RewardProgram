@@ -24,29 +24,16 @@ public class ShopService : IShopService
 
         var rows = await query
             .OrderBy(e => e.CustomerName)
-            .Select(e => new
-            {
+            .Select(e => new ShopMapItemResponse(
                 e.CustomerName,
-                ShopImageUrl = e.ShopData!.ShopImageUrl,
-                CityName = e.ShopData.City != null ? e.ShopData.City.NameAr : "",
-                ShortAddress = e.ShortAddress!,
+                e.ShopData!.ShopImageUrl,
+                e.ShopData.City != null ? e.ShopData.City.NameAr : "",
+                e.ShortAddress!,
                 e.ShopData.Street,
                 e.ShopData.District,
-                e.ShopData.BuildingNumber,
-                Phone = e.ShopData.EnteredByUser != null ? e.ShopData.EnteredByUser.MobileNumber : null
-            })
+                e.ShopData.BuildingNumber))
             .ToListAsync(ct);
 
-        return rows
-            .Select(r => new ShopMapItemResponse(
-                r.CustomerName,
-                r.ShopImageUrl,
-                r.CityName,
-                r.ShortAddress,
-                r.Street,
-                r.District,
-                r.BuildingNumber,
-                r.Phone))
-            .ToList();
+        return rows;
     }
 }

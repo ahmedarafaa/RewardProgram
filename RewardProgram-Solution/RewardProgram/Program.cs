@@ -49,7 +49,21 @@ namespace RewardProgram
 
             app.UseExceptionHandler();
             app.UseSerilogRequestLogging();
+
+            if (!app.Environment.IsDevelopment())
+                app.UseHsts();
+
             app.UseHttpsRedirection();
+
+            app.Use(async (ctx, next) =>
+            {
+                var headers = ctx.Response.Headers;
+                headers["X-Content-Type-Options"] = "nosniff";
+                headers["X-Frame-Options"] = "DENY";
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+                await next();
+            });
+
             app.UseStaticFiles();
             app.UseCors();
 

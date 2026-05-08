@@ -82,23 +82,46 @@ public class AdminProductService : IAdminProductService
     public async Task<Result> DeleteProductAsync(
         string productId, string adminUserId, CancellationToken ct = default)
     {
-        var product = await _context.Products
-            .FirstOrDefaultAsync(p => p.Id == productId, ct);
-        if (product is null)
-            return Result.Failure(ProductErrors.ProductNotFound);
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+        try
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId, ct);
+            if (product is null)
+                return Result.Failure(ProductErrors.ProductNotFound);
 
-        var hasBarcodes = await _context.ProductBarcodes
-            .AnyAsync(b => b.ProductId == productId, ct);
+            var hasBarcodes = await _context.ProductBarcodes
+                .AnyAsync(b => b.ProductId == productId, ct);
 
-        if (hasBarcodes)
-            return Result.Failure(ProductErrors.ProductHasBarcodes);
+            if (hasBarcodes)
+                return Result.Failure(ProductErrors.ProductHasBarcodes);
 
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync(ct);
+            // SaveChangesAsync interceptor converts Remove to soft-delete (IsDeleted=true)
+            // and populates DeletedBy/DeletedAt from current user claims.
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Product '{ProductCode}' deleted by admin {AdminId}", product.ProductCode, adminUserId);
+            // Re-check inside the transaction in case a concurrent barcode generation
+            // committed between our hasBarcodes check and SaveChangesAsync.
+            var racedBarcodes = await _context.ProductBarcodes
+                .AnyAsync(b => b.ProductId == productId, ct);
+            if (racedBarcodes)
+            {
+                await transaction.RollbackAsync(ct);
+                return Result.Failure(ProductErrors.ProductHasBarcodes);
+            }
 
-        return Result.Success();
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation("Product '{ProductCode}' deleted by admin {AdminId}", product.ProductCode, adminUserId);
+
+            return Result.Success();
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<Result<PaginatedResult<AdminProductResponse>>> ListProductsAsync(

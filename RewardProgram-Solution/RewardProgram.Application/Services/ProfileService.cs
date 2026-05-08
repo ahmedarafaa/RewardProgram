@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Profile;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Files;
 
@@ -15,9 +16,6 @@ public class ProfileService : IProfileService
     private readonly IUserRepository _userRepository;
     private readonly IFileStorageService _fileStorage;
     private readonly ILogger<ProfileService> _logger;
-
-    private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png"];
-    private const long MaxPhotoSize = 5 * 1024 * 1024; // 5MB
 
     public ProfileService(
         IApplicationDbContext context,
@@ -77,25 +75,19 @@ public class ProfileService : IProfileService
 
     public async Task<Result<string>> UpdateProfilePhotoAsync(string userId, IFormFile photo, CancellationToken ct = default)
     {
-        var extension = Path.GetExtension(photo.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(extension))
-            return Result.Failure<string>(ProfileErrors.InvalidImageType);
-
-        if (photo.Length > MaxPhotoSize)
-            return Result.Failure<string>(ProfileErrors.ImageTooLarge);
+        var validation = ImageUploadValidator.Validate(photo);
+        if (validation.IsFailure)
+            return Result.Failure<string>(validation.Error);
 
         var user = await _userRepository.FindByIdAsync(userId, ct);
         if (user is null)
             return Result.Failure<string>(AuthErrors.UserNotFound);
 
-        // Delete old photo if exists
-        if (!string.IsNullOrEmpty(user.ProfileImageUrl))
-            await _fileStorage.DeleteAsync(user.ProfileImageUrl);
+        var oldPhotoUrl = user.ProfileImageUrl;
 
-        // Upload new photo
         var uploadResult = await _fileStorage.UploadAsync(
             photo.OpenReadStream(),
-            $"{Guid.NewGuid()}{extension}",
+            photo.FileName,
             "profiles",
             ct);
 
@@ -104,6 +96,11 @@ public class ProfileService : IProfileService
 
         user.ProfileImageUrl = uploadResult.Value;
         await _userRepository.UpdateAsync(user);
+
+        // Delete old photo only after the new one is committed to user record,
+        // so an upload failure doesn't lose the previous photo.
+        if (!string.IsNullOrEmpty(oldPhotoUrl))
+            await _fileStorage.DeleteAsync(oldPhotoUrl);
 
         _logger.LogInformation("Profile photo updated for user {UserId}", userId);
 
@@ -131,9 +128,11 @@ public class ProfileService : IProfileService
         user.IsAccountDeleted = true;
         user.AccountDeletedAt = DateTime.UtcNow;
 
-        // Revoke all refresh tokens
+        // Revoke all refresh tokens + clear FCM token so the deleted account
+        // stops receiving push notifications immediately.
         foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
             token.RevokedOn = DateTime.UtcNow;
+        user.FcmToken = null;
 
         await _userRepository.UpdateAsync(user);
 

@@ -34,6 +34,13 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddLocalization();
 
+        services.AddHsts(options =>
+        {
+            options.Preload = true;
+            options.IncludeSubDomains = true;
+            options.MaxAge = TimeSpan.FromDays(365);
+        });
+
         var keysDirectory = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "App_Data", "keys"));
         keysDirectory.Create();
         services.AddDataProtection()
@@ -79,7 +86,7 @@ public static class DependencyInjection
         services.Configure<VerificationTokenOptions>(o =>
         {
             o.HmacKey = $"VerificationToken:{jwtKey}";
-            o.ExpiryMinutes = 10;
+            o.ExpiryMinutes = 300;
         });
 
         // Register Services
@@ -116,7 +123,13 @@ public static class DependencyInjection
         services.AddHostedService<OtpCleanupBackgroundService>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
-        services.AddProblemDetails();
+        services.AddProblemDetails(options =>
+        {
+            options.CustomizeProblemDetails = ctx =>
+            {
+                ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+            };
+        });
 
         return services;
     }
