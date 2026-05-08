@@ -65,9 +65,14 @@ public class InvitationService : IInvitationService
         var approvedInvitations = invitedUsers
             .Count(u => u.RegistrationStatus == Domain.Enums.UserEnums.RegistrationStatus.Approved);
 
-        // Total points earned from invitations
+        // Total points earned from inviting OTHERS — excludes this user's own signup
+        // bonus (which is also stored as an InvitationReward but with ReferenceId
+        // pointing to their inviter, not to someone they invited).
         var totalPointsEarned = await _context.WalletTransactions
-            .Where(t => t.Wallet.UserId == userId && t.Type == WalletTransactionType.InvitationReward)
+            .Where(t => t.Wallet.UserId == userId
+                && t.Type == WalletTransactionType.InvitationReward
+                && t.ReferenceId != null
+                && t.ReferenceId != user.InvitedByUserId)
             .SumAsync(t => t.Amount, ct);
 
         return Result.Success(new InvitationInfoResponse(
@@ -109,6 +114,14 @@ public class InvitationService : IInvitationService
             inviterPoints = 0m;
         }
 
+        // Pre-create wallets outside the main transaction so the unique-constraint
+        // race on first-ever-credit is resolved here rather than poisoning the
+        // change tracker inside the crediting transaction.
+        if (inviteePoints > 0)
+            await EnsureWalletAsync(invitee.Id, ct);
+        if (inviterPoints > 0)
+            await EnsureWalletAsync(inviter.Id, ct);
+
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
@@ -128,7 +141,7 @@ public class InvitationService : IInvitationService
             // Always credit invitee
             if (inviteePoints > 0)
             {
-                var inviteeWallet = await GetOrCreateWalletAsync(invitee.Id, ct);
+                var inviteeWallet = await _context.Wallets.FirstAsync(w => w.UserId == invitee.Id, ct);
                 var inviteeSarAmount = inviteePoints / sarRate;
                 inviteeWallet.Balance += inviteePoints;
                 inviteeWallet.SarBalance += inviteeSarAmount;
@@ -150,20 +163,21 @@ public class InvitationService : IInvitationService
                     inviteePoints, invitee.Id);
             }
 
-            // Credit inviter only if under 20 rewarded invitations
-            var inviterRewardCount = 0;
+            // Credit inviter only if under the 20 rewarded invitations cap.
+            // Reserve the slot with an atomic UPDATE that only succeeds when the
+            // current counter is below the cap — this serializes the cap check
+            // against concurrent approvals without a table lock.
             var inviterRewarded = false;
             if (inviterPoints > 0)
             {
-                // Count only inviter rewards (where ReferenceId is an invitee's userId, not the inviter's own invitee reward)
-                inviterRewardCount = await _context.WalletTransactions
-                    .CountAsync(t => t.Wallet.UserId == inviter.Id
-                        && t.Type == WalletTransactionType.InvitationReward
-                        && t.ReferenceId != inviter.Id, ct);
+                var reserved = await _userRepository.Query()
+                    .Where(u => u.Id == inviter.Id && u.InviterRewardCount < MaxRewardedInvitations)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(u => u.InviterRewardCount, u => u.InviterRewardCount + 1), ct);
 
-                if (inviterRewardCount < MaxRewardedInvitations)
+                if (reserved == 1)
                 {
-                    var inviterWallet = await GetOrCreateWalletAsync(inviter.Id, ct);
+                    var inviterWallet = await _context.Wallets.FirstAsync(w => w.UserId == inviter.Id, ct);
                     var inviterSarAmount = inviterPoints / sarRate;
                     inviterWallet.Balance += inviterPoints;
                     inviterWallet.SarBalance += inviterSarAmount;
@@ -183,8 +197,8 @@ public class InvitationService : IInvitationService
                     inviterRewarded = true;
 
                     _logger.LogInformation(
-                        "Invitation reward: {Points} points credited to inviter {InviterId} (reward #{Count})",
-                        inviterPoints, inviter.Id, inviterRewardCount + 1);
+                        "Invitation reward: {Points} points credited to inviter {InviterId}",
+                        inviterPoints, inviter.Id);
                 }
                 else
                 {
@@ -234,24 +248,29 @@ public class InvitationService : IInvitationService
         throw new InvalidOperationException("Failed to generate unique invitation code after 10 attempts");
     }
 
-    private async Task<Wallet> GetOrCreateWalletAsync(string userId, CancellationToken ct)
+    private async Task EnsureWalletAsync(string userId, CancellationToken ct)
     {
-        var wallet = await _context.Wallets
-            .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+        if (await _context.Wallets.AnyAsync(w => w.UserId == userId, ct))
+            return;
 
-        if (wallet is not null)
-            return wallet;
-
-        wallet = new Wallet
+        var wallet = new Wallet
         {
             UserId = userId,
             Balance = 0
         };
 
-        // Note: If concurrent calls race to create the wallet, the unique constraint
-        // on UserId will cause DbUpdateException. The caller (CreditInvitationRewardsAsync)
-        // catches DbUpdateException and logs it as a duplicate — safe.
         await _context.Wallets.AddAsync(wallet, ct);
-        return wallet;
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Concurrent creator won the unique-index race — detach the failed
+            // insert so it doesn't get replayed by the next SaveChanges.
+            // Remove() on an Added entity detaches rather than marks Deleted.
+            _context.Wallets.Remove(wallet);
+        }
     }
 }

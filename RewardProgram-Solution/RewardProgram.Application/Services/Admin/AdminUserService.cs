@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -17,21 +18,48 @@ namespace RewardProgram.Application.Services.Admin;
 
 public class AdminUserService : IAdminUserService
 {
+    // Cache the SM/ZM role-id sets so the admin user list endpoint doesn't hit
+    // Identity for the full role membership on every page request. Invalidated
+    // on toggle-status / delete (which can change the active member set indirectly).
+    private static readonly TimeSpan RoleMembersCacheTtl = TimeSpan.FromMinutes(5);
+    private const string SmRoleCacheKey = "roles:salesman:userIds";
+    private const string ZmRoleCacheKey = "roles:zonemanager:userIds";
+
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
     private readonly ILogger<AdminUserService> _logger;
 
     public AdminUserService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IFileStorageService fileStorageService,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
         ILogger<AdminUserService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _fileStorageService = fileStorageService;
+        _cache = cache;
         _logger = logger;
+    }
+
+    private async Task<HashSet<string>> GetCachedRoleUserIdsAsync(string roleName, string cacheKey)
+    {
+        if (_cache.TryGetValue<HashSet<string>>(cacheKey, out var cached) && cached is not null)
+            return cached;
+
+        var ids = (await _userRepository.GetUsersInRoleAsync(roleName))
+            .Select(u => u.Id).ToHashSet();
+        _cache.Set(cacheKey, ids, RoleMembersCacheTtl);
+        return ids;
+    }
+
+    private void InvalidateRoleMembershipCache()
+    {
+        _cache.Remove(SmRoleCacheKey);
+        _cache.Remove(ZmRoleCacheKey);
     }
 
     #region Add User
@@ -91,11 +119,14 @@ public class AdminUserService : IAdminUserService
 
             if (cities.Count > 0)
             {
+                // Pending users only — Approved users keep their historical
+                // AssignedSalesManId (the SM who approved them) for audit trail.
                 var assignedCityIds = cities.Select(c => c.Id).ToList();
                 var usersInCities = await _userRepository.Query()
                     .Where(u => u.UserType != UserType.SalesMan
                         && u.UserType != UserType.ZoneManager
                         && u.UserType != UserType.SystemAdmin
+                        && u.RegistrationStatus == RegistrationStatus.PendingSalesman
                         && u.NationalAddress != null
                         && assignedCityIds.Contains(u.NationalAddress.CityId))
                     .ToListAsync(ct);
@@ -106,6 +137,8 @@ public class AdminUserService : IAdminUserService
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} created SalesMan {UserId} for {Count} cities",
                 adminUserId, user.Id, cities.Count);
@@ -183,6 +216,8 @@ public class AdminUserService : IAdminUserService
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} created ZoneManager {UserId} for region {RegionId}",
                 adminUserId, user.Id, region?.Id ?? "(unassigned)");
@@ -548,14 +583,14 @@ public class AdminUserService : IAdminUserService
         AdminUserListQuery query, CancellationToken ct = default)
     {
         var usersQuery = _userRepository.Query()
+            .AsNoTracking()
             .Where(u => u.UserType != UserType.SystemAdmin);
 
         // Pre-load role memberships so dual-role users (SM + ZM) appear in BOTH tabs
-        // and so the response carries the full role list per user.
-        var zmRoleUserIds = (await _userRepository.GetUsersInRoleAsync(UserRoles.ZoneManager))
-            .Select(u => u.Id).ToHashSet();
-        var smRoleUserIds = (await _userRepository.GetUsersInRoleAsync(UserRoles.SalesMan))
-            .Select(u => u.Id).ToHashSet();
+        // and so the response carries the full role list per user. Cached for 5 min
+        // since SM/ZM membership rarely changes (admin toggle/delete invalidates).
+        var zmRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.ZoneManager, ZmRoleCacheKey);
+        var smRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.SalesMan, SmRoleCacheKey);
 
         // Apply filters
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -726,13 +761,12 @@ public class AdminUserService : IAdminUserService
 
         user.IsDisabled = !user.IsDisabled;
 
-        // When disabling, revoke refresh tokens + clear push token so the user
-        // can't keep a session alive (or receive push) for up to the 365-day
-        // refresh lifetime until the access token naturally expires.
+        // When disabling, also bump the security stamp (forces existing access tokens
+        // signed before the bump to be rejected at the next validation), clear FCM,
+        // and revoke refresh tokens via bulk SQL so any in-flight refresh sessions
+        // are killed immediately rather than living for the 365-day refresh lifetime.
         if (user.IsDisabled)
         {
-            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
-                token.RevokedOn = DateTime.UtcNow;
             user.FcmToken = null;
         }
 
@@ -743,6 +777,16 @@ public class AdminUserService : IAdminUserService
                 userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
             return Result.Failure<AdminToggleStatusResponse>(AdminUserErrors.UpdateUserFailed);
         }
+
+        if (user.IsDisabled)
+        {
+            await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+        }
+
+        // Conservative cache invalidation: SM/ZM disable/enable shifts who shows in
+        // active queues; clear so the next ListUsers reload picks up the change.
+        if (user.UserType is UserType.SalesMan or UserType.ZoneManager)
+            InvalidateRoleMembershipCache();
 
         var message = user.IsDisabled ? "تم تعطيل المستخدم بنجاح" : "تم تفعيل المستخدم بنجاح";
 
@@ -923,12 +967,16 @@ public class AdminUserService : IAdminUserService
                 city.UpdatedAt = DateTime.UtcNow;
             }
 
-            // Reassign all users in these cities to the new salesman
+            // Reassign ONLY pending users in these cities to the new SM. Approved
+            // users keep their historical AssignedSalesManId — that's the SM who
+            // approved them, and overwriting it would break audit trail per S19
+            // spec ("WHERE RegistrationStatus = Pending only").
             var cityIds = cities.Select(c => c.Id).ToList();
             var usersInCities = await _userRepository.Query()
                 .Where(u => u.UserType != UserType.SalesMan
                     && u.UserType != UserType.ZoneManager
                     && u.UserType != UserType.SystemAdmin
+                    && u.RegistrationStatus == RegistrationStatus.PendingSalesman
                     && u.NationalAddress != null
                     && cityIds.Contains(u.NationalAddress.CityId))
                 .ToListAsync(ct);
@@ -1068,11 +1116,14 @@ public class AdminUserService : IAdminUserService
                 city.UpdatedAt = DateTime.UtcNow;
             }
 
-            // Update AssignedSalesManId for users in these cities
+            // Update AssignedSalesManId only for PENDING users in these cities.
+            // Approved users keep their historical AssignedSalesManId for audit
+            // trail (per S19: reassignment must not overwrite approval history).
             var usersInCities = await _userRepository.Query()
                 .Where(u => u.UserType != UserType.SalesMan
                     && u.UserType != UserType.ZoneManager
                     && u.UserType != UserType.SystemAdmin
+                    && u.RegistrationStatus == RegistrationStatus.PendingSalesman
                     && u.NationalAddress != null
                     && currentCityIds.Contains(u.NationalAddress.CityId))
                 .ToListAsync(ct);
@@ -1087,11 +1138,6 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled = true;
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
-
-            // Kill any active session — otherwise a deleted SM keeps refreshing
-            // access tokens and receiving push notifications until tokens expire.
-            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
-                token.RevokedOn = DateTime.UtcNow;
             user.FcmToken = null;
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1105,6 +1151,11 @@ public class AdminUserService : IAdminUserService
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            // Bulk-revoke refresh tokens AFTER commit so a deleted SM cannot
+            // keep refreshing access tokens via the 365-day refresh lifetime.
+            await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+            InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} deleted SalesMan {UserId} (reassigned {Count} cities)",
                 adminUserId, userId, currentCities.Count);
@@ -1174,11 +1225,6 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled = true;
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
-
-            // Kill any active session — otherwise a deleted ZM keeps refreshing
-            // access tokens and receiving push notifications until tokens expire.
-            foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
-                token.RevokedOn = DateTime.UtcNow;
             user.FcmToken = null;
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1192,6 +1238,11 @@ public class AdminUserService : IAdminUserService
 
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            // Bulk-revoke refresh tokens AFTER commit so a deleted ZM cannot
+            // keep refreshing access tokens via the 365-day refresh lifetime.
+            await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+            InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} deleted ZoneManager {UserId} (region {RegionId} → {NewZmId})",
                 adminUserId, userId, managedRegion?.Id ?? "(none)", request.NewZoneManagerId ?? "(none)");

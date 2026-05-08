@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
@@ -19,24 +20,32 @@ public class NotificationService : INotificationService
     // batch from holding row locks while also bounding change-tracker memory.
     private const int BroadcastChunkSize = 500;
 
+    // Unread badge polled by the app every ~30s. Cache the count to absorb
+    // foreground-tick polling without a DB roundtrip per user per poll.
+    private static readonly TimeSpan UnreadCountCacheTtl = TimeSpan.FromSeconds(30);
+    private static string UnreadCountCacheKey(string userId) => $"notif:unread:{userId}";
+
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IFirebaseMessagingService _fcm;
     private readonly ILogger<NotificationService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IMemoryCache _cache;
 
     public NotificationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IFirebaseMessagingService fcm,
         ILogger<NotificationService> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IMemoryCache cache)
     {
         _context = context;
         _userRepository = userRepository;
         _fcm = fcm;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _cache = cache;
     }
 
     // ── Device Registration ──
@@ -98,26 +107,35 @@ public class NotificationService : INotificationService
 
     public async Task<int> GetUnreadCountAsync(string userId, CancellationToken ct)
     {
-        return await _context.Notifications
+        if (_cache.TryGetValue(UnreadCountCacheKey(userId), out int cached))
+            return cached;
+
+        var count = await _context.Notifications
             .CountAsync(n => n.UserId == userId && !n.IsRead && !n.IsDeleted, ct);
+
+        _cache.Set(UnreadCountCacheKey(userId), count, UnreadCountCacheTtl);
+        return count;
     }
 
     public async Task<Result> MarkAsReadAsync(string notificationId, string userId, CancellationToken ct)
     {
+        // Single-query lookup that includes ownership in the WHERE clause so we
+        // return uniform NotFound for "doesn't exist" and "not yours" — closes
+        // the IDOR enumeration that previously distinguished the two cases.
         var notification = await _context.Notifications
-            .FirstOrDefaultAsync(n => n.Id == notificationId && !n.IsDeleted, ct);
+            .FirstOrDefaultAsync(n => n.Id == notificationId
+                && n.UserId == userId
+                && !n.IsDeleted, ct);
 
         if (notification is null)
             return Result.Failure(NotificationErrors.NotificationNotFound);
-
-        if (notification.UserId != userId)
-            return Result.Failure(NotificationErrors.NotificationNotOwned);
 
         if (!notification.IsRead)
         {
             notification.IsRead = true;
             notification.ReadAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(ct);
+            _cache.Remove(UnreadCountCacheKey(userId));
         }
 
         return Result.Success();
@@ -131,23 +149,27 @@ public class NotificationService : INotificationService
                 .SetProperty(n => n.IsRead, true)
                 .SetProperty(n => n.ReadAt, DateTime.UtcNow), ct);
 
+        _cache.Remove(UnreadCountCacheKey(userId));
         return Result.Success();
     }
 
     public async Task<Result> DeleteNotificationAsync(string notificationId, string userId, CancellationToken ct)
     {
+        // Single-query lookup with ownership in WHERE → uniform NotFound (no IDOR enumeration).
         var notification = await _context.Notifications
-            .FirstOrDefaultAsync(n => n.Id == notificationId && !n.IsDeleted, ct);
+            .FirstOrDefaultAsync(n => n.Id == notificationId
+                && n.UserId == userId
+                && !n.IsDeleted, ct);
 
         if (notification is null)
             return Result.Failure(NotificationErrors.NotificationNotFound);
 
-        if (notification.UserId != userId)
-            return Result.Failure(NotificationErrors.NotificationNotOwned);
-
         notification.IsDeleted = true;
         notification.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+
+        if (!notification.IsRead)
+            _cache.Remove(UnreadCountCacheKey(userId));
 
         return Result.Success();
     }
@@ -212,6 +234,8 @@ public class NotificationService : INotificationService
 
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync(ct);
+
+        _cache.Remove(UnreadCountCacheKey(userId));
 
         _logger.LogInformation("Notification created: {Type} for user {UserId}", type, userId);
 

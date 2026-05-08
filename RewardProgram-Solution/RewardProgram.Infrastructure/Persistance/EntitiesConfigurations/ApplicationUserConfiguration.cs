@@ -80,6 +80,10 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(x => x.InvitationCode)
             .HasMaxLength(8);
 
+        builder.Property(x => x.InviterRewardCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
         builder.HasOne(x => x.InvitedByUser)
             .WithMany()
             .HasForeignKey(x => x.InvitedByUserId)
@@ -97,6 +101,11 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         // Composite indexes
         builder.HasIndex(x => new { x.UserType, x.RegistrationStatus });
         builder.HasIndex(x => new { x.UserType, x.IsDisabled });
+
+        // Hot index for admin user list (OrderByDescending(CreatedAt) on every page).
+        builder.HasIndex(x => x.CreatedAt)
+            .IsDescending(true)
+            .HasDatabaseName("IX_AspNetUsers_CreatedAt_Desc");
     }
 
     private void NationalAddressConfiguration(EntityTypeBuilder<ApplicationUser> builder)

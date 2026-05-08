@@ -127,14 +127,22 @@ public class ProfileService : IProfileService
         user.IsDisabled = true;
         user.IsAccountDeleted = true;
         user.AccountDeletedAt = DateTime.UtcNow;
-
-        // Revoke all refresh tokens + clear FCM token so the deleted account
-        // stops receiving push notifications immediately.
-        foreach (var token in user.RefreshTokens.Where(t => t.RevokedOn == null))
-            token.RevokedOn = DateTime.UtcNow;
         user.FcmToken = null;
 
+        // Null InvitationCode so future invitees can't register pointing to a
+        // deleted user (which would silently fail at reward credit time).
+        user.InvitationCode = null;
+
+        // Bump SecurityStamp so existing access tokens that embed the prior stamp
+        // are rejected at the next validation tick. New JWTs cannot be issued
+        // because IsAccountDeleted is now checked at refresh + login time.
+        await _userRepository.UpdateSecurityStampAsync(user);
+
         await _userRepository.UpdateAsync(user);
+
+        // Bulk-revoke active refresh tokens so the deleted account cannot
+        // keep a refresh-loop alive for the 365-day lifetime.
+        await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
 
         _logger.LogInformation("Account deleted (disabled) for user {UserId}", userId);
 

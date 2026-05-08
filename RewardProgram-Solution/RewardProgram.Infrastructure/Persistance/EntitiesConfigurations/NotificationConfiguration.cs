@@ -50,6 +50,11 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
         builder.HasIndex(x => x.UserId);
 
+        // Hot index for admin notification history (OrderByDescending(CreatedAt)
+        // with WHERE !IsDeleted on every page request).
+        builder.HasIndex(x => new { x.IsDeleted, x.CreatedAt })
+            .HasDatabaseName("IX_Notifications_IsDeleted_CreatedAt");
+
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

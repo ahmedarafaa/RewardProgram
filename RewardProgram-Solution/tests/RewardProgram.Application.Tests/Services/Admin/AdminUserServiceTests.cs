@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Admin.Users;
@@ -28,6 +29,7 @@ public class AdminUserServiceTests : IDisposable
         _userRepo = Substitute.For<IUserRepository>();
         _fileStorage = Substitute.For<IFileStorageService>();
         _sut = new AdminUserService(_context, _userRepo, _fileStorage,
+            new MemoryCache(new MemoryCacheOptions()),
             Substitute.For<ILogger<AdminUserService>>());
     }
 

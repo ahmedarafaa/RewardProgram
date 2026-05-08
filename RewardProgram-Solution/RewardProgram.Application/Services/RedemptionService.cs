@@ -18,7 +18,11 @@ namespace RewardProgram.Application.Services;
 public class RedemptionService : IRedemptionService
 {
     private const string CashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
-    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromDays(14);
+
+    // Cash OTP lifetime: 72 hours. Previously 14 days, which combined with
+    // attempts-reset-on-resend gave attackers a multi-week brute-force window.
+    // 72h covers normal handover scheduling + weekend without enabling abuse.
+    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromHours(72);
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;

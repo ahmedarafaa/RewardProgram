@@ -59,6 +59,15 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.HasIndex(x => x.ReferenceId);
         builder.HasIndex(x => new { x.WalletId, x.CreatedAt });
 
+        // Filtered unique index: at most one InvitationReward per (Wallet, ReferenceId).
+        // Prevents double-credit if CreditInvitationRewardsAsync fires twice for the
+        // same invitee-inviter pair (e.g. retry after partial failure or concurrent
+        // approval triggers). Type=5 is WalletTransactionType.InvitationReward.
+        builder.HasIndex(x => new { x.WalletId, x.ReferenceId })
+            .IsUnique()
+            .HasFilter("[Type] = 5 AND [ReferenceId] IS NOT NULL AND [IsDeleted] = 0")
+            .HasDatabaseName("IX_WalletTransactions_InvitationReward_Unique");
+
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

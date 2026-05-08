@@ -100,6 +100,104 @@ public class AuthService : IAuthService
         ));
     }
 
+    public async Task<Result<ValidateRegistrationFieldsResponse>> ValidateRegistrationFieldsAsync(
+        ValidateRegistrationFieldsRequest request, CancellationToken ct = default)
+    {
+        var tokenResult = RegistrationVerificationToken.Validate(
+            request.VerificationToken, _verificationTokenOptions.HmacKey);
+        if (tokenResult.IsFailure)
+            return Result.Failure<ValidateRegistrationFieldsResponse>(tokenResult.Error);
+
+        var mobile = tokenResult.Value;
+
+        if (request.UserType != UserType.ShopOwner
+            && request.UserType != UserType.Seller
+            && request.UserType != UserType.Technician)
+        {
+            return Result.Failure<ValidateRegistrationFieldsResponse>(
+                new Error("Auth.InvalidUserType", "نوع المستخدم غير صالح", 400));
+        }
+
+        var errors = new List<ValidationFieldError>();
+
+        if (!string.IsNullOrWhiteSpace(request.InvitationCode))
+        {
+            var inviter = await _userRepository.Query()
+                .FirstOrDefaultAsync(u => u.InvitationCode == request.InvitationCode, ct);
+
+            if (inviter is null)
+                errors.Add(ToFieldError("invitationCode", InvitationErrors.InvalidInvitationCode));
+            else if (inviter.MobileNumber == mobile)
+                errors.Add(ToFieldError("invitationCode", InvitationErrors.SelfInvitation));
+            else if (inviter.RegistrationStatus != RegistrationStatus.Approved)
+                errors.Add(ToFieldError("invitationCode", InvitationErrors.InviterNotApproved));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CustomerCode) && request.UserType != UserType.Technician)
+        {
+            var erp = await _context.ErpCustomers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.CustomerCode == request.CustomerCode, ct);
+
+            if (erp is null)
+            {
+                errors.Add(ToFieldError("customerCode", AuthErrors.CustomerCodeNotFound));
+            }
+            else if (request.UserType == UserType.ShopOwner)
+            {
+                var alreadyOwned = await _context.ShopOwnerProfiles
+                    .AsNoTracking()
+                    .AnyAsync(p => p.CustomerCode == request.CustomerCode, ct);
+                if (alreadyOwned)
+                    errors.Add(ToFieldError("customerCode", AuthErrors.CustomerCodeAlreadyOwned));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CityId))
+        {
+            var city = await _context.Cities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive, ct);
+
+            if (city is null)
+                errors.Add(ToFieldError("cityId", AuthErrors.CityNotFound));
+            else if (string.IsNullOrEmpty(city.ApprovalSalesManId))
+                errors.Add(ToFieldError("cityId", AuthErrors.NoApprovalSalesMan));
+        }
+
+        var hasVat = !string.IsNullOrEmpty(request.VAT);
+        var hasCrn = !string.IsNullOrEmpty(request.CRN);
+        var hasAddr = !string.IsNullOrEmpty(request.ShortAddress);
+
+        if (hasVat || hasCrn || hasAddr)
+        {
+            var query = _context.ShopData.AsNoTracking().AsQueryable();
+            if (!string.IsNullOrEmpty(request.CustomerCode))
+                query = query.Where(sd => sd.CustomerCode != request.CustomerCode);
+
+            var conflicts = await query
+                .Where(sd => (hasVat && sd.VAT == request.VAT)
+                    || (hasCrn && sd.CRN == request.CRN)
+                    || (hasAddr && sd.ShortAddress == request.ShortAddress))
+                .Select(sd => new { sd.VAT, sd.CRN, sd.ShortAddress })
+                .ToListAsync(ct);
+
+            if (hasVat && conflicts.Any(c => c.VAT == request.VAT))
+                errors.Add(ToFieldError("vat", ShopDataErrors.VatAlreadyExists));
+            if (hasCrn && conflicts.Any(c => c.CRN == request.CRN))
+                errors.Add(ToFieldError("crn", ShopDataErrors.CrnAlreadyExists));
+            if (hasAddr && conflicts.Any(c => c.ShortAddress == request.ShortAddress))
+                errors.Add(ToFieldError("shortAddress", ShopDataErrors.ShortAddressAlreadyExists));
+        }
+
+        return Result.Success(new ValidateRegistrationFieldsResponse(
+            IsValid: errors.Count == 0,
+            Errors: errors));
+    }
+
+    private static ValidationFieldError ToFieldError(string field, Error error)
+        => new(field, error.Code, error.Description);
+
     public async Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
     {
         // 1. Validate verification token and extract mobile
@@ -553,7 +651,7 @@ public class AuthService : IAuthService
         if (user == null)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserNotFound);
 
-        if (user.IsDisabled)
+        if (user.IsDisabled || user.IsAccountDeleted)
             return Result.Failure<SendOtpResponse>(AuthErrors.UserDisabled);
 
         if (user.RegistrationStatus == RegistrationStatus.Rejected)
@@ -590,7 +688,7 @@ public class AuthService : IAuthService
         if (user == null)
             return Result.Failure<AuthResponse>(AuthErrors.UserNotFound);
 
-        if (user.IsDisabled)
+        if (user.IsDisabled || user.IsAccountDeleted)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
         if (user.RegistrationStatus == RegistrationStatus.Rejected)
@@ -651,7 +749,7 @@ public class AuthService : IAuthService
         if (token.IsExpired)
             return Result.Failure<AuthResponse>(AuthErrors.RefreshTokenExpired);
 
-        if (user.IsDisabled)
+        if (user.IsDisabled || user.IsAccountDeleted)
             return Result.Failure<AuthResponse>(AuthErrors.UserDisabled);
 
         if (user.RegistrationStatus == RegistrationStatus.Rejected)
