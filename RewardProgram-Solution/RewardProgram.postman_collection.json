@@ -288,6 +288,41 @@
           }
         },
         {
+          "name": "Validate Registration Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"userType\": 1,\n  \"invitationCode\": null,\n  \"customerCode\": \"10001\",\n  \"cityId\": null,\n  \"vat\": null,\n  \"crn\": null,\n  \"shortAddress\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/registration/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "registration",
+                "validate"
+              ]
+            },
+            "description": "Pre-submit validation for registration fields. Lets the mobile app validate per-screen (invitation code, customer code, city, shop fields) before the final submit, so users aren't bounced back from the last screen on a server-side check.\n\n**Auth**: requires the `verificationToken` returned by Verify Registration OTP.\n\n**userType**: 1 = ShopOwner, 2 = Seller, 3 = Technician. Other values rejected.\n\n**Field semantics**:\n- Only fields you send are validated; nulls/omitted fields are skipped.\n- `invitationCode`: must exist, must not be the caller's own code, inviter must be Approved.\n- `customerCode`: must exist in ErpCustomer; for ShopOwner also rejects if already owned by another ShopOwner. Ignored for Technician.\n- `cityId`: must exist, be active, and have an approval salesman.\n- `vat` / `crn` / `shortAddress`: rejected if used by another ShopData record (excludes the row matching the supplied `customerCode`).\n\n**Response**: 200 OK with `{ isValid: bool, errors: [{ field, code, message }] }` even when validation fails. Bad/expired token still returns ProblemDetails (400)."
+          },
+          "response": []
+        },
+        {
           "name": "Register Shop Owner",
           "event": [
             {

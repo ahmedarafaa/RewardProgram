@@ -9,6 +9,7 @@ public interface IAuthService
     // Registration — OTP-first flow
     Task<Result<SendOtpResponse>> SendRegistrationOtpAsync(SendOtpRequest request, CancellationToken ct = default);
     Task<Result<VerifyRegistrationOtpResponse>> VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequest request, CancellationToken ct = default);
+    Task<Result<ValidateRegistrationFieldsResponse>> ValidateRegistrationFieldsAsync(ValidateRegistrationFieldsRequest request, CancellationToken ct = default);
     Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default);
     Task<Result<RegisterResponse>> RegisterSellerAsync(RegisterSellerRequest request, CancellationToken ct = default);
     Task<Result<RegisterResponse>> RegisterTechnicianAsync(RegisterTechnicianRequest request, CancellationToken ct = default);

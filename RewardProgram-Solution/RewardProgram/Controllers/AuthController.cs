@@ -65,6 +65,19 @@ public class AuthController : ControllerBase
 
     #region Registration
 
+    [HttpPost("registration/validate")]
+    [ProducesResponseType(typeof(ValidateRegistrationFieldsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ValidateRegistrationFields(
+        [FromBody] ValidateRegistrationFieldsRequest request, CancellationToken ct)
+    {
+        var result = await _authService.ValidateRegistrationFieldsAsync(request, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+    }
+
     [HttpPost("register/shop-owner")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
