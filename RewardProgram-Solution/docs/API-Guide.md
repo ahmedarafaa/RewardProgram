@@ -457,11 +457,24 @@ void handleDeepLink(Uri uri) {
    - Redirects to App Store (iOS) or Play Store (Android)
    - After install and first launch, Firebase delivers the original deep link to the app
    - App extracts `ABC12345` from the deferred deep link and proceeds as Scenario 1
-5. **Option B — Fallback landing page:**
-   - `app.raedrewardapp.com/invite/ABC12345` serves a web page with:
-     - Store download buttons (App Store + Play Store)
-     - The invitation code displayed with a "Copy code" button
-   - User downloads the app, opens it, and pastes the code manually (less ideal but works)
+5. **Option B — Fallback landing page (implemented today):**
+   - `GET /invite/{code}` on the API serves a self-contained HTML page that:
+     - Detects platform via user-agent
+     - On Android: fires an `intent://` URL that opens the app if installed, else falls back to Play Store via `S.browser_fallback_url`
+     - On iOS: fires the custom-scheme deep link (`raedreward://invite/{code}`) and falls back to App Store after 1.5s if it doesn't resolve
+     - On desktop / fallback: shows the invitation code prominently with a Copy button + manual store-download buttons
+   - DNS for `app.raedrewardapp.com` must be configured to route `/invite/*` to the API host (CNAME or reverse proxy). Until that's set up, the page is reachable directly via the API host (e.g. `https://staging.raedrewardapp.com/invite/ABC12345`).
+   - Configure store URLs and Android package name via the `Invitation` section in `appsettings.json` (or env-var overrides):
+     ```json
+     "Invitation": {
+       "ShareBaseUrl": "https://app.raedrewardapp.com/invite/",
+       "IosAppStoreUrl": "https://apps.apple.com/app/idXXXXXXXXX",
+       "AndroidPlayStoreUrl": "https://play.google.com/store/apps/details?id=com.raed.rewardapp",
+       "AndroidPackageName": "com.raed.rewardapp",
+       "DeepLinkScheme": "raedreward://invite/"
+     }
+     ```
+   - Once Universal Links / App Links are configured (AASA + assetlinks.json hosted at the brand domain), the page becomes a no-op pass-through for users who have the app installed.
 
 ```
 ┌─────────────────────────────────────────────────┐

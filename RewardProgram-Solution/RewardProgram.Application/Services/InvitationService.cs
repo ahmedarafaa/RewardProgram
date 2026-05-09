@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NanoidDotNet;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Invitation;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
@@ -15,22 +17,24 @@ public class InvitationService : IInvitationService
     private const string InviteAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private const int InviteCodeLength = 8;
     private const int MaxRewardedInvitations = 20;
-    private const string ShareBaseUrl = "https://app.raedrewardapp.com/invite/";
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
+    private readonly InvitationOptions _options;
     private readonly ILogger<InvitationService> _logger;
 
     public InvitationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         INotificationService notificationService,
+        IOptions<InvitationOptions> options,
         ILogger<InvitationService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _notificationService = notificationService;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -48,7 +52,7 @@ public class InvitationService : IInvitationService
             await _userRepository.UpdateAsync(user);
         }
 
-        var shareLink = $"{ShareBaseUrl}{user.InvitationCode}";
+        var shareLink = $"{_options.ShareBaseUrl}{user.InvitationCode}";
 
         // Stats: count users who were invited by this user
         var invitedUsers = await _userRepository.Query()

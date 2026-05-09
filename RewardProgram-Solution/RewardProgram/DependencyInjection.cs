@@ -80,6 +80,7 @@ public static class DependencyInjection
 
         // Configure Twilio Options
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
+        services.Configure<InvitationOptions>(configuration.GetSection(InvitationOptions.SectionName));
 
         // Configure Verification Token Options (derived from JWT key to avoid key reuse)
         var jwtKey = configuration.GetSection(JwtOptions.SectionName)["Key"]!;

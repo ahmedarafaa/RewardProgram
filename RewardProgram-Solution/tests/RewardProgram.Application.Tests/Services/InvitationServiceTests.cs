@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Services;
 using RewardProgram.Application.Tests.TestHelpers;
@@ -25,8 +27,9 @@ public class InvitationServiceTests : IDisposable
         _userRepo = Substitute.For<IUserRepository>();
         _notificationService = Substitute.For<INotificationService>();
 
+        var options = Options.Create(new InvitationOptions());
         _sut = new InvitationService(
-            _context, _userRepo, _notificationService,
+            _context, _userRepo, _notificationService, options,
             Substitute.For<ILogger<InvitationService>>());
     }
 
