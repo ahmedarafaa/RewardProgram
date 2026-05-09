@@ -75,4 +75,7 @@ public static class AdminUserErrors
 
     public static readonly Error ConcurrencyConflict =
         new("Admin.ConcurrencyConflict", "تم تعديل البيانات من مستخدم آخر، حاول مرة أخرى", 409);
+
+    public static readonly Error AccountNotDeleted =
+        new("Admin.AccountNotDeleted", "الحساب غير محذوف، لا يمكن استعادته", 400);
 }

@@ -16,5 +16,9 @@ public record AdminUserListItemResponse(
     string? CityName,
     string? CustomerCode,
     string? StoreName,
-    IReadOnlyList<string> Roles
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<NamedRef> OwnedCities,
+    NamedRef? ManagedRegion
 );
+
+public record NamedRef(string Id, string NameAr);

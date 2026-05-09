@@ -1038,6 +1038,34 @@
 						},
 						"description": "Soft-delete a ZoneManager. If the ZM manages a region, newZoneManagerId is MANDATORY and must point to another ZoneManager. If the ZM has no region (idle), newZoneManagerId can be null."
 					}
+				},
+				{
+					"name": "Restore Account",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/:userId/restore",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								":userId",
+								"restore"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "ID of a previously soft-deleted user"
+								}
+							]
+						},
+						"description": "Restore a previously soft-deleted account. Clears `IsAccountDeleted`, `AccountDeletedAt`, and `IsDisabled`. The user logs in normally with their existing mobile number — which is exactly why we still block creating a new account with that mobile while the original is in the deleted state.\n\nFor SalesMan / ZoneManager: the account comes back **idle** — cities and regions were reassigned at delete time and are not automatically returned. Use `POST cities/reassign` or `POST regions/reassign` if you want to give them ownership again.\n\nFails with 400 `Admin.AccountNotDeleted` if the user is not in a deleted state, 403 `Admin.UserIsSystemAdmin` for the system admin account, or 404 if the user doesn't exist."
+					}
 				}
 			]
 		},

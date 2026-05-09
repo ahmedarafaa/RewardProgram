@@ -33,4 +33,7 @@ public interface IAdminUserService
     // Delete SM/ZM
     Task<Result> DeleteSalesManAsync(string userId, AdminDeleteSalesManRequest request, string adminUserId, CancellationToken ct = default);
     Task<Result> DeleteZoneManagerAsync(string userId, AdminDeleteZoneManagerRequest request, string adminUserId, CancellationToken ct = default);
+
+    // Restore deleted account
+    Task<Result> RestoreUserAsync(string userId, string adminUserId, CancellationToken ct = default);
 }

@@ -229,4 +229,20 @@ public class AdminUserController : ControllerBase
     }
 
     #endregion
+
+    #region Restore Account
+
+    [HttpPost("{id}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RestoreUser(string id, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.RestoreUserAsync(id, adminId, ct);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    #endregion
 }

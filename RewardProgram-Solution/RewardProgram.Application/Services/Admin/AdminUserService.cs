@@ -703,6 +703,32 @@ public class AdminUserService : IAdminUserService
                 .ToDictionaryAsync(sd => sd.CustomerCode, sd => sd.StoreName, ct)
             : [];
 
+        // Bulk-load owned cities (for SalesMan rows) and managed regions (for ZoneManager rows).
+        // Source of truth: City.ApprovalSalesManId / Region.ZoneManagerId — NOT the user's home address.
+        var pageSmIds = users.Where(u => smRoleUserIds.Contains(u.Id)).Select(u => u.Id).ToList();
+        var pageZmIds = users.Where(u => zmRoleUserIds.Contains(u.Id)).Select(u => u.Id).ToList();
+
+        var ownedCitiesBySm = pageSmIds.Count > 0
+            ? (await _context.Cities
+                    .Where(c => c.ApprovalSalesManId != null && pageSmIds.Contains(c.ApprovalSalesManId))
+                    .Select(c => new { c.Id, c.NameAr, SmId = c.ApprovalSalesManId! })
+                    .ToListAsync(ct))
+                .GroupBy(x => x.SmId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<NamedRef>)g
+                        .OrderBy(x => x.NameAr)
+                        .Select(x => new NamedRef(x.Id, x.NameAr))
+                        .ToList())
+            : [];
+
+        var managedRegionByZm = pageZmIds.Count > 0
+            ? await _context.Regions
+                .Where(r => r.ZoneManagerId != null && pageZmIds.Contains(r.ZoneManagerId))
+                .Select(r => new { r.Id, r.NameAr, ZmId = r.ZoneManagerId! })
+                .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr), ct)
+            : [];
+
         // Map results
         var items = users.Select(u =>
         {
@@ -735,10 +761,16 @@ public class AdminUserService : IAdminUserService
             if (smRoleUserIds.Contains(u.Id)) roles.Add(UserRoles.SalesMan);
             if (roles.Count == 0) roles.Add(u.UserType.ToString());
 
+            var ownedCities = ownedCitiesBySm.TryGetValue(u.Id, out var oc)
+                ? oc
+                : (IReadOnlyList<NamedRef>)Array.Empty<NamedRef>();
+            managedRegionByZm.TryGetValue(u.Id, out var managedRegion);
+
             return new AdminUserListItemResponse(
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.RegistrationStatus,
                 u.IsDisabled, u.IsAccountDeleted, u.AccountDeletedAt,
-                u.CreatedAt, regionName, cityName, customerCode, storeName, roles);
+                u.CreatedAt, regionName, cityName, customerCode, storeName, roles,
+                ownedCities, managedRegion);
         }).ToList();
 
         return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));
@@ -1261,6 +1293,46 @@ public class AdminUserService : IAdminUserService
             _logger.LogError(ex, "Admin: Failed to delete ZoneManager {UserId}", userId);
             return Result.Failure(AdminUserErrors.UpdateUserFailed);
         }
+    }
+
+    #endregion
+
+    #region Restore Account
+
+    public async Task<Result> RestoreUserAsync(string userId, string adminUserId, CancellationToken ct = default)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user == null)
+            return Result.Failure(AdminUserErrors.UserNotFound);
+
+        if (user.UserType == UserType.SystemAdmin)
+            return Result.Failure(AdminUserErrors.UserIsSystemAdmin);
+
+        if (!user.IsAccountDeleted)
+            return Result.Failure(AdminUserErrors.AccountNotDeleted);
+
+        // Restore as idle: cities/regions were reassigned at delete time and are NOT
+        // automatically returned. Admin can reassign via existing endpoints if needed.
+        user.IsAccountDeleted = false;
+        user.AccountDeletedAt = null;
+        user.IsDisabled = false;
+
+        var updateResult = await _userRepository.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            _logger.LogError("Admin: Failed to restore user {UserId}: {Errors}",
+                userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+            return Result.Failure(AdminUserErrors.UpdateUserFailed);
+        }
+
+        // Role membership cache may need refresh — a restored SM/ZM is once again
+        // an active member of their role from the admin list's perspective.
+        InvalidateRoleMembershipCache();
+
+        _logger.LogInformation("Admin {AdminId} restored user {UserId} (type {UserType})",
+            adminUserId, userId, user.UserType);
+
+        return Result.Success();
     }
 
     #endregion
