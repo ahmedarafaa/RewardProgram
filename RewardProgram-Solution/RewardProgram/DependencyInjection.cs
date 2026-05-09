@@ -117,7 +117,6 @@ public static class DependencyInjection
         services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
         ValidateFirebaseConfig(configuration);
         services.AddSingleton<IFirebaseMessagingService, FirebaseMessagingService>();
-        services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
         services.AddHostedService<PointsExpiryBackgroundService>();
         services.AddHostedService<OtpCleanupBackgroundService>();

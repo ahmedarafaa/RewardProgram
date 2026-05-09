@@ -400,16 +400,16 @@ GET /api/invitation
 {
   "invitationCode": "ABC12345",
   "shareLink": "https://app.raedrewardapp.com/invite/ABC12345",
-  "qrCodeBase64": "<base64 BMP image>",
   "totalInvitations": 5,
   "approvedInvitations": 3,
   "totalPointsEarned": 300
 }
 ```
 
-**Display QR code:**
+**Display QR code (render client-side from `shareLink`):**
 ```dart
-Image.memory(base64Decode(qrCodeBase64))
+// pubspec.yaml: qr_flutter: ^4.x
+QrImageView(data: response.shareLink, size: 240)
 ```
 
 **Business rules:**
@@ -742,7 +742,7 @@ Response wrapper:
 1. **OTP flow**: Always validate all fields client-side before sending registration request — OTP is consumed on validation, so a validation error wastes the OTP.
 2. **FormData uploads**: ShopOwner and Seller registration use `multipart/form-data`. Nested `nationalAddress` fields should be sent as flat keys: `nationalAddress.buildingNumber`, `nationalAddress.street`, etc.
 3. **Token storage**: Store JWT and refresh token securely (e.g., `flutter_secure_storage`). Refresh proactively before expiry.
-4. **QR code display**: `qrCodeBase64` is a raw base64-encoded BMP — use `Image.memory(base64Decode(qrCodeBase64))`.
+4. **QR code display**: render client-side from `shareLink` with `qr_flutter` (e.g. `QrImageView(data: shareLink, size: 240)`). The backend no longer ships a QR image.
 5. **Wallet zero state**: New users with no scans have no wallet — balance endpoints return zeros. Dashboard handles this gracefully.
 6. **SAR conversion**: The SAR rate is set by admin and stored per transaction at earn time. Displayed SAR values reflect the rate at time of earning, not the current rate.
 7. **Arabic error messages**: All validation error messages are in Arabic — display them directly to the user.

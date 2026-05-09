@@ -1175,7 +1175,7 @@
                 "invitation"
               ]
             },
-            "description": "Get your invitation code, QR code (base64 BMP), shareable link, and invitation stats.\n\nLazy-generates the invitation code on first call if missing.\n\n**Response:**\n- `invitationCode`: 8-char alphanumeric code\n- `shareLink`: Full URL for sharing (e.g. https://app.raedrewardapp.com/invite/ABC12345)\n- `qrCodeBase64`: Base64-encoded BMP image of the QR code\n- `totalInvitations`: Total users who registered with your code\n- `approvedInvitations`: How many of those were approved\n- `totalPointsEarned`: Total points earned from invitation rewards\n\nRequires ShopOwner, Seller, or Technician JWT.",
+            "description": "Get your invitation code, shareable link, and invitation stats.\n\nLazy-generates the invitation code on first call if missing. The QR code is rendered client-side from `shareLink` (e.g. `qr_flutter`).\n\n**Response:**\n- `invitationCode`: 8-char alphanumeric code\n- `shareLink`: Full URL for sharing (e.g. https://app.raedrewardapp.com/invite/ABC12345)\n- `totalInvitations`: Total users who registered with your code\n- `approvedInvitations`: How many of those were approved\n- `totalPointsEarned`: Total points earned from invitation rewards\n\nRequires ShopOwner, Seller, or Technician JWT.",
             "auth": {
               "type": "bearer",
               "bearer": [

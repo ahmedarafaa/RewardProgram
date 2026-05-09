@@ -16,7 +16,6 @@ public class InvitationServiceTests : IDisposable
 {
     private readonly TestDbContext _context;
     private readonly IUserRepository _userRepo;
-    private readonly IQrCodeGenerator _qrCodeGenerator;
     private readonly INotificationService _notificationService;
     private readonly InvitationService _sut;
 
@@ -24,14 +23,10 @@ public class InvitationServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _qrCodeGenerator = Substitute.For<IQrCodeGenerator>();
         _notificationService = Substitute.For<INotificationService>();
 
-        _qrCodeGenerator.Generate(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>())
-            .Returns([0x01, 0x02]);
-
         _sut = new InvitationService(
-            _context, _userRepo, _qrCodeGenerator, _notificationService,
+            _context, _userRepo, _notificationService,
             Substitute.For<ILogger<InvitationService>>());
     }
 
@@ -66,7 +61,6 @@ public class InvitationServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.InvitationCode.Should().Be("ABCD1234");
         result.Value.ShareLink.Should().Contain("ABCD1234");
-        result.Value.QrCodeBase64.Should().NotBeNullOrEmpty();
     }
 
     [Fact]

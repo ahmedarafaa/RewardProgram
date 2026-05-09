@@ -19,20 +19,17 @@ public class InvitationService : IInvitationService
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
-    private readonly IQrCodeGenerator _qrCodeGenerator;
     private readonly INotificationService _notificationService;
     private readonly ILogger<InvitationService> _logger;
 
     public InvitationService(
         IApplicationDbContext context,
         IUserRepository userRepository,
-        IQrCodeGenerator qrCodeGenerator,
         INotificationService notificationService,
         ILogger<InvitationService> logger)
     {
         _context = context;
         _userRepository = userRepository;
-        _qrCodeGenerator = qrCodeGenerator;
         _notificationService = notificationService;
         _logger = logger;
     }
@@ -52,8 +49,6 @@ public class InvitationService : IInvitationService
         }
 
         var shareLink = $"{ShareBaseUrl}{user.InvitationCode}";
-        var qrBytes = _qrCodeGenerator.Generate(shareLink);
-        var qrBase64 = Convert.ToBase64String(qrBytes);
 
         // Stats: count users who were invited by this user
         var invitedUsers = await _userRepository.Query()
@@ -78,7 +73,6 @@ public class InvitationService : IInvitationService
         return Result.Success(new InvitationInfoResponse(
             user.InvitationCode,
             shareLink,
-            qrBase64,
             totalInvitations,
             approvedInvitations,
             totalPointsEarned
