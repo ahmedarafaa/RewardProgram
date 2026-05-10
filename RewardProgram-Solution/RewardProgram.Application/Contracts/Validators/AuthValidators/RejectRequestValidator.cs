@@ -13,6 +13,8 @@ public class RejectRequestValidator : AbstractValidator<RejectRequest>
 
         RuleFor(x => x.Reason)
             .NotEmpty().WithMessage(L["Reason.NotEmpty"])
+            .Must(r => !string.IsNullOrWhiteSpace(r)).WithMessage(L["Reason.NotEmpty"])
+            .MinimumLength(3).WithMessage(L["Reason.MinLength"])
             .MaximumLength(500).WithMessage(L["Reason.MaxLength"]);
     }
 }

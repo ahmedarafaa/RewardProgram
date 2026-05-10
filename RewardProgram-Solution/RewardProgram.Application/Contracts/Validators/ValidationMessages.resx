@@ -72,6 +72,7 @@
   <data name="UserId.NotEmpty"><value>معرف المستخدم مطلوب</value></data>
   <data name="Reason.NotEmpty"><value>سبب الرفض مطلوب</value></data>
   <data name="Reason.MaxLength"><value>سبب الرفض يجب ألا يتجاوز 500 حرف</value></data>
+  <data name="Reason.MinLength"><value>سبب الرفض يجب أن يكون 3 أحرف على الأقل</value></data>
 
   <!-- Product -->
   <data name="Product.Name.NotEmpty"><value>اسم المنتج مطلوب</value></data>

@@ -72,6 +72,7 @@
   <data name="UserId.NotEmpty"><value>User ID is required</value></data>
   <data name="Reason.NotEmpty"><value>Rejection reason is required</value></data>
   <data name="Reason.MaxLength"><value>Rejection reason must not exceed 500 characters</value></data>
+  <data name="Reason.MinLength"><value>Rejection reason must be at least 3 characters</value></data>
 
   <!-- Product -->
   <data name="Product.Name.NotEmpty"><value>Product name is required</value></data>
