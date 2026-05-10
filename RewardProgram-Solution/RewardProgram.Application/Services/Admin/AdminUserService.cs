@@ -69,8 +69,11 @@ public class AdminUserService : IAdminUserService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
+        var existingByMobile = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existingByMobile is not null)
+            return Result.Failure<AdminAddUserResponse>(existingByMobile.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
 
         var cityIds = request.CityIds ?? [];
         List<Domain.Entities.Users.City> cities = [];
@@ -168,8 +171,11 @@ public class AdminUserService : IAdminUserService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
+        var existingByMobile = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existingByMobile is not null)
+            return Result.Failure<AdminAddUserResponse>(existingByMobile.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
 
         Domain.Entities.Users.Region? region = null;
 
@@ -247,8 +253,11 @@ public class AdminUserService : IAdminUserService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
+        var existingByMobile = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existingByMobile is not null)
+            return Result.Failure<AdminAddUserResponse>(existingByMobile.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
 
         var erpExists = await _context.ErpCustomers
             .AnyAsync(e => e.CustomerCode == request.CustomerCode, ct);
@@ -381,8 +390,11 @@ public class AdminUserService : IAdminUserService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
+        var existingByMobile = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existingByMobile is not null)
+            return Result.Failure<AdminAddUserResponse>(existingByMobile.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
 
         var erpExists = await _context.ErpCustomers
             .AnyAsync(e => e.CustomerCode == request.CustomerCode, ct);
@@ -509,8 +521,11 @@ public class AdminUserService : IAdminUserService
     {
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
-            return Result.Failure<AdminAddUserResponse>(AdminUserErrors.MobileAlreadyExists);
+        var existingByMobile = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existingByMobile is not null)
+            return Result.Failure<AdminAddUserResponse>(existingByMobile.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
 
         var city = await _context.Cities
             .FirstOrDefaultAsync(c => c.Id == request.CityId && c.IsActive && !c.IsDeleted, ct);
@@ -650,6 +665,8 @@ public class AdminUserService : IAdminUserService
                 u.IsDisabled,
                 u.IsAccountDeleted,
                 u.AccountDeletedAt,
+                u.DeletedByAdminId,
+                u.RestoredAt,
                 u.CreatedAt,
                 CityId = u.NationalAddress != null ? u.NationalAddress.CityId : null
             })
@@ -708,9 +725,13 @@ public class AdminUserService : IAdminUserService
         var pageSmIds = users.Where(u => smRoleUserIds.Contains(u.Id)).Select(u => u.Id).ToList();
         var pageZmIds = users.Where(u => zmRoleUserIds.Contains(u.Id)).Select(u => u.Id).ToList();
 
+        // Only count active, non-soft-deleted cities/regions as ownership — a
+        // deactivated/deleted territory shouldn't surface as the SM/ZM's responsibility.
         var ownedCitiesBySm = pageSmIds.Count > 0
             ? (await _context.Cities
-                    .Where(c => c.ApprovalSalesManId != null && pageSmIds.Contains(c.ApprovalSalesManId))
+                    .Where(c => c.IsActive && !c.IsDeleted
+                        && c.ApprovalSalesManId != null
+                        && pageSmIds.Contains(c.ApprovalSalesManId))
                     .Select(c => new { c.Id, c.NameAr, SmId = c.ApprovalSalesManId! })
                     .ToListAsync(ct))
                 .GroupBy(x => x.SmId)
@@ -724,7 +745,9 @@ public class AdminUserService : IAdminUserService
 
         var managedRegionByZm = pageZmIds.Count > 0
             ? await _context.Regions
-                .Where(r => r.ZoneManagerId != null && pageZmIds.Contains(r.ZoneManagerId))
+                .Where(r => r.IsActive && !r.IsDeleted
+                    && r.ZoneManagerId != null
+                    && pageZmIds.Contains(r.ZoneManagerId))
                 .Select(r => new { r.Id, r.NameAr, ZmId = r.ZoneManagerId! })
                 .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr), ct)
             : [];
@@ -766,9 +789,17 @@ public class AdminUserService : IAdminUserService
                 : (IReadOnlyList<NamedRef>)Array.Empty<NamedRef>();
             managedRegionByZm.TryGetValue(u.Id, out var managedRegion);
 
+            // DeletionSource is derived: only meaningful when the row is currently
+            // deleted. For never-deleted users we emit null; the frontend can rely
+            // on IsAccountDeleted+DeletionSource together for restore decisions.
+            string? deletionSource = u.IsAccountDeleted
+                ? (u.DeletedByAdminId is null ? "Self" : "Admin")
+                : null;
+
             return new AdminUserListItemResponse(
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.RegistrationStatus,
                 u.IsDisabled, u.IsAccountDeleted, u.AccountDeletedAt,
+                deletionSource, u.RestoredAt,
                 u.CreatedAt, regionName, cityName, customerCode, storeName, roles,
                 ownedCities, managedRegion);
         }).ToList();
@@ -1170,6 +1201,9 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled = true;
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
+            user.DeletedByAdminId = adminUserId;
+            user.RestoredAt = null;
+            user.RestoredByAdminId = null;
             user.FcmToken = null;
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1257,6 +1291,9 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled = true;
             user.IsAccountDeleted = true;
             user.AccountDeletedAt = DateTime.UtcNow;
+            user.DeletedByAdminId = adminUserId;
+            user.RestoredAt = null;
+            user.RestoredByAdminId = null;
             user.FcmToken = null;
 
             var updateResult = await _userRepository.UpdateAsync(user);
@@ -1313,9 +1350,14 @@ public class AdminUserService : IAdminUserService
 
         // Restore as idle: cities/regions were reassigned at delete time and are NOT
         // automatically returned. Admin can reassign via existing endpoints if needed.
+        var wasSelfDeleted = user.DeletedByAdminId is null;
+
         user.IsAccountDeleted = false;
         user.AccountDeletedAt = null;
+        user.DeletedByAdminId = null;
         user.IsDisabled = false;
+        user.RestoredAt = DateTime.UtcNow;
+        user.RestoredByAdminId = adminUserId;
 
         var updateResult = await _userRepository.UpdateAsync(user);
         if (!updateResult.Succeeded)
@@ -1329,8 +1371,9 @@ public class AdminUserService : IAdminUserService
         // an active member of their role from the admin list's perspective.
         InvalidateRoleMembershipCache();
 
-        _logger.LogInformation("Admin {AdminId} restored user {UserId} (type {UserType})",
-            adminUserId, userId, user.UserType);
+        _logger.LogInformation(
+            "Admin {AdminId} restored user {UserId} (type {UserType}, source {DeletionSource})",
+            adminUserId, userId, user.UserType, wasSelfDeleted ? "Self" : "Admin");
 
         return Result.Success();
     }

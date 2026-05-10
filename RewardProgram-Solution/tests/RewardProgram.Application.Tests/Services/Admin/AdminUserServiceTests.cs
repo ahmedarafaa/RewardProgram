@@ -206,7 +206,8 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddSalesMan_DuplicateMobile_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ApplicationUser { Id = "existing", Name = "Existing", MobileNumber = "+966500000099" });
 
         var result = await _sut.AddSalesManAsync(
             new AdminAddSalesManRequest("Test", "0500000001", ["city1"]), "admin1");
@@ -218,7 +219,7 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddSalesMan_InvalidCities_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var result = await _sut.AddSalesManAsync(
             new AdminAddSalesManRequest("Test", "0500000001", ["nonexistent"]), "admin1");
@@ -232,7 +233,8 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddZoneManager_DuplicateMobile_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ApplicationUser { Id = "existing", Name = "Existing", MobileNumber = "+966500000099" });
 
         var result = await _sut.AddZoneManagerAsync(
             new AdminAddZoneManagerRequest("Test", "0500000001", "region1"), "admin1");
@@ -244,7 +246,7 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddZoneManager_RegionNotFound_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var result = await _sut.AddZoneManagerAsync(
             new AdminAddZoneManagerRequest("Test", "0500000001", "bad-region"), "admin1");
@@ -256,7 +258,7 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddZoneManager_RegionAlreadyHasManager_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var region = new Region
         {
@@ -278,7 +280,8 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddTechnician_DuplicateMobile_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ApplicationUser { Id = "existing", Name = "Existing", MobileNumber = "+966500000099" });
 
         var result = await _sut.AddTechnicianAsync(
             new AdminAddTechnicianRequest("Test", "0500000001", "city1", "12345", "Olaya"), "admin1");
@@ -290,7 +293,7 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddTechnician_CityNotFound_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var result = await _sut.AddTechnicianAsync(
             new AdminAddTechnicianRequest("Test", "0500000001", "bad-city", "12345", "Olaya"), "admin1");
@@ -302,7 +305,7 @@ public class AdminUserServiceTests : IDisposable
     [Fact]
     public async Task AddTechnician_CityNoSalesMan_ShouldFail()
     {
-        _userRepo.MobileExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
 
         var region = new Region { NameAr = "R", NameEn = "R", IsActive = true };
         _context.Regions.Add(region);
@@ -321,5 +324,78 @@ public class AdminUserServiceTests : IDisposable
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(AdminUserErrors.NoApprovalSalesMan);
+    }
+
+    // ── RestoreUser ──
+
+    [Fact]
+    public async Task RestoreUser_UserNotFound_ShouldFail()
+    {
+        _userRepo.FindByIdAsync("bad", Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
+
+        var result = await _sut.RestoreUserAsync("bad", "admin1");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(AdminUserErrors.UserNotFound);
+    }
+
+    [Fact]
+    public async Task RestoreUser_SystemAdmin_ShouldFail()
+    {
+        var user = new ApplicationUser
+        {
+            Id = "admin", Name = "Admin", MobileNumber = "+966500000001",
+            UserType = UserType.SystemAdmin, IsAccountDeleted = true
+        };
+        _userRepo.FindByIdAsync("admin", Arg.Any<CancellationToken>()).Returns(user);
+
+        var result = await _sut.RestoreUserAsync("admin", "admin1");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(AdminUserErrors.UserIsSystemAdmin);
+    }
+
+    [Fact]
+    public async Task RestoreUser_NotDeleted_ShouldFail()
+    {
+        var user = new ApplicationUser
+        {
+            Id = "u1", Name = "Test", MobileNumber = "+966500000001",
+            UserType = UserType.SalesMan, IsAccountDeleted = false
+        };
+        _userRepo.FindByIdAsync("u1", Arg.Any<CancellationToken>()).Returns(user);
+
+        var result = await _sut.RestoreUserAsync("u1", "admin1");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(AdminUserErrors.AccountNotDeleted);
+    }
+
+    [Fact]
+    public async Task RestoreUser_Valid_ShouldClearDeletionAndStampRestoreFields()
+    {
+        var deletedAt = DateTime.UtcNow.AddDays(-3);
+        var user = new ApplicationUser
+        {
+            Id = "u1", Name = "Test", MobileNumber = "+966500000001",
+            UserType = UserType.SalesMan,
+            IsDisabled = true,
+            IsAccountDeleted = true,
+            AccountDeletedAt = deletedAt,
+            DeletedByAdminId = "previous-admin"
+        };
+        _userRepo.FindByIdAsync("u1", Arg.Any<CancellationToken>()).Returns(user);
+        _userRepo.UpdateAsync(user).Returns(IdentityResult.Success);
+
+        var result = await _sut.RestoreUserAsync("u1", "admin1");
+
+        result.IsSuccess.Should().BeTrue();
+        user.IsAccountDeleted.Should().BeFalse();
+        user.AccountDeletedAt.Should().BeNull();
+        user.DeletedByAdminId.Should().BeNull();
+        user.IsDisabled.Should().BeFalse();
+        user.RestoredByAdminId.Should().Be("admin1");
+        user.RestoredAt.Should().NotBeNull();
+        user.RestoredAt!.Value.Should().BeAfter(deletedAt);
     }
 }

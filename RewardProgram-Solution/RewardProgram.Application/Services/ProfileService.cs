@@ -123,10 +123,14 @@ public class ProfileService : IProfileService
         if (hasPendingRedemptions)
             return Result.Failure(ProfileErrors.HasPendingRedemptions);
 
-        // Disable account and mark as deleted
+        // Disable account and mark as deleted. DeletedByAdminId stays null to mark
+        // this as a self-deletion (admin restore can flag this for confirmation).
         user.IsDisabled = true;
         user.IsAccountDeleted = true;
         user.AccountDeletedAt = DateTime.UtcNow;
+        user.DeletedByAdminId = null;
+        user.RestoredAt = null;
+        user.RestoredByAdminId = null;
         user.FcmToken = null;
 
         // Null InvitationCode so future invitees can't register pointing to a

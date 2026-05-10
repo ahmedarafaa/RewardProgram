@@ -7,6 +7,11 @@ public static class AdminUserErrors
     public static readonly Error MobileAlreadyExists =
         new("Admin.MobileAlreadyExists", "رقم الجوال مسجل مسبقاً", 409);
 
+    public static readonly Error MobileBelongsToDeletedAccount =
+        new("Admin.MobileBelongsToDeletedAccount",
+            "رقم الجوال مرتبط بحساب محذوف — يمكن استعادته بدلاً من إنشاء حساب جديد",
+            409);
+
     public static readonly Error CityNotFound =
         new("Admin.CityNotFound", "المدينة غير موجودة", 400);
 

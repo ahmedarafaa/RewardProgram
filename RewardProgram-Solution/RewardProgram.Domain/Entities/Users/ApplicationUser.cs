@@ -40,6 +40,10 @@ public class ApplicationUser : IdentityUser
     public string? InvitationCode { get; set; }
     public string? InvitedByUserId { get; set; }
     public ApplicationUser? InvitedByUser { get; set; }
+    // Number of invitation rewards already credited to this user as inviter.
+    // Guarded by an atomic UPDATE with a `< MaxRewardedInvitations` predicate
+    // to serialize cap enforcement without a table lock.
+    public int InviterRewardCount { get; set; }
 
     // === FCM Push Notifications ===
     public string? FcmToken { get; set; }
@@ -47,6 +51,13 @@ public class ApplicationUser : IdentityUser
     // === Account Deletion ===
     public bool IsAccountDeleted { get; set; }
     public DateTime? AccountDeletedAt { get; set; }
+    // Null = self-deleted via the public delete-account endpoint.
+    // Set = soft-deleted by an admin (the admin's user-id is recorded for audit).
+    // Distinction matters because admin restore should treat the two cases differently
+    // — see `AdminUserService.RestoreUserAsync` and the front-end "self-deleted" hint.
+    public string? DeletedByAdminId { get; set; }
+    public DateTime? RestoredAt { get; set; }
+    public string? RestoredByAdminId { get; set; }
 }
 
 [Owned]
