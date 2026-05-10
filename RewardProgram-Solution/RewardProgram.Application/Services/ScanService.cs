@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -20,20 +19,17 @@ public class ScanService : IScanService
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
     private readonly ILogger<ScanService> _logger;
-    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public ScanService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         INotificationService notificationService,
-        ILogger<ScanService> logger,
-        IStringLocalizer<ErrorMessages> localizer)
+        ILogger<ScanService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _notificationService = notificationService;
         _logger = logger;
-        _localizer = localizer;
     }
 
     private const int MaxRetries = 2;
@@ -113,7 +109,6 @@ public class ScanService : IScanService
             decimal pointsForScanner;
             decimal? deferredPointsForFirstScanner = null;
             string? firstScannerUserId = null;
-            string message;
 
             // 7. Calculate points based on scan order and role
             switch (barcode.Status)
@@ -122,14 +117,12 @@ public class ScanService : IScanService
                     // Seller scans first → 50%
                     pointsForScanner = pointValue / 2m;
                     barcode.Status = BarcodeStatus.SellerScanned;
-                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.Available when scannerRole == ScannerRole.Technician:
                     // Technician scans first → 100%
                     pointsForScanner = pointValue;
                     barcode.Status = BarcodeStatus.TechnicianScanned;
-                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.SellerScanned when scannerRole == ScannerRole.Technician:
@@ -139,14 +132,12 @@ public class ScanService : IScanService
                     deferredPointsForFirstScanner = pointValue - sellerScanRecord.PointsAwarded;
                     firstScannerUserId = sellerScanRecord.UserId;
                     barcode.Status = BarcodeStatus.Consumed;
-                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.TechnicianScanned when scannerRole == ScannerRole.Seller:
                     // Seller scans second → 100% directly
                     pointsForScanner = pointValue;
                     barcode.Status = BarcodeStatus.Consumed;
-                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 default:
@@ -235,8 +226,8 @@ public class ScanService : IScanService
                 barcode.Product.Name,
                 pointsForScanner,
                 scannerWallet.Balance,
-                message,
-                barcode.Id
+                barcode.Id,
+                barcode.Code
             ));
         }
         catch (DbUpdateConcurrencyException)

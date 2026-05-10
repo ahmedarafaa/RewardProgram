@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Scan;
@@ -25,7 +24,7 @@ public class ScanServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _sut = new ScanService(_context, _userRepo, Substitute.For<INotificationService>(), Substitute.For<ILogger<ScanService>>(), new StubLocalizer<ErrorMessages>());
+        _sut = new ScanService(_context, _userRepo, Substitute.For<INotificationService>(), Substitute.For<ILogger<ScanService>>());
     }
 
     public void Dispose() => _context.Dispose();

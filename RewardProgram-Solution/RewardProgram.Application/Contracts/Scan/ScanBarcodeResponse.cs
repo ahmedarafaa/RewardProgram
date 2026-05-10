@@ -4,5 +4,6 @@ public record ScanBarcodeResponse(
     string ProductName,
     decimal PointsAwarded,
     decimal NewBalance,
-    string Message
+    string BarcodeId,
+    string BarcodeCode
 );
