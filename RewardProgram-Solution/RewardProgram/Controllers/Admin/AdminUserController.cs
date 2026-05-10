@@ -100,6 +100,15 @@ public class AdminUserController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(AdminUserDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetUser(string id, CancellationToken ct)
+    {
+        var result = await _adminUserService.GetUserByIdAsync(id, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
     #endregion
 
     #region Toggle Status

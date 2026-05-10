@@ -16,6 +16,9 @@ public interface IAdminUserService
     // List Users
     Task<Result<PaginatedResult<AdminUserListItemResponse>>> ListUsersAsync(AdminUserListQuery query, CancellationToken ct = default);
 
+    // Get user details (single user, full info — used by Edit form, restore confirm dialog, etc.)
+    Task<Result<AdminUserDetailResponse>> GetUserByIdAsync(string userId, CancellationToken ct = default);
+
     // Toggle Status
     Task<Result<AdminToggleStatusResponse>> ToggleStatusAsync(string userId, string adminUserId, CancellationToken ct = default);
 

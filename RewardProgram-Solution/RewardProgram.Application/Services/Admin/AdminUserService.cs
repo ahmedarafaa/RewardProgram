@@ -820,6 +820,130 @@ public class AdminUserService : IAdminUserService
         return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));
     }
 
+    public async Task<Result<AdminUserDetailResponse>> GetUserByIdAsync(
+        string userId, CancellationToken ct = default)
+    {
+        var user = await _userRepository.Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+        if (user is null || user.UserType == UserType.SystemAdmin)
+            return Result.Failure<AdminUserDetailResponse>(AdminUserErrors.UserNotFound);
+
+        var roles = (await _userRepository.GetRolesAsync(
+            (await _userRepository.FindByIdAsync(userId, ct))!)).ToList();
+
+        // Home address — null for staff (SM/ZM/SystemAdmin) since they have no NationalAddress.
+        AdminUserAddress? address = null;
+        if (user.NationalAddress is not null)
+        {
+            var city = await _context.Cities
+                .AsNoTracking()
+                .Where(c => c.Id == user.NationalAddress.CityId)
+                .Select(c => new { c.Id, c.NameAr, c.NameEn, c.RegionId })
+                .FirstOrDefaultAsync(ct);
+
+            if (city is not null)
+            {
+                var region = await _context.Regions
+                    .AsNoTracking()
+                    .Where(r => r.Id == city.RegionId)
+                    .Select(r => new { r.Id, r.NameAr, r.NameEn })
+                    .FirstOrDefaultAsync(ct);
+
+                address = new AdminUserAddress(
+                    city.Id, city.NameAr, city.NameEn,
+                    region?.Id ?? string.Empty,
+                    region?.NameAr ?? string.Empty,
+                    region?.NameEn ?? string.Empty,
+                    user.NationalAddress.Street,
+                    user.NationalAddress.BuildingNumber,
+                    user.NationalAddress.PostalCode,
+                    user.NationalAddress.SubNumber,
+                    user.NationalAddress.District);
+            }
+        }
+
+        // Shop info for ShopOwner/Seller — pulled from ShopOwnerProfile/SellerProfile + ShopData.
+        AdminUserShopInfo? shop = null;
+        if (user.UserType is UserType.ShopOwner or UserType.Seller)
+        {
+            var customerCode = user.UserType == UserType.ShopOwner
+                ? await _context.ShopOwnerProfiles.AsNoTracking()
+                    .Where(p => p.UserId == userId)
+                    .Select(p => p.CustomerCode)
+                    .FirstOrDefaultAsync(ct)
+                : await _context.SellerProfiles.AsNoTracking()
+                    .Where(p => p.UserId == userId)
+                    .Select(p => p.CustomerCode)
+                    .FirstOrDefaultAsync(ct);
+
+            if (!string.IsNullOrEmpty(customerCode))
+            {
+                var shopData = await _context.ShopData.AsNoTracking()
+                    .FirstOrDefaultAsync(sd => sd.CustomerCode == customerCode, ct);
+
+                if (shopData is not null)
+                {
+                    var shopCity = await _context.Cities.AsNoTracking()
+                        .Where(c => c.Id == shopData.CityId)
+                        .Select(c => new { c.Id, c.NameAr, c.NameEn })
+                        .FirstOrDefaultAsync(ct);
+
+                    shop = new AdminUserShopInfo(
+                        shopData.CustomerCode,
+                        shopData.StoreName,
+                        shopData.VAT,
+                        shopData.CRN,
+                        shopData.ShortAddress,
+                        shopData.ShopImageUrl,
+                        shopCity?.Id, shopCity?.NameAr, shopCity?.NameEn,
+                        shopData.Street,
+                        shopData.BuildingNumber,
+                        shopData.PostalCode,
+                        shopData.SubNumber,
+                        shopData.District);
+                }
+            }
+        }
+
+        // SalesMan owned cities (active, non-deleted only — same rule as the list endpoint).
+        IReadOnlyList<NamedRef> ownedCities = roles.Contains(UserRoles.SalesMan)
+            ? (await _context.Cities.AsNoTracking()
+                .Where(c => c.IsActive && !c.IsDeleted && c.ApprovalSalesManId == userId)
+                .OrderBy(c => c.NameAr)
+                .Select(c => new NamedRef(c.Id, c.NameAr, c.NameEn))
+                .ToListAsync(ct))
+            : Array.Empty<NamedRef>();
+
+        // ZoneManager managed region.
+        NamedRef? managedRegion = roles.Contains(UserRoles.ZoneManager)
+            ? await _context.Regions.AsNoTracking()
+                .Where(r => r.IsActive && !r.IsDeleted && r.ZoneManagerId == userId)
+                .Select(r => new NamedRef(r.Id, r.NameAr, r.NameEn))
+                .FirstOrDefaultAsync(ct)
+            : null;
+
+        // If the user has no Identity-role rows but is SalesMan/ZoneManager by primary type
+        // (edge case for legacy data), surface the primary type as a role string.
+        if (roles.Count == 0)
+            roles.Add(user.UserType.ToString());
+
+        string? deletionSource = user.IsAccountDeleted
+            ? (user.DeletedByAdminId is null ? "Self" : "Admin")
+            : null;
+
+        var response = new AdminUserDetailResponse(
+            user.Id, user.Name, user.MobileNumber, user.UserType, user.RegistrationStatus,
+            user.IsDisabled, user.IsAccountDeleted, user.AccountDeletedAt,
+            deletionSource, user.RestoredAt,
+            user.CreatedAt, roles,
+            address, shop, ownedCities, managedRegion,
+            user.InvitationCode, user.InvitedByUserId, user.InviterRewardCount);
+
+        return Result.Success(response);
+    }
+
     #endregion
 
     #region Toggle Status
