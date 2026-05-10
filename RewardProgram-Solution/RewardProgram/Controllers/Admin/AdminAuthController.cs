@@ -2,8 +2,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using RewardProgram.API;
 using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities.Users;
@@ -17,16 +19,26 @@ public class AdminAuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IAuthService _authService;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public AdminAuthController(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
-        IAuthService authService)
+        IAuthService authService,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _authService = authService;
+        _localizer = localizer;
     }
+
+    private ObjectResult Unauthorized401(string key) =>
+        Unauthorized(new ProblemDetails
+        {
+            Title = _localizer[key].Value,
+            Status = 401
+        });
 
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
@@ -36,39 +48,23 @@ public class AdminAuthController : ControllerBase
         var user = await _userManager.FindByNameAsync(request.Username);
 
         if (user is null || user.IsDisabled)
-            return Unauthorized(new ProblemDetails
-            {
-                Title = "اسم المستخدم أو كلمة المرور غير صحيحة",
-                Status = 401
-            });
+            return Unauthorized401("AdminAuth.InvalidCredentials");
 
         if (await _userManager.IsLockedOutAsync(user))
-            return Unauthorized(new ProblemDetails
-            {
-                Title = "تم قفل الحساب مؤقتاً بسبب محاولات فاشلة متكررة. حاول لاحقاً.",
-                Status = 401
-            });
+            return Unauthorized401("AdminAuth.AccountLocked");
 
         var isValidPassword = await _userManager.CheckPasswordAsync(user, request.Password);
         if (!isValidPassword)
         {
             await _userManager.AccessFailedAsync(user);
-            return Unauthorized(new ProblemDetails
-            {
-                Title = "اسم المستخدم أو كلمة المرور غير صحيحة",
-                Status = 401
-            });
+            return Unauthorized401("AdminAuth.InvalidCredentials");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
         if (!roles.Contains(UserRoles.SystemAdmin))
         {
             await _userManager.AccessFailedAsync(user);
-            return Unauthorized(new ProblemDetails
-            {
-                Title = "غير مصرح لك بالدخول",
-                Status = 401
-            });
+            return Unauthorized401("AdminAuth.NotAuthorized");
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
@@ -96,7 +92,7 @@ public class AdminAuthController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _authService.RevokeTokenAsync(request.RefreshToken, userId, ct);
         return result.IsSuccess
-            ? Ok(new { message = "تم تسجيل الخروج بنجاح" })
+            ? Ok(new { message = _localizer["AdminAuth.LoggedOut"].Value })
             : result.ToProblem();
     }
 }

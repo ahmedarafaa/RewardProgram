@@ -129,4 +129,47 @@
   <!-- Wallet Errors -->
   <data name="Wallet.NotFound"><value>المحفظة غير موجودة</value></data>
   <data name="Wallet.InsufficientBalance"><value>رصيد النقاط غير كافٍ</value></data>
+
+  <!-- Newly added (2026-05-10) -->
+  <data name="Admin.AccountNotDeleted"><value>الحساب غير محذوف، لا يمكن استعادته</value></data>
+  <data name="Admin.AllCitiesMustBeReassigned"><value>يجب إعادة تعيين جميع المدن التابعة للمندوب قبل الحذف</value></data>
+  <data name="Admin.CannotReassignToSelf"><value>لا يمكن إعادة التعيين لنفس المستخدم</value></data>
+  <data name="Admin.CityAlreadyHasSalesMan"><value>المدينة لديها مندوب مبيعات بالفعل</value></data>
+  <data name="Admin.CityNotOwnedBySalesMan"><value>المدينة ليست تابعة لهذا المندوب</value></data>
+  <data name="Admin.ConcurrencyConflict"><value>تم تعديل البيانات من مستخدم آخر، حاول مرة أخرى</value></data>
+  <data name="Admin.MobileBelongsToDeletedAccount"><value>رقم الجوال مرتبط بحساب محذوف — يمكن استعادته بدلاً من إنشاء حساب جديد</value></data>
+  <data name="Admin.ReassignmentTargetNotSalesMan"><value>المستخدم المستهدف ليس مندوب مبيعات</value></data>
+  <data name="Admin.ReassignmentTargetNotZoneManager"><value>المستخدم المستهدف ليس مدير منطقة</value></data>
+  <data name="Admin.ReplacementZoneManagerRequired"><value>يجب تحديد مدير منطقة بديل قبل الحذف</value></data>
+  <data name="Admin.ZoneManagerAlreadyAssigned"><value>مدير المنطقة مخصص لمنطقة أخرى بالفعل</value></data>
+  <data name="Auth.VerificationTokenInvalid"><value>رمز التحقق غير صالح</value></data>
+  <data name="Auth.VerificationTokenExpired"><value>انتهت صلاحية رمز التحقق، يرجى إعادة التحقق</value></data>
+  <data name="Notification.UserNotFound"><value>المستخدم غير موجود</value></data>
+  <data name="Profile.InvalidImageType"><value>نوع الصورة غير مدعوم، يرجى استخدام JPG أو PNG</value></data>
+  <data name="Profile.ImageTooLarge"><value>حجم الصورة يتجاوز الحد المسموح (5 ميجابايت)</value></data>
+  <data name="Profile.HasPendingRedemptions"><value>لا يمكن حذف الحساب أثناء وجود طلبات استبدال معلقة</value></data>
+  <data name="Redemption.OtpMaxAttemptsExceeded"><value>تم تجاوز الحد الأقصى لمحاولات رمز التحقق</value></data>
+  <data name="Redemption.CannotCancelScanWithInsufficientBalance"><value>لا يمكن إلغاء المسح — الرصيد المتاح غير كافٍ (قد تكون النقاط مستردة أو محتجزة)</value></data>
+  <data name="Redemption.NoActiveCashRequest"><value>لا يوجد طلب استبدال نقدي نشط لإعادة إرسال الرمز</value></data>
+  <data name="Redemption.ResendCooldown"><value>يرجى الانتظار قبل طلب إعادة إرسال الرمز</value></data>
+  <data name="Redemption.OtpSendFailed"><value>فشل إرسال رمز التحقق — يرجى المحاولة لاحقاً</value></data>
+  <data name="Redemption.ConcurrencyConflict"><value>تم تحديث الطلب من قبل مستخدم آخر — يرجى تحديث الصفحة وإعادة المحاولة</value></data>
+
+  <!-- Validation -->
+  <data name="Validation.OneOrMoreErrors"><value>حدث خطأ في التحقق من البيانات المُدخلة</value></data>
+  <!-- Admin Auth (controller-level) -->
+  <data name="AdminAuth.InvalidCredentials"><value>اسم المستخدم أو كلمة المرور غير صحيحة</value></data>
+  <data name="AdminAuth.AccountLocked"><value>تم قفل الحساب مؤقتاً بسبب محاولات فاشلة متكررة. حاول لاحقاً</value></data>
+  <data name="AdminAuth.NotAuthorized"><value>غير مصرح لك بالدخول</value></data>
+  <data name="AdminAuth.LoggedOut"><value>تم تسجيل الخروج بنجاح</value></data>
+  <!-- Service success messages -->
+  <data name="Auth.InvalidUserType"><value>نوع المستخدم غير صالح</value></data>
+  <data name="Auth.RegisterSuccess"><value>تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق</value></data>
+  <data name="Auth.RegisterSuccessWithBonus"><value>تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق. ستحصل على {0} نقطة مكافأة تسجيل عند الموافقة على حسابك</value></data>
+  <data name="AdminUser.SalesManCreated"><value>تم إنشاء مندوب المبيعات بنجاح</value></data>
+  <data name="AdminUser.ZoneManagerCreated"><value>تم إنشاء مدير المنطقة بنجاح</value></data>
+  <data name="AdminUser.ShopOwnerCreated"><value>تم إنشاء صاحب المحل بنجاح</value></data>
+  <data name="AdminUser.SellerCreated"><value>تم إنشاء البائع بنجاح</value></data>
+  <data name="AdminUser.TechnicianCreated"><value>تم إنشاء الفني بنجاح</value></data>
+  <data name="Scan.Success"><value>تم مسح الباركود بنجاح — حصلت على {0} نقطة</value></data>
 </root>

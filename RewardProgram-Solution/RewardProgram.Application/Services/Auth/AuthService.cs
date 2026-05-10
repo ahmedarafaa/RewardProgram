@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NanoidDotNet;
@@ -25,6 +26,7 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthService> _logger;
     private readonly VerificationTokenOptions _verificationTokenOptions;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public AuthService(
         IApplicationDbContext context,
@@ -33,7 +35,8 @@ public class AuthService : IAuthService
         IFileStorageService fileStorageService,
         ITokenService tokenService,
         ILogger<AuthService> logger,
-        IOptions<VerificationTokenOptions> verificationTokenOptions)
+        IOptions<VerificationTokenOptions> verificationTokenOptions,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _userRepository = userRepository;
@@ -42,6 +45,7 @@ public class AuthService : IAuthService
         _tokenService = tokenService;
         _logger = logger;
         _verificationTokenOptions = verificationTokenOptions.Value;
+        _localizer = localizer;
     }
 
     #region Registration — OTP-First Flow
@@ -115,7 +119,7 @@ public class AuthService : IAuthService
             && request.UserType != UserType.Technician)
         {
             return Result.Failure<ValidateRegistrationFieldsResponse>(
-                new Error("Auth.InvalidUserType", "نوع المستخدم غير صالح", 400));
+                new Error("Auth.InvalidUserType", _localizer["Auth.InvalidUserType"].Value, 400));
         }
 
         var errors = new List<ValidationFieldError>();
@@ -843,16 +847,14 @@ public class AuthService : IAuthService
     private async Task<RegisterResponse> BuildRegisterResponseAsync(
         string userId, string? inviterId, CancellationToken ct)
     {
-        const string baseMessage = "تم تسجيل طلبك بنجاح، سيتم مراجعته وإشعارك فور اكتمال التحقق";
-
         if (inviterId is null)
-            return new RegisterResponse(userId, baseMessage);
+            return new RegisterResponse(userId, _localizer["Auth.RegisterSuccess"].Value);
 
         var bonus = await _context.RewardSettings
             .Select(s => (decimal?)s.InviteeRewardPoints)
             .FirstOrDefaultAsync(ct) ?? 50m;
 
-        var message = $"{baseMessage}. ستحصل على {bonus} نقطة مكافأة تسجيل عند الموافقة على حسابك";
+        var message = _localizer["Auth.RegisterSuccessWithBonus", bonus].Value;
         return new RegisterResponse(userId, message, bonus);
     }
 

@@ -34,6 +34,34 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddLocalization();
 
+        // Localize the framework's auto-generated 400 ProblemDetails when DTO model-state
+        // validation fails — its default `title` is the hardcoded English string
+        // "One or more validation errors occurred." which leaks into ar-locale responses.
+        services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var localizer = context.HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Localization.IStringLocalizer<RewardProgram.Application.Errors.ErrorMessages>>();
+                var title = localizer is not null
+                    ? localizer["Validation.OneOrMoreErrors"].Value
+                    : "One or more validation errors occurred";
+
+                var problem = new Microsoft.AspNetCore.Mvc.ValidationProblemDetails(context.ModelState)
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = title,
+                    Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+                };
+                problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+
+                return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(problem)
+                {
+                    ContentTypes = { "application/problem+json" }
+                };
+            };
+        });
+
         services.AddHsts(options =>
         {
             options.Preload = true;

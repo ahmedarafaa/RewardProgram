@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -19,17 +20,20 @@ public class ScanService : IScanService
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
     private readonly ILogger<ScanService> _logger;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public ScanService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         INotificationService notificationService,
-        ILogger<ScanService> logger)
+        ILogger<ScanService> logger,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _userRepository = userRepository;
         _notificationService = notificationService;
         _logger = logger;
+        _localizer = localizer;
     }
 
     private const int MaxRetries = 2;
@@ -118,14 +122,14 @@ public class ScanService : IScanService
                     // Seller scans first → 50%
                     pointsForScanner = pointValue / 2m;
                     barcode.Status = BarcodeStatus.SellerScanned;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
+                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.Available when scannerRole == ScannerRole.Technician:
                     // Technician scans first → 100%
                     pointsForScanner = pointValue;
                     barcode.Status = BarcodeStatus.TechnicianScanned;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
+                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.SellerScanned when scannerRole == ScannerRole.Technician:
@@ -135,14 +139,14 @@ public class ScanService : IScanService
                     deferredPointsForFirstScanner = pointValue - sellerScanRecord.PointsAwarded;
                     firstScannerUserId = sellerScanRecord.UserId;
                     barcode.Status = BarcodeStatus.Consumed;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
+                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 case BarcodeStatus.TechnicianScanned when scannerRole == ScannerRole.Seller:
                     // Seller scans second → 100% directly
                     pointsForScanner = pointValue;
                     barcode.Status = BarcodeStatus.Consumed;
-                    message = $"تم مسح الباركود بنجاح — حصلت على {pointsForScanner} نقطة";
+                    message = _localizer["Scan.Success", pointsForScanner].Value;
                     break;
 
                 default:

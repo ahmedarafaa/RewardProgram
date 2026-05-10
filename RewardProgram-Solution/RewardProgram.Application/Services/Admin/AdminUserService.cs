@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -30,19 +31,22 @@ public class AdminUserService : IAdminUserService
     private readonly IFileStorageService _fileStorageService;
     private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
     private readonly ILogger<AdminUserService> _logger;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public AdminUserService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IFileStorageService fileStorageService,
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
-        ILogger<AdminUserService> logger)
+        ILogger<AdminUserService> logger,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _userRepository = userRepository;
         _fileStorageService = fileStorageService;
         _cache = cache;
         _logger = logger;
+        _localizer = localizer;
     }
 
     private async Task<HashSet<string>> GetCachedRoleUserIdsAsync(string roleName, string cacheKey)
@@ -148,7 +152,7 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
-                UserType.SalesMan, "تم إنشاء مندوب المبيعات بنجاح"));
+                UserType.SalesMan, _localizer["AdminUser.SalesManCreated"].Value));
         }
         catch (DbUpdateException ex)
         {
@@ -230,7 +234,7 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
-                UserType.ZoneManager, "تم إنشاء مدير المنطقة بنجاح"));
+                UserType.ZoneManager, _localizer["AdminUser.ZoneManagerCreated"].Value));
         }
         catch (DbUpdateException ex)
         {
@@ -374,7 +378,7 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
-                UserType.ShopOwner, "تم إنشاء صاحب المحل بنجاح"));
+                UserType.ShopOwner, _localizer["AdminUser.ShopOwnerCreated"].Value));
         }
         catch (Exception ex)
         {
@@ -505,7 +509,7 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
-                UserType.Seller, "تم إنشاء البائع بنجاح"));
+                UserType.Seller, _localizer["AdminUser.SellerCreated"].Value));
         }
         catch (Exception ex)
         {
@@ -579,7 +583,7 @@ public class AdminUserService : IAdminUserService
 
             return Result.Success(new AdminAddUserResponse(
                 user.Id, user.Name, user.MobileNumber,
-                UserType.Technician, "تم إنشاء الفني بنجاح"));
+                UserType.Technician, _localizer["AdminUser.TechnicianCreated"].Value));
         }
         catch (Exception ex)
         {

@@ -129,4 +129,47 @@
   <!-- Wallet Errors -->
   <data name="Wallet.NotFound"><value>Wallet not found</value></data>
   <data name="Wallet.InsufficientBalance"><value>Insufficient points balance</value></data>
+
+  <!-- Newly added (2026-05-10) -->
+  <data name="Admin.AccountNotDeleted"><value>Account is not deleted, cannot be restored</value></data>
+  <data name="Admin.AllCitiesMustBeReassigned"><value>All cities owned by this salesman must be reassigned before deletion</value></data>
+  <data name="Admin.CannotReassignToSelf"><value>Cannot reassign to the same user</value></data>
+  <data name="Admin.CityAlreadyHasSalesMan"><value>City already has an assigned salesman</value></data>
+  <data name="Admin.CityNotOwnedBySalesMan"><value>City is not assigned to this salesman</value></data>
+  <data name="Admin.ConcurrencyConflict"><value>Data was modified by another user, please try again</value></data>
+  <data name="Admin.MobileBelongsToDeletedAccount"><value>Mobile number belongs to a deleted account — restore it instead of creating a new one</value></data>
+  <data name="Admin.ReassignmentTargetNotSalesMan"><value>The target user is not a salesman</value></data>
+  <data name="Admin.ReassignmentTargetNotZoneManager"><value>The target user is not a zone manager</value></data>
+  <data name="Admin.ReplacementZoneManagerRequired"><value>A replacement zone manager must be specified before deletion</value></data>
+  <data name="Admin.ZoneManagerAlreadyAssigned"><value>Zone manager is already assigned to another region</value></data>
+  <data name="Auth.VerificationTokenInvalid"><value>Invalid verification token</value></data>
+  <data name="Auth.VerificationTokenExpired"><value>Verification token has expired, please verify again</value></data>
+  <data name="Notification.UserNotFound"><value>User not found</value></data>
+  <data name="Profile.InvalidImageType"><value>Unsupported image format, please use JPG or PNG</value></data>
+  <data name="Profile.ImageTooLarge"><value>Image size exceeds the limit (5 MB)</value></data>
+  <data name="Profile.HasPendingRedemptions"><value>Cannot delete account while pending redemption requests exist</value></data>
+  <data name="Redemption.OtpMaxAttemptsExceeded"><value>Maximum verification code attempts exceeded</value></data>
+  <data name="Redemption.CannotCancelScanWithInsufficientBalance"><value>Cannot cancel scan — insufficient balance (points may have been redeemed or held)</value></data>
+  <data name="Redemption.NoActiveCashRequest"><value>No active cash redemption request to resend the code</value></data>
+  <data name="Redemption.ResendCooldown"><value>Please wait before requesting another verification code</value></data>
+  <data name="Redemption.OtpSendFailed"><value>Failed to send verification code — please try again later</value></data>
+  <data name="Redemption.ConcurrencyConflict"><value>Request was updated by another user — please refresh and try again</value></data>
+
+  <!-- Validation -->
+  <data name="Validation.OneOrMoreErrors"><value>One or more validation errors occurred</value></data>
+  <!-- Admin Auth (controller-level) -->
+  <data name="AdminAuth.InvalidCredentials"><value>Invalid username or password</value></data>
+  <data name="AdminAuth.AccountLocked"><value>Account is temporarily locked due to repeated failed attempts. Try again later</value></data>
+  <data name="AdminAuth.NotAuthorized"><value>You are not authorized to log in</value></data>
+  <data name="AdminAuth.LoggedOut"><value>Logged out successfully</value></data>
+  <!-- Service success messages -->
+  <data name="Auth.InvalidUserType"><value>Invalid user type</value></data>
+  <data name="Auth.RegisterSuccess"><value>Your request was registered successfully. It will be reviewed and you'll be notified once verification completes</value></data>
+  <data name="Auth.RegisterSuccessWithBonus"><value>Your request was registered successfully. It will be reviewed and you'll be notified once verification completes. You will receive {0} points as a registration bonus once your account is approved</value></data>
+  <data name="AdminUser.SalesManCreated"><value>Salesman created successfully</value></data>
+  <data name="AdminUser.ZoneManagerCreated"><value>Zone manager created successfully</value></data>
+  <data name="AdminUser.ShopOwnerCreated"><value>Shop owner created successfully</value></data>
+  <data name="AdminUser.SellerCreated"><value>Seller created successfully</value></data>
+  <data name="AdminUser.TechnicianCreated"><value>Technician created successfully</value></data>
+  <data name="Scan.Success"><value>Barcode scanned successfully — you earned {0} points</value></data>
 </root>
