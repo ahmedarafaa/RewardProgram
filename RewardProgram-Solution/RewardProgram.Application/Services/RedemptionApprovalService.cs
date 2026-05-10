@@ -458,6 +458,12 @@ public class RedemptionApprovalService : IRedemptionApprovalService
                 s => s.SetProperty(r => r.CashOtpAttempts, r => r.CashOtpAttempts + 1),
                 ct);
 
+        // ExecuteUpdate above bumped RowVersion in the DB but bypassed the change
+        // tracker. The tracked `redemptionRequest` still holds the pre-bump value, so
+        // the next SaveChanges would issue UPDATE ... WHERE RowVersion=stale → fail.
+        // ReloadAsync refreshes the tracker (and all properties) from the DB.
+        await _context.Entry(redemptionRequest).ReloadAsync(ct);
+
         if (incrementedRows == 0)
         {
             // Already at the cap (either pre-existing or due to a concurrent attempt

@@ -33,4 +33,9 @@ public interface IApplicationDbContext
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    // Exposed so service code can ReloadAsync a tracked entity after an
+    // ExecuteUpdate / ExecuteDelete has bumped its row version in the DB
+    // (those operations bypass the change tracker).
+    Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }
