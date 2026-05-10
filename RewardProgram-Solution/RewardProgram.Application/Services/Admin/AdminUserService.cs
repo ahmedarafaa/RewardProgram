@@ -736,14 +736,14 @@ public class AdminUserService : IAdminUserService
                     .Where(c => c.IsActive && !c.IsDeleted
                         && c.ApprovalSalesManId != null
                         && pageSmIds.Contains(c.ApprovalSalesManId))
-                    .Select(c => new { c.Id, c.NameAr, SmId = c.ApprovalSalesManId! })
+                    .Select(c => new { c.Id, c.NameAr, c.NameEn, SmId = c.ApprovalSalesManId! })
                     .ToListAsync(ct))
                 .GroupBy(x => x.SmId)
                 .ToDictionary(
                     g => g.Key,
                     g => (IReadOnlyList<NamedRef>)g
                         .OrderBy(x => x.NameAr)
-                        .Select(x => new NamedRef(x.Id, x.NameAr))
+                        .Select(x => new NamedRef(x.Id, x.NameAr, x.NameEn))
                         .ToList())
             : [];
 
@@ -752,8 +752,8 @@ public class AdminUserService : IAdminUserService
                 .Where(r => r.IsActive && !r.IsDeleted
                     && r.ZoneManagerId != null
                     && pageZmIds.Contains(r.ZoneManagerId))
-                .Select(r => new { r.Id, r.NameAr, ZmId = r.ZoneManagerId! })
-                .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr), ct)
+                .Select(r => new { r.Id, r.NameAr, r.NameEn, ZmId = r.ZoneManagerId! })
+                .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr, r.NameEn), ct)
             : [];
 
         // Map results

@@ -27,4 +27,4 @@ public record AdminUserListItemResponse(
     NamedRef? ManagedRegion
 );
 
-public record NamedRef(string Id, string NameAr);
+public record NamedRef(string Id, string NameAr, string NameEn);
