@@ -172,4 +172,13 @@
   <data name="AdminUser.SellerCreated"><value>تم إنشاء البائع بنجاح</value></data>
   <data name="AdminUser.TechnicianCreated"><value>تم إنشاء الفني بنجاح</value></data>
   <data name="Scan.Success"><value>تم مسح الباركود بنجاح — حصلت على {0} نقطة</value></data>
+  <!-- Admin sync responses (toggle / edit / cancel scan) -->
+  <data name="AdminScan.CancelSuccess"><value>تم إلغاء المسح بنجاح وتم استرداد النقاط</value></data>
+  <data name="AdminUser.UserDisabled"><value>تم تعطيل المستخدم بنجاح</value></data>
+  <data name="AdminUser.UserEnabled"><value>تم تفعيل المستخدم بنجاح</value></data>
+  <data name="AdminUser.SalesManUpdated"><value>تم تعديل مندوب المبيعات بنجاح</value></data>
+  <data name="AdminUser.ZoneManagerUpdated"><value>تم تعديل مدير المنطقة بنجاح</value></data>
+  <data name="AdminUser.ShopOwnerUpdated"><value>تم تعديل صاحب المحل بنجاح</value></data>
+  <data name="AdminUser.SellerUpdated"><value>تم تعديل البائع بنجاح</value></data>
+  <data name="AdminUser.TechnicianUpdated"><value>تم تعديل الفني بنجاح</value></data>
 </root>

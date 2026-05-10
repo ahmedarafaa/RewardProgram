@@ -172,4 +172,13 @@
   <data name="AdminUser.SellerCreated"><value>Seller created successfully</value></data>
   <data name="AdminUser.TechnicianCreated"><value>Technician created successfully</value></data>
   <data name="Scan.Success"><value>Barcode scanned successfully — you earned {0} points</value></data>
+  <!-- Admin sync responses (toggle / edit / cancel scan) -->
+  <data name="AdminScan.CancelSuccess"><value>Scan cancelled successfully, points refunded</value></data>
+  <data name="AdminUser.UserDisabled"><value>User disabled successfully</value></data>
+  <data name="AdminUser.UserEnabled"><value>User enabled successfully</value></data>
+  <data name="AdminUser.SalesManUpdated"><value>Salesman updated successfully</value></data>
+  <data name="AdminUser.ZoneManagerUpdated"><value>Zone manager updated successfully</value></data>
+  <data name="AdminUser.ShopOwnerUpdated"><value>Shop owner updated successfully</value></data>
+  <data name="AdminUser.SellerUpdated"><value>Seller updated successfully</value></data>
+  <data name="AdminUser.TechnicianUpdated"><value>Technician updated successfully</value></data>
 </root>

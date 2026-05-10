@@ -18,7 +18,7 @@ public class AdminBarcodeServiceTests : IDisposable
     public AdminBarcodeServiceTests()
     {
         _context = TestDbContext.Create();
-        _sut = new AdminBarcodeService(_context, Substitute.For<ILogger<AdminBarcodeService>>());
+        _sut = new AdminBarcodeService(_context, Substitute.For<ILogger<AdminBarcodeService>>(), new StubLocalizer<ErrorMessages>());
     }
 
     public void Dispose() => _context.Dispose();

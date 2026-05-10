@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using NanoidDotNet;
 using RewardProgram.Application.Abstractions;
@@ -23,13 +24,16 @@ public class AdminBarcodeService : IAdminBarcodeService
 
     private readonly IApplicationDbContext _context;
     private readonly ILogger<AdminBarcodeService> _logger;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public AdminBarcodeService(
         IApplicationDbContext context,
-        ILogger<AdminBarcodeService> logger)
+        ILogger<AdminBarcodeService> logger,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _logger = logger;
+        _localizer = localizer;
     }
 
     public async Task<Result<AdminGenerateBarcodesResponse>> GenerateBarcodesAsync(
@@ -301,7 +305,7 @@ public class AdminBarcodeService : IAdminBarcodeService
                 barcode.Code,
                 totalPointsReversed,
                 totalSarReversed,
-                "تم إلغاء المسح بنجاح وتم استرداد النقاط"
+                _localizer["AdminScan.CancelSuccess"].Value
             ));
         }
         catch (Exception ex)

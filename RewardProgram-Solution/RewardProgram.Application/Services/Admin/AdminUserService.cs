@@ -855,7 +855,9 @@ public class AdminUserService : IAdminUserService
         if (user.UserType is UserType.SalesMan or UserType.ZoneManager)
             InvalidateRoleMembershipCache();
 
-        var message = user.IsDisabled ? "تم تعطيل المستخدم بنجاح" : "تم تفعيل المستخدم بنجاح";
+        var message = user.IsDisabled
+            ? _localizer["AdminUser.UserDisabled"].Value
+            : _localizer["AdminUser.UserEnabled"].Value;
 
         _logger.LogInformation("Admin {AdminId} toggled status for user {UserId} to IsDisabled={IsDisabled}",
             adminUserId, userId, user.IsDisabled);
@@ -891,7 +893,7 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
-            UserType.SalesMan, "تم تعديل مندوب المبيعات بنجاح"));
+            UserType.SalesMan, _localizer["AdminUser.SalesManUpdated"].Value));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditZoneManagerAsync(
@@ -918,7 +920,7 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
-            UserType.ZoneManager, "تم تعديل مدير المنطقة بنجاح"));
+            UserType.ZoneManager, _localizer["AdminUser.ZoneManagerUpdated"].Value));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditShopOwnerAsync(
@@ -945,7 +947,7 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
-            UserType.ShopOwner, "تم تعديل صاحب المحل بنجاح"));
+            UserType.ShopOwner, _localizer["AdminUser.ShopOwnerUpdated"].Value));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditSellerAsync(
@@ -972,7 +974,7 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
-            UserType.Seller, "تم تعديل البائع بنجاح"));
+            UserType.Seller, _localizer["AdminUser.SellerUpdated"].Value));
     }
 
     public async Task<Result<AdminAddUserResponse>> EditTechnicianAsync(
@@ -999,7 +1001,7 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
-            UserType.Technician, "تم تعديل الفني بنجاح"));
+            UserType.Technician, _localizer["AdminUser.TechnicianUpdated"].Value));
     }
 
     #endregion
