@@ -18,8 +18,13 @@ public record AdminUserListItemResponse(
     string? DeletionSource,
     DateTime? RestoredAt,
     DateTime CreatedAt,
+    // RegionName / CityName retain Arabic for backward compatibility; the *NameEn
+    // siblings let the English admin UI render English without a follow-up call.
+    // Sourced from the user's home address via NationalAddress.CityId.
     string? RegionName,
+    string? RegionNameEn,
     string? CityName,
+    string? CityNameEn,
     string? CustomerCode,
     string? StoreName,
     IReadOnlyList<string> Roles,

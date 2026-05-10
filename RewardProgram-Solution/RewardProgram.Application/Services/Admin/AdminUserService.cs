@@ -686,7 +686,7 @@ public class AdminUserService : IAdminUserService
         var cityMap = cityIds.Count > 0
             ? await _context.Cities
                 .Where(c => cityIds.Contains(c.Id))
-                .Select(c => new { c.Id, c.NameAr, c.RegionId })
+                .Select(c => new { c.Id, c.NameAr, c.NameEn, c.RegionId })
                 .ToDictionaryAsync(c => c.Id, ct)
             : [];
 
@@ -694,7 +694,8 @@ public class AdminUserService : IAdminUserService
         var regionMap = regionIds.Count > 0
             ? await _context.Regions
                 .Where(r => regionIds.Contains(r.Id))
-                .ToDictionaryAsync(r => r.Id, r => r.NameAr, ct)
+                .Select(r => new { r.Id, r.NameAr, r.NameEn })
+                .ToDictionaryAsync(r => r.Id, r => new { r.NameAr, r.NameEn }, ct)
             : [];
 
         // Bulk-load CustomerCode + StoreName for ShopOwner/Seller
@@ -760,13 +761,19 @@ public class AdminUserService : IAdminUserService
         var items = users.Select(u =>
         {
             string? cityName = null;
+            string? cityNameEn = null;
             string? regionName = null;
+            string? regionNameEn = null;
 
             if (u.CityId != null && cityMap.TryGetValue(u.CityId, out var cityInfo))
             {
                 cityName = cityInfo.NameAr;
-                if (regionMap.TryGetValue(cityInfo.RegionId, out var rName))
-                    regionName = rName;
+                cityNameEn = cityInfo.NameEn;
+                if (regionMap.TryGetValue(cityInfo.RegionId, out var rNames))
+                {
+                    regionName = rNames.NameAr;
+                    regionNameEn = rNames.NameEn;
+                }
             }
 
             string? customerCode = null;
@@ -804,7 +811,9 @@ public class AdminUserService : IAdminUserService
                 u.Id, u.Name, u.MobileNumber, u.UserType, u.RegistrationStatus,
                 u.IsDisabled, u.IsAccountDeleted, u.AccountDeletedAt,
                 deletionSource, u.RestoredAt,
-                u.CreatedAt, regionName, cityName, customerCode, storeName, roles,
+                u.CreatedAt,
+                regionName, regionNameEn, cityName, cityNameEn,
+                customerCode, storeName, roles,
                 ownedCities, managedRegion);
         }).ToList();
 
