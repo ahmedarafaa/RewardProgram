@@ -6,6 +6,7 @@ using RewardProgram.Application.Contracts.Wallet;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
+using RewardProgram.Domain.Enums;
 
 namespace RewardProgram.Application.Services;
 
@@ -45,7 +46,18 @@ public class WalletService : IWalletService
             .Where(t => t.Wallet.UserId == userId);
 
         if (query.Type.HasValue)
-            dbQuery = dbQuery.Where(t => t.Type == query.Type.Value);
+        {
+            // "Earned" is the user-facing label for any incoming points. Expand the
+            // filter to include InvitationReward so referral bonuses surface on the
+            // mobile app's Earned tab — keeping a single Earned filter from the
+            // user's perspective while preserving the underlying type distinction
+            // for analytics queries that ask for InvitationReward explicitly.
+            var t = query.Type.Value;
+            dbQuery = t == WalletTransactionType.Earned
+                ? dbQuery.Where(tx => tx.Type == WalletTransactionType.Earned
+                    || tx.Type == WalletTransactionType.InvitationReward)
+                : dbQuery.Where(tx => tx.Type == t);
+        }
 
         if (query.FromDate.HasValue)
             dbQuery = dbQuery.Where(t => t.CreatedAt >= query.FromDate.Value.Date);
@@ -61,9 +73,9 @@ public class WalletService : IWalletService
             .Take(pageSize)
             .Select(t => new WalletTransactionResponse(
                 t.Id,
-                t.Amount,
+                Math.Abs(t.Amount),
                 t.SarRate,
-                t.SarAmount,
+                Math.Abs(t.SarAmount),
                 t.Type,
                 t.Description,
                 t.CreatedAt
