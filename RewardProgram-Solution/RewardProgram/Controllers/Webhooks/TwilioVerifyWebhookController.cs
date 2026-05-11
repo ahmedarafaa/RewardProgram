@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces.Auth;
-using RewardProgram.Application.Options;
 using RewardProgram.Infrastructure.Authentication;
 using Twilio.Security;
 

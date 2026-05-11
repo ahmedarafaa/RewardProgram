@@ -10,7 +10,6 @@ using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Interfaces.Files;
-using RewardProgram.Application.Options;
 using RewardProgram.Application.Services;
 using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Services.Auth;

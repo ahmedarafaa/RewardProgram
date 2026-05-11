@@ -50,6 +50,13 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
             .IsRequired()
             .HasDefaultValue(false);
 
+        // SQL Server rowversion column — auto-managed, increments on every UPDATE.
+        // EF treats it as a concurrency token so a stale write fails fast with
+        // DbUpdateConcurrencyException instead of clobbering the other request.
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         // Indexes
         builder.HasIndex(x => x.PinId).IsUnique();
         builder.HasIndex(x => x.MobileNumber);

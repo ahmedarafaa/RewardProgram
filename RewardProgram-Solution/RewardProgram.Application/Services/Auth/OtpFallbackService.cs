@@ -61,16 +61,27 @@ public class OtpFallbackService : IOtpFallbackService
                 "Twilio webhook for {Mobile}: skipping SMS — OTP has already expired.",
                 MobileNumberHelper.Mask(row.MobileNumber));
             row.FallbackFired = true;   // prevent re-processing on a retry
-            await _context.SaveChangesAsync(ct);
+            try { await _context.SaveChangesAsync(ct); }
+            catch (DbUpdateConcurrencyException) { /* another handler already flagged it */ }
             return Result.Success(false);
         }
 
-        // Fire the SMS Verify for the same number. Mark FallbackFired BEFORE the
-        // network call so a concurrent webhook (Twilio retries on non-2xx) can't
-        // race us into sending twice. If SMS itself fails we leave FallbackFired
-        // = true — user can /resend-otp; we don't want a tight retry loop.
+        // Reserve the work with an optimistic flag flip BEFORE the network call.
+        // RowVersion makes this atomic: a concurrent webhook retry that loaded
+        // the same row will hit DbUpdateConcurrencyException on its SaveChanges
+        // and we'll treat that as "already handled" — no double SMS.
         row.FallbackFired = true;
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _logger.LogInformation(
+                "Twilio webhook for Sid {Sid}: lost race to a concurrent handler — no-op.",
+                verificationSid);
+            return Result.Success(false);
+        }
 
         var smsResult = await _twilioService.SendOtpAsync(row.MobileNumber, "sms", ct);
         if (smsResult.IsFailure)

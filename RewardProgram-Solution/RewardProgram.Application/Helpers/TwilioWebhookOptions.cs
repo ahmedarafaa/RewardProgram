@@ -1,4 +1,4 @@
-namespace RewardProgram.Application.Options;
+namespace RewardProgram.Application.Helpers;
 
 /// Settings for the Twilio Verify status webhook.
 ///

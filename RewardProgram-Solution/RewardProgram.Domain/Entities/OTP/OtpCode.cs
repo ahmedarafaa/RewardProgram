@@ -52,6 +52,13 @@ public class OtpCode
     // so we never send a second SMS for the same row.
     public bool FallbackFired { get; set; }
 
+    // Optimistic concurrency token. The Twilio status webhook can be retried by
+    // Twilio (it does so on 5xx and on timeouts), and two near-simultaneous
+    // invocations would otherwise both flip FallbackFired and fire SMS twice.
+    // With RowVersion, the second SaveChanges throws DbUpdateConcurrencyException
+    // — the handler treats that as "already handled" and returns 200.
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
     // Check if OTP has expired.
     public bool IsExpired => DateTime.UtcNow > ExpiresAt;
 
