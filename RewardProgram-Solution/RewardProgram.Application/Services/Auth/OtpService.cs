@@ -33,7 +33,7 @@ public class OtpService : IOtpService
         if (rateLimitResult.IsFailure)
             return Result.Failure<string>(rateLimitResult.Error);
 
-        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, ct);
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "whatsapp", ct);
         if (sendResult.IsFailure)
             return Result.Failure<string>(sendResult.Error);
 
@@ -92,8 +92,12 @@ public class OtpService : IOtpService
             await _context.SaveChangesAsync(ct);
         }
 
-        // 5. Send new OTP with the same sync-fallback policy, carry forward registration data
-        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, ct);
+        // 5. Send new OTP — preferring SMS this time. The user pressed Resend,
+        //    which is a strong signal that the first attempt (WhatsApp) didn't
+        //    reach them. Going straight to SMS guarantees they get the code via
+        //    a different channel rather than retrying the same one. If SMS fails
+        //    synchronously (rare), the helper falls back to WhatsApp.
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "sms", ct);
         if (sendResult.IsFailure)
             return Result.Failure<SendOtpResponse>(sendResult.Error);
 
@@ -181,35 +185,49 @@ public class OtpService : IOtpService
         ));
     }
 
-    // Try WhatsApp first; if Twilio surfaces a synchronous error (number not
-    // WhatsApp-capable, channel not enabled, 5xx, etc.), retry with SMS in the
-    // same request so the user gets exactly ONE OTP — through whichever channel
-    // works. The pending/silent-delivery-failure case (most common for "no
-    // WhatsApp account") is handled by the Twilio status webhook, not here.
+    // Try primaryChannel first; if Twilio surfaces a synchronous error (number
+    // not channel-capable, channel not enabled, 5xx, etc.), retry the other
+    // channel in the same request so the user gets exactly ONE OTP — through
+    // whichever channel works.
+    //
+    // Used in two flows:
+    //   - SendAsync (first attempt) uses primaryChannel="whatsapp" — cheaper /
+    //     better UX, but falls back to SMS on Twilio errors.
+    //   - ResendAsync (user pressed Resend) uses primaryChannel="sms" — strong
+    //     signal that the WhatsApp attempt didn't reach the user, so switch
+    //     channel rather than retry the same one.
+    //
+    // FallbackFired is set when the channel actually used differs from the
+    // requested primary — i.e. "we already used up the in-request fallback".
     private async Task<Result<(string Sid, string Channel, bool FallbackFired)>> SendWithSyncFallbackAsync(
-        string mobileNumber, CancellationToken ct)
+        string mobileNumber, string primaryChannel, CancellationToken ct)
     {
-        var whatsAppResult = await _twilioService.SendOtpAsync(mobileNumber, "whatsapp", ct);
-        if (whatsAppResult.IsSuccess)
-            return Result.Success((whatsAppResult.Value, "whatsapp", false));
+        var fallbackChannel = primaryChannel == "whatsapp" ? "sms" : "whatsapp";
+
+        var primary = await _twilioService.SendOtpAsync(mobileNumber, primaryChannel, ct);
+        if (primary.IsSuccess)
+            return Result.Success((primary.Value, primaryChannel, FallbackFired: false));
 
         _logger.LogWarning(
-            "WhatsApp send failed synchronously for {Mobile} ({Error}). Retrying via SMS.",
+            "{Channel} send failed synchronously for {Mobile} ({Error}). Retrying via {Fallback}.",
+            primaryChannel,
             MobileNumberHelper.Mask(mobileNumber),
-            whatsAppResult.Error.Code);
+            primary.Error.Code,
+            fallbackChannel);
 
-        var smsResult = await _twilioService.SendOtpAsync(mobileNumber, "sms", ct);
-        if (smsResult.IsFailure)
+        var secondary = await _twilioService.SendOtpAsync(mobileNumber, fallbackChannel, ct);
+        if (secondary.IsFailure)
         {
             _logger.LogError(
-                "Both WhatsApp and SMS sends failed for {Mobile}. WA={WaErr}, SMS={SmsErr}",
+                "Both {Primary} and {Fallback} sends failed for {Mobile}. {Primary}={PrimaryErr}, {Fallback}={FallbackErr}",
+                primaryChannel, fallbackChannel,
                 MobileNumberHelper.Mask(mobileNumber),
-                whatsAppResult.Error.Code,
-                smsResult.Error.Code);
-            return Result.Failure<(string, string, bool)>(smsResult.Error);
+                primaryChannel, primary.Error.Code,
+                fallbackChannel, secondary.Error.Code);
+            return Result.Failure<(string, string, bool)>(secondary.Error);
         }
 
-        return Result.Success((smsResult.Value, "sms", true));
+        return Result.Success((secondary.Value, fallbackChannel, FallbackFired: true));
     }
 
     private async Task<Result> CheckRateLimitAsync(string mobileNumber, CancellationToken ct = default)
