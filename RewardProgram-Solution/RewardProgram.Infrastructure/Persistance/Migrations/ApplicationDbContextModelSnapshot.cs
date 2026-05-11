@@ -404,9 +404,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("FallbackEligibleAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<bool>("FallbackFired")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -437,6 +434,9 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasIndex("CreatedAt");
 
+                    b.HasIndex("CurrentSid")
+                        .HasDatabaseName("IX_OtpCodes_CurrentSid");
+
                     b.HasIndex("IsUsed");
 
                     b.HasIndex("MobileNumber");
@@ -447,9 +447,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasIndex("MobileNumber", "IsUsed");
 
                     b.HasIndex("PinId", "IsUsed");
-
-                    b.HasIndex("FallbackFired", "IsUsed", "FallbackEligibleAt")
-                        .HasDatabaseName("IX_OtpCodes_FallbackDue");
 
                     b.ToTable("OtpCodes", (string)null);
                 });

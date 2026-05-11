@@ -1,13 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
-using RewardProgram.Application.Options;
 using RewardProgram.Domain.Entities.OTP;
 
 namespace RewardProgram.Application.Services.Auth;
@@ -16,18 +14,15 @@ public class OtpService : IOtpService
 {
     private readonly ITwilioService _twilioService;
     private readonly IApplicationDbContext _context;
-    private readonly OtpFallbackOptions _fallbackOptions;
     private readonly ILogger<OtpService> _logger;
 
     public OtpService(
         ITwilioService twilioService,
         IApplicationDbContext context,
-        IOptions<OtpFallbackOptions> fallbackOptions,
         ILogger<OtpService> logger)
     {
         _twilioService = twilioService;
         _context = context;
-        _fallbackOptions = fallbackOptions.Value;
         _logger = logger;
     }
 
@@ -38,19 +33,18 @@ public class OtpService : IOtpService
         if (rateLimitResult.IsFailure)
             return Result.Failure<string>(rateLimitResult.Error);
 
-        var result = await _twilioService.SendOtpAsync(mobileNumber, ct);
-        if (result.IsFailure)
-            return result;
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, ct);
+        if (sendResult.IsFailure)
+            return Result.Failure<string>(sendResult.Error);
 
-        var pinId = result.Value;
+        var (pinId, channel, fallbackFired) = sendResult.Value;
 
         var otpCode = new OtpCode
         {
             PinId = pinId,
             CurrentSid = pinId,
-            Channel = "whatsapp",
-            FallbackEligibleAt = ComputeFallbackEligibleAt(),
-            FallbackFired = false,
+            Channel = channel,
+            FallbackFired = fallbackFired,
             MobileNumber = mobileNumber,
             RegistrationData = registrationData,
             CreatedAt = DateTime.UtcNow,
@@ -62,8 +56,8 @@ public class OtpService : IOtpService
         await _context.OtpCodes.AddAsync(otpCode, ct);
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("OTP sent and stored for Mobile: {Mobile}",
-            MobileNumberHelper.Mask(mobileNumber));
+        _logger.LogInformation("OTP sent and stored for Mobile: {Mobile} via {Channel}",
+            MobileNumberHelper.Mask(mobileNumber), channel);
 
         return Result.Success(pinId);
     }
@@ -98,20 +92,19 @@ public class OtpService : IOtpService
             await _context.SaveChangesAsync(ct);
         }
 
-        // 5. Send new OTP, carry forward registration data
-        var result = await _twilioService.SendOtpAsync(mobileNumber, ct);
-        if (result.IsFailure)
-            return Result.Failure<SendOtpResponse>(result.Error);
+        // 5. Send new OTP with the same sync-fallback policy, carry forward registration data
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, ct);
+        if (sendResult.IsFailure)
+            return Result.Failure<SendOtpResponse>(sendResult.Error);
 
-        var newPinId = result.Value;
+        var (newPinId, channel, fallbackFired) = sendResult.Value;
 
         var newOtp = new OtpCode
         {
             PinId = newPinId,
             CurrentSid = newPinId,
-            Channel = "whatsapp",
-            FallbackEligibleAt = ComputeFallbackEligibleAt(),
-            FallbackFired = false,
+            Channel = channel,
+            FallbackFired = fallbackFired,
             MobileNumber = mobileNumber,
             RegistrationData = lastOtp.RegistrationData,
             CreatedAt = DateTime.UtcNow,
@@ -123,8 +116,8 @@ public class OtpService : IOtpService
         await _context.OtpCodes.AddAsync(newOtp, ct);
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("OTP resent for Mobile: {Mobile}, NewPinId: {NewPinId}",
-            MobileNumberHelper.Mask(mobileNumber), newPinId);
+        _logger.LogInformation("OTP resent for Mobile: {Mobile}, NewPinId: {NewPinId}, Channel: {Channel}",
+            MobileNumberHelper.Mask(mobileNumber), newPinId, channel);
 
         return Result.Success(new SendOtpResponse(
             PinId: newPinId,
@@ -158,8 +151,8 @@ public class OtpService : IOtpService
         otpCode.VerificationAttempts++;
 
         // Verify against CurrentSid — may have been rotated to the SMS-channel
-        // Sid by OtpFallbackWorker. PinId stays as the public token for lookup.
-        // Legacy rows from before the fallback feature have CurrentSid empty; fall
+        // Sid by the Twilio delivery webhook. PinId stays as the public lookup
+        // token. Legacy rows from before this feature have CurrentSid empty; fall
         // back to PinId for them so existing pending OTPs remain verifiable.
         var sidToVerify = string.IsNullOrEmpty(otpCode.CurrentSid) ? pinId : otpCode.CurrentSid;
         var result = await _twilioService.VerifyOtpAsync(sidToVerify, otp, ct);
@@ -188,15 +181,35 @@ public class OtpService : IOtpService
         ));
     }
 
-    // Returns when (UTC) the SMS fallback worker may consider this row, or null
-    // if the feature is disabled. null also propagates naturally to mock mode in
-    // Dev/Staging via the Enabled flag, keeping the worker a no-op there.
-    private DateTime? ComputeFallbackEligibleAt()
+    // Try WhatsApp first; if Twilio surfaces a synchronous error (number not
+    // WhatsApp-capable, channel not enabled, 5xx, etc.), retry with SMS in the
+    // same request so the user gets exactly ONE OTP — through whichever channel
+    // works. The pending/silent-delivery-failure case (most common for "no
+    // WhatsApp account") is handled by the Twilio status webhook, not here.
+    private async Task<Result<(string Sid, string Channel, bool FallbackFired)>> SendWithSyncFallbackAsync(
+        string mobileNumber, CancellationToken ct)
     {
-        if (!_fallbackOptions.Enabled)
-            return null;
+        var whatsAppResult = await _twilioService.SendOtpAsync(mobileNumber, "whatsapp", ct);
+        if (whatsAppResult.IsSuccess)
+            return Result.Success((whatsAppResult.Value, "whatsapp", false));
 
-        return DateTime.UtcNow.AddSeconds(_fallbackOptions.FallbackDelaySeconds);
+        _logger.LogWarning(
+            "WhatsApp send failed synchronously for {Mobile} ({Error}). Retrying via SMS.",
+            MobileNumberHelper.Mask(mobileNumber),
+            whatsAppResult.Error.Code);
+
+        var smsResult = await _twilioService.SendOtpAsync(mobileNumber, "sms", ct);
+        if (smsResult.IsFailure)
+        {
+            _logger.LogError(
+                "Both WhatsApp and SMS sends failed for {Mobile}. WA={WaErr}, SMS={SmsErr}",
+                MobileNumberHelper.Mask(mobileNumber),
+                whatsAppResult.Error.Code,
+                smsResult.Error.Code);
+            return Result.Failure<(string, string, bool)>(smsResult.Error);
+        }
+
+        return Result.Success((smsResult.Value, "sms", true));
     }
 
     private async Task<Result> CheckRateLimitAsync(string mobileNumber, CancellationToken ct = default)

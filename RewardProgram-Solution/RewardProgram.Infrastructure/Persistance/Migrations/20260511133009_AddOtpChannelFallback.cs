@@ -1,12 +1,11 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace RewardProgram.Infrastructure.Persistance.Migrations
 {
     /// <inheritdoc />
-    public partial class AddOtpFallbackFields : Migration
+    public partial class AddOtpChannelFallback : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,12 +26,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "FallbackEligibleAt",
-                table: "OtpCodes",
-                type: "datetime2",
-                nullable: true);
-
             migrationBuilder.AddColumn<bool>(
                 name: "FallbackFired",
                 table: "OtpCodes",
@@ -41,16 +34,16 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                 defaultValue: false);
 
             migrationBuilder.CreateIndex(
-                name: "IX_OtpCodes_FallbackDue",
+                name: "IX_OtpCodes_CurrentSid",
                 table: "OtpCodes",
-                columns: new[] { "FallbackFired", "IsUsed", "FallbackEligibleAt" });
+                column: "CurrentSid");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "IX_OtpCodes_FallbackDue",
+                name: "IX_OtpCodes_CurrentSid",
                 table: "OtpCodes");
 
             migrationBuilder.DropColumn(
@@ -59,10 +52,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
             migrationBuilder.DropColumn(
                 name: "CurrentSid",
-                table: "OtpCodes");
-
-            migrationBuilder.DropColumn(
-                name: "FallbackEligibleAt",
                 table: "OtpCodes");
 
             migrationBuilder.DropColumn(

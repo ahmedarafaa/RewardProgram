@@ -33,9 +33,10 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
         builder.Property(x => x.RegistrationData)
             .HasColumnType("nvarchar(max)");
 
-        // SMS fallback fields. CurrentSid mirrors PinId on insert but is rotated
-        // by OtpFallbackWorker when WhatsApp delivery hasn't been verified within
-        // the configured window.
+        // SMS fallback fields. CurrentSid mirrors PinId on insert and is rotated
+        // to the SMS-channel Sid when fallback fires (sync error at send time, or
+        // Twilio delivery webhook later). PinId stays untouched so the mobile
+        // app's public token remains valid across the channel switch.
         builder.Property(x => x.CurrentSid)
             .HasMaxLength(100)
             .IsRequired();
@@ -57,9 +58,9 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
         builder.HasIndex(x => new { x.MobileNumber, x.IsUsed });
         builder.HasIndex(x => new { x.PinId, x.IsUsed });
 
-        // Composite index that exactly matches the fallback worker's predicate:
-        // rows due, not yet fired, not yet used, on the WhatsApp channel.
-        builder.HasIndex(x => new { x.FallbackFired, x.IsUsed, x.FallbackEligibleAt })
-            .HasDatabaseName("IX_OtpCodes_FallbackDue");
+        // The webhook handler looks up the row by Twilio's VerificationSid (which
+        // == CurrentSid). Indexed for the lookup hot path on each webhook hit.
+        builder.HasIndex(x => x.CurrentSid)
+            .HasDatabaseName("IX_OtpCodes_CurrentSid");
     }
 }
