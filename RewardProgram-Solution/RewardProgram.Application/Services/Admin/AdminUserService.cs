@@ -300,12 +300,22 @@ public class AdminUserService : IAdminUserService
 
         if (!string.IsNullOrWhiteSpace(query.RegionId))
         {
+            // Region filter has THREE matching paths so staff users surface too:
+            //  1. Non-staff users via their home address (NationalAddress.CityId → Region)
+            //  2. ZoneManagers via their managed region
+            //  3. SalesMen via any owned city in this region
+            // A dual SM+ZM user matches if either of #2 or #3 fits.
+            var rid = query.RegionId;
             var cityIdsInRegion = _context.Cities
-                .Where(c => c.RegionId == query.RegionId)
+                .Where(c => c.RegionId == rid)
                 .Select(c => c.Id);
 
             usersQuery = usersQuery.Where(u =>
-                u.NationalAddress != null && cityIdsInRegion.Contains(u.NationalAddress.CityId));
+                (u.NationalAddress != null && cityIdsInRegion.Contains(u.NationalAddress.CityId))
+                || _context.Regions.Any(r =>
+                    r.Id == rid && r.ZoneManagerId == u.Id && r.IsActive && !r.IsDeleted)
+                || _context.Cities.Any(c =>
+                    c.RegionId == rid && c.ApprovalSalesManId == u.Id && c.IsActive && !c.IsDeleted));
         }
 
         // Count and paginate
@@ -390,21 +400,29 @@ public class AdminUserService : IAdminUserService
 
         // Only count active, non-soft-deleted cities/regions as ownership — a
         // deactivated/deleted territory shouldn't surface as the SM/ZM's responsibility.
-        var ownedCitiesBySm = pageSmIds.Count > 0
-            ? (await _context.Cities
-                    .Where(c => c.IsActive && !c.IsDeleted
-                        && c.ApprovalSalesManId != null
-                        && pageSmIds.Contains(c.ApprovalSalesManId))
-                    .Select(c => new { c.Id, c.NameAr, c.NameEn, SmId = c.ApprovalSalesManId! })
-                    .ToListAsync(ct))
-                .GroupBy(x => x.SmId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => (IReadOnlyList<NamedRef>)g
-                        .OrderBy(x => x.NameAr)
-                        .Select(x => new NamedRef(x.Id, x.NameAr, x.NameEn))
-                        .ToList())
+        // We load the raw rows once and project two views: city list (for OwnedCities)
+        // and distinct region IDs per SM (for the synthesized regionName below).
+        var smOwnedCityRows = pageSmIds.Count > 0
+            ? await _context.Cities
+                .Where(c => c.IsActive && !c.IsDeleted
+                    && c.ApprovalSalesManId != null
+                    && pageSmIds.Contains(c.ApprovalSalesManId))
+                .Select(c => new { c.Id, c.NameAr, c.NameEn, c.RegionId, SmId = c.ApprovalSalesManId! })
+                .ToListAsync(ct)
             : [];
+
+        var ownedCitiesBySm = smOwnedCityRows
+            .GroupBy(x => x.SmId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<NamedRef>)g
+                    .OrderBy(x => x.NameAr)
+                    .Select(x => new NamedRef(x.Id, x.NameAr, x.NameEn))
+                    .ToList());
+
+        var smRegionIdsByUser = smOwnedCityRows
+            .GroupBy(x => x.SmId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.RegionId).Distinct().ToList());
 
         var managedRegionByZm = pageZmIds.Count > 0
             ? await _context.Regions
@@ -414,6 +432,25 @@ public class AdminUserService : IAdminUserService
                 .Select(r => new { r.Id, r.NameAr, r.NameEn, ZmId = r.ZoneManagerId! })
                 .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr, r.NameEn), ct)
             : [];
+
+        // Extend regionMap so it covers every region referenced via territory
+        // (not just users' home cities) — needed to render regionName for staff.
+        var territoryRegionIds = smRegionIdsByUser.Values.SelectMany(x => x)
+            .Concat(managedRegionByZm.Values.Select(r => r.Id))
+            .Where(rid => !regionMap.ContainsKey(rid))
+            .Distinct()
+            .ToList();
+
+        if (territoryRegionIds.Count > 0)
+        {
+            var extras = await _context.Regions
+                .Where(r => territoryRegionIds.Contains(r.Id))
+                .Select(r => new { r.Id, r.NameAr, r.NameEn })
+                .ToListAsync(ct);
+
+            foreach (var r in extras)
+                regionMap[r.Id] = new { r.NameAr, r.NameEn };
+        }
 
         // Map results
         var items = users.Select(u =>
@@ -431,6 +468,41 @@ public class AdminUserService : IAdminUserService
                 {
                     regionName = rNames.NameAr;
                     regionNameEn = rNames.NameEn;
+                }
+            }
+
+            // For staff users (SM / ZM / dual SM+ZM), synthesize regionName from
+            // their territory data when no home-address region exists. Dual-role
+            // users get the union of both ownership sets, deduplicated.
+            if (regionName is null)
+            {
+                var staffRegionIds = new HashSet<string>();
+
+                if (managedRegionByZm.TryGetValue(u.Id, out var mr))
+                    staffRegionIds.Add(mr.Id);
+
+                if (smRegionIdsByUser.TryGetValue(u.Id, out var smRids))
+                {
+                    foreach (var rid in smRids)
+                        staffRegionIds.Add(rid);
+                }
+
+                if (staffRegionIds.Count > 0)
+                {
+                    // Stable order — alphabetical by Arabic name — so the same user
+                    // always renders the same string.
+                    var ordered = staffRegionIds
+                        .Select(rid => regionMap.TryGetValue(rid, out var rn) ? rn : null)
+                        .Where(rn => rn is not null)
+                        .Select(rn => rn!)
+                        .OrderBy(rn => rn.NameAr)
+                        .ToList();
+
+                    if (ordered.Count > 0)
+                    {
+                        regionName = string.Join("، ", ordered.Select(rn => rn.NameAr));
+                        regionNameEn = string.Join(", ", ordered.Select(rn => rn.NameEn));
+                    }
                 }
             }
 
