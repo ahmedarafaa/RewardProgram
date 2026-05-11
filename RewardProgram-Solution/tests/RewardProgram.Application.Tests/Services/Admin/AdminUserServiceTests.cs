@@ -277,57 +277,6 @@ public class AdminUserServiceTests : IDisposable
         result.Error.Should().Be(AdminUserErrors.RegionAlreadyHasZoneManager);
     }
 
-    // ── AddTechnician ──
-
-    [Fact]
-    public async Task AddTechnician_DuplicateMobile_ShouldFail()
-    {
-        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new ApplicationUser { Id = "existing", Name = "Existing", MobileNumber = "+966500000099" });
-
-        var result = await _sut.AddTechnicianAsync(
-            new AdminAddTechnicianRequest("Test", "0500000001", "city1", "12345", "Olaya"), "admin1");
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(AdminUserErrors.MobileAlreadyExists);
-    }
-
-    [Fact]
-    public async Task AddTechnician_CityNotFound_ShouldFail()
-    {
-        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
-
-        var result = await _sut.AddTechnicianAsync(
-            new AdminAddTechnicianRequest("Test", "0500000001", "bad-city", "12345", "Olaya"), "admin1");
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(AdminUserErrors.CityNotFound);
-    }
-
-    [Fact]
-    public async Task AddTechnician_CityNoSalesMan_ShouldFail()
-    {
-        _userRepo.FindByMobileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((ApplicationUser?)null);
-
-        var region = new Region { NameAr = "R", NameEn = "R", IsActive = true };
-        _context.Regions.Add(region);
-        await _context.SaveChangesAsync();
-
-        var city = new City
-        {
-            NameAr = "C", NameEn = "C", RegionId = region.Id, IsActive = true,
-            ApprovalSalesManId = null // no salesman
-        };
-        _context.Cities.Add(city);
-        await _context.SaveChangesAsync();
-
-        var result = await _sut.AddTechnicianAsync(
-            new AdminAddTechnicianRequest("Test", "0500000001", city.Id, "12345", "Olaya"), "admin1");
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(AdminUserErrors.NoApprovalSalesMan);
-    }
-
     // ── RestoreUser ──
 
     [Fact]

@@ -45,38 +45,9 @@ public class AdminUserController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    [HttpPost("shop-owner")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AddShopOwner([FromForm] AdminAddShopOwnerRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.AddShopOwnerAsync(request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
-
-    [HttpPost("seller")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AddSeller([FromForm] AdminAddSellerRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.AddSellerAsync(request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
-
-    [HttpPost("technician")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AddTechnician([FromBody] AdminAddTechnicianRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.AddTechnicianAsync(request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
+    // ShopOwner / Seller / Technician are NOT admin-created — they self-register
+    // through the public OTP-first flow (POST /api/auth/register/*). Endpoints
+    // for those user types were removed per business owner directive 2026-05-11.
 
     #endregion
 
@@ -152,38 +123,8 @@ public class AdminUserController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    [HttpPut("shop-owner/{id}")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> EditShopOwner(string id, [FromBody] AdminEditShopOwnerRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.EditShopOwnerAsync(id, request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
-
-    [HttpPut("seller/{id}")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> EditSeller(string id, [FromBody] AdminEditSellerRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.EditSellerAsync(id, request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
-
-    [HttpPut("technician/{id}")]
-    [ProducesResponseType(typeof(AdminAddUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> EditTechnician(string id, [FromBody] AdminEditTechnicianRequest request, CancellationToken ct)
-    {
-        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var result = await _adminUserService.EditTechnicianAsync(id, request, adminId, ct);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
-    }
+    // ShopOwner / Seller / Technician edit endpoints removed per owner directive
+    // 2026-05-11. Those users update their own profile via /api/profile.
 
     #endregion
 
