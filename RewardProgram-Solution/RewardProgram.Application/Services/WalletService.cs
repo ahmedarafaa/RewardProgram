@@ -92,9 +92,12 @@ public class WalletService : IWalletService
             })
             .ToListAsync(ct);
 
+        // Amount keeps its sign so the UI can render +N for credits and -N for
+        // debits without having to interpret Type. SarAmount stays absolute —
+        // it's an informational "equivalent value", direction is conveyed by Amount.
         var items = rows.Select(t => new WalletTransactionResponse(
             t.Id,
-            Math.Abs(t.Amount),
+            t.Amount,
             t.SarRate,
             Math.Abs(t.SarAmount),
             t.Type,

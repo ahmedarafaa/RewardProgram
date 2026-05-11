@@ -49,10 +49,12 @@ public class DashboardService : IDashboardService
                 .Where(t => t.WalletId == wallet.Id)
                 .OrderByDescending(t => t.CreatedAt)
                 .Take(10)
+                // Amount keeps its sign (+ for credit, − for debit) so the UI can
+                // render the direction without mapping Type. SarAmount stays absolute.
                 .Select(t => new DashboardTransactionItem(
                     t.Id,
                     t.Amount,
-                    t.SarAmount,
+                    Math.Abs(t.SarAmount),
                     t.Type,
                     t.Description,
                     t.CreatedAt
