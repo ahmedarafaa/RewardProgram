@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
@@ -411,13 +412,20 @@ public class AdminUserService : IAdminUserService
                 .ToListAsync(ct)
             : [];
 
+        // Locale picked by RequestLocalization middleware from Accept-Language.
+        // The "default" name fields below (NamedRef.NameAr, regionName, cityName)
+        // carry whichever language matches the request; the *NameEn / NameEn
+        // siblings always stay English for callers that need explicit access.
+        var isEnglish = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            .Equals("en", StringComparison.OrdinalIgnoreCase);
+
         var ownedCitiesBySm = smOwnedCityRows
             .GroupBy(x => x.SmId)
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<NamedRef>)g
-                    .OrderBy(x => x.NameAr)
-                    .Select(x => new NamedRef(x.Id, x.NameAr, x.NameEn))
+                    .OrderBy(x => isEnglish ? x.NameEn : x.NameAr)
+                    .Select(x => new NamedRef(x.Id, isEnglish ? x.NameEn : x.NameAr, x.NameEn))
                     .ToList());
 
         var smRegionIdsByUser = smOwnedCityRows
@@ -430,7 +438,10 @@ public class AdminUserService : IAdminUserService
                     && r.ZoneManagerId != null
                     && pageZmIds.Contains(r.ZoneManagerId))
                 .Select(r => new { r.Id, r.NameAr, r.NameEn, ZmId = r.ZoneManagerId! })
-                .ToDictionaryAsync(r => r.ZmId, r => new NamedRef(r.Id, r.NameAr, r.NameEn), ct)
+                .ToDictionaryAsync(
+                    r => r.ZmId,
+                    r => new NamedRef(r.Id, isEnglish ? r.NameEn : r.NameAr, r.NameEn),
+                    ct)
             : [];
 
         // Extend regionMap so it covers every region referenced via territory
@@ -462,11 +473,11 @@ public class AdminUserService : IAdminUserService
 
             if (u.CityId != null && cityMap.TryGetValue(u.CityId, out var cityInfo))
             {
-                cityName = cityInfo.NameAr;
+                cityName = isEnglish ? cityInfo.NameEn : cityInfo.NameAr;
                 cityNameEn = cityInfo.NameEn;
                 if (regionMap.TryGetValue(cityInfo.RegionId, out var rNames))
                 {
-                    regionName = rNames.NameAr;
+                    regionName = isEnglish ? rNames.NameEn : rNames.NameAr;
                     regionNameEn = rNames.NameEn;
                 }
             }
@@ -489,18 +500,19 @@ public class AdminUserService : IAdminUserService
 
                 if (staffRegionIds.Count > 0)
                 {
-                    // Stable order — alphabetical by Arabic name — so the same user
-                    // always renders the same string.
+                    // Stable order — alphabetical by display name in the active
+                    // locale — so the same user always renders the same string.
                     var ordered = staffRegionIds
                         .Select(rid => regionMap.TryGetValue(rid, out var rn) ? rn : null)
                         .Where(rn => rn is not null)
                         .Select(rn => rn!)
-                        .OrderBy(rn => rn.NameAr)
+                        .OrderBy(rn => isEnglish ? rn.NameEn : rn.NameAr)
                         .ToList();
 
                     if (ordered.Count > 0)
                     {
-                        regionName = string.Join("، ", ordered.Select(rn => rn.NameAr));
+                        var sep = isEnglish ? ", " : "، ";
+                        regionName = string.Join(sep, ordered.Select(rn => isEnglish ? rn.NameEn : rn.NameAr));
                         regionNameEn = string.Join(", ", ordered.Select(rn => rn.NameEn));
                     }
                 }
@@ -563,6 +575,12 @@ public class AdminUserService : IAdminUserService
         var roles = (await _userRepository.GetRolesAsync(
             (await _userRepository.FindByIdAsync(userId, ct))!)).ToList();
 
+        // Default-name fields below carry whichever language matches the
+        // request; the *NameEn / NameEn siblings always stay English for
+        // callers that need explicit access.
+        var isEnglish = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            .Equals("en", StringComparison.OrdinalIgnoreCase);
+
         // Home address — null for staff (SM/ZM/SystemAdmin) since they have no NationalAddress.
         AdminUserAddress? address = null;
         if (user.NationalAddress is not null)
@@ -582,9 +600,11 @@ public class AdminUserService : IAdminUserService
                     .FirstOrDefaultAsync(ct);
 
                 address = new AdminUserAddress(
-                    city.Id, city.NameAr, city.NameEn,
+                    city.Id,
+                    isEnglish ? city.NameEn : city.NameAr,
+                    city.NameEn,
                     region?.Id ?? string.Empty,
-                    region?.NameAr ?? string.Empty,
+                    region is null ? string.Empty : (isEnglish ? region.NameEn : region.NameAr),
                     region?.NameEn ?? string.Empty,
                     user.NationalAddress.Street,
                     user.NationalAddress.BuildingNumber,
@@ -627,7 +647,9 @@ public class AdminUserService : IAdminUserService
                         shopData.CRN,
                         shopData.ShortAddress,
                         shopData.ShopImageUrl,
-                        shopCity?.Id, shopCity?.NameAr, shopCity?.NameEn,
+                        shopCity?.Id,
+                        shopCity is null ? null : (isEnglish ? shopCity.NameEn : shopCity.NameAr),
+                        shopCity?.NameEn,
                         shopData.Street,
                         shopData.BuildingNumber,
                         shopData.PostalCode,
@@ -638,21 +660,36 @@ public class AdminUserService : IAdminUserService
         }
 
         // SalesMan owned cities (active, non-deleted only — same rule as the list endpoint).
-        IReadOnlyList<NamedRef> ownedCities = roles.Contains(UserRoles.SalesMan)
-            ? (await _context.Cities.AsNoTracking()
+        IReadOnlyList<NamedRef> ownedCities;
+        if (roles.Contains(UserRoles.SalesMan))
+        {
+            var rows = await _context.Cities.AsNoTracking()
                 .Where(c => c.IsActive && !c.IsDeleted && c.ApprovalSalesManId == userId)
-                .OrderBy(c => c.NameAr)
-                .Select(c => new NamedRef(c.Id, c.NameAr, c.NameEn))
-                .ToListAsync(ct))
-            : Array.Empty<NamedRef>();
+                .Select(c => new { c.Id, c.NameAr, c.NameEn })
+                .ToListAsync(ct);
+
+            ownedCities = rows
+                .OrderBy(c => isEnglish ? c.NameEn : c.NameAr)
+                .Select(c => new NamedRef(c.Id, isEnglish ? c.NameEn : c.NameAr, c.NameEn))
+                .ToList();
+        }
+        else
+        {
+            ownedCities = Array.Empty<NamedRef>();
+        }
 
         // ZoneManager managed region.
-        NamedRef? managedRegion = roles.Contains(UserRoles.ZoneManager)
-            ? await _context.Regions.AsNoTracking()
+        NamedRef? managedRegion = null;
+        if (roles.Contains(UserRoles.ZoneManager))
+        {
+            var r = await _context.Regions.AsNoTracking()
                 .Where(r => r.IsActive && !r.IsDeleted && r.ZoneManagerId == userId)
-                .Select(r => new NamedRef(r.Id, r.NameAr, r.NameEn))
-                .FirstOrDefaultAsync(ct)
-            : null;
+                .Select(r => new { r.Id, r.NameAr, r.NameEn })
+                .FirstOrDefaultAsync(ct);
+
+            if (r is not null)
+                managedRegion = new NamedRef(r.Id, isEnglish ? r.NameEn : r.NameAr, r.NameEn);
+        }
 
         // If the user has no Identity-role rows but is SalesMan/ZoneManager by primary type
         // (edge case for legacy data), surface the primary type as a role string.

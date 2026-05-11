@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Dashboard;
@@ -92,11 +93,15 @@ public class DashboardService : IDashboardService
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.CustomerCode == profile.CustomerCode, ct);
 
-        // City name
+        // City name — picked in the active request culture so English mode
+        // gets the English label and Arabic mode keeps Arabic.
+        var isEnglish = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            .Equals("en", StringComparison.OrdinalIgnoreCase);
+
         var cityName = shopData is not null
             ? await _context.Cities.AsNoTracking()
                 .Where(c => c.Id == shopData.CityId)
-                .Select(c => c.NameAr)
+                .Select(c => isEnglish ? c.NameEn : c.NameAr)
                 .FirstOrDefaultAsync(ct) ?? string.Empty
             : string.Empty;
 

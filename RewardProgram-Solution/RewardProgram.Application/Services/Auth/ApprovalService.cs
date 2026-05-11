@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
@@ -80,10 +81,22 @@ public class ApprovalService : IApprovalService
             .Distinct()
             .ToList();
 
+        // Pick city/region names per the active request culture so the approval
+        // queue surfaces English in English mode and Arabic in Arabic mode.
+        var isEnglish = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            .Equals("en", StringComparison.OrdinalIgnoreCase);
+
         var cities = await _context.Cities
             .Where(c => cityIds.Contains(c.Id))
             .Include(c => c.Region)
-            .ToDictionaryAsync(c => c.Id, c => new { c.NameAr, RegionName = c.Region.NameAr }, ct);
+            .ToDictionaryAsync(
+                c => c.Id,
+                c => new
+                {
+                    CityName = isEnglish ? c.NameEn : c.NameAr,
+                    RegionName = isEnglish ? c.Region.NameEn : c.Region.NameAr
+                },
+                ct);
 
         // Collect CustomerCodes from profiles
         var customerCodes = users
@@ -115,7 +128,7 @@ public class ApprovalService : IApprovalService
             {
                 if (cities.TryGetValue(u.NationalAddress.CityId, out var cityInfo))
                 {
-                    cityName = cityInfo.NameAr;
+                    cityName = cityInfo.CityName;
                     regionName = cityInfo.RegionName;
                 }
             }
@@ -352,13 +365,19 @@ public class ApprovalService : IApprovalService
         if (user.RegistrationStatus == RegistrationStatus.PendingSalesman
             && roles.Contains(UserRoles.SalesMan))
         {
+            // Invariant: registration requires a NationalAddress and the user's city
+            // always has an SM assigned (enforced by SM reassign / delete-with-reassign).
+            // If we land here without one, treat it as data corruption, not a 4xx.
+            if (user.NationalAddress is null)
+                throw new InvalidOperationException(
+                    $"User {userId} reached SM approval with no NationalAddress — invariant violated.");
+
             if (user.AssignedSalesManId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
             // Dual-role skip: if approver also manages user's region as ZM,
             // collapse SM+ZM steps into one and jump straight to Approved.
             var isZmForUserRegion = roles.Contains(UserRoles.ZoneManager)
-                && user.NationalAddress != null
                 && await _context.Cities
                     .Where(c => c.Id == user.NationalAddress.CityId)
                     .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
@@ -366,11 +385,10 @@ public class ApprovalService : IApprovalService
             if (!isZmForUserRegion)
             {
                 // Standard SM-only path — still need a ZoneManager downstream.
-                var regionHasZoneManager = user.NationalAddress != null
-                    && await _context.Cities
-                        .Where(c => c.Id == user.NationalAddress.CityId)
-                        .Select(c => c.Region!.ZoneManagerId)
-                        .FirstOrDefaultAsync(ct) != null;
+                var regionHasZoneManager = await _context.Cities
+                    .Where(c => c.Id == user.NationalAddress.CityId)
+                    .Select(c => c.Region!.ZoneManagerId)
+                    .FirstOrDefaultAsync(ct) != null;
 
                 if (!regionHasZoneManager)
                     return Result.Failure(ApprovalErrors.NoZoneManagerForRegion);
@@ -399,13 +417,22 @@ public class ApprovalService : IApprovalService
         if (user.RegistrationStatus == RegistrationStatus.PendingZoneManager
             && roles.Contains(UserRoles.ZoneManager))
         {
-            // Verify this ZoneManager manages the region of the user's city
-            var isAuthorized = user.NationalAddress != null
-                && await _context.Cities
-                    .Where(c => c.Id == user.NationalAddress.CityId)
-                    .AnyAsync(c => c.Region!.ZoneManagerId == approverId, ct);
+            if (user.NationalAddress is null)
+                throw new InvalidOperationException(
+                    $"User {userId} reached ZM approval with no NationalAddress — invariant violated.");
 
-            if (!isAuthorized)
+            // Re-read the region's current ZoneManagerId — it can be null (region
+            // was never assigned, or admin cleared it after registration), in which
+            // case we surface NoZoneManagerForRegion instead of a misleading 403.
+            var regionZoneManagerId = await _context.Cities
+                .Where(c => c.Id == user.NationalAddress.CityId)
+                .Select(c => c.Region!.ZoneManagerId)
+                .FirstOrDefaultAsync(ct);
+
+            if (string.IsNullOrEmpty(regionZoneManagerId))
+                return Result.Failure(ApprovalErrors.NoZoneManagerForRegion);
+
+            if (regionZoneManagerId != approverId)
                 return Result.Failure(ApprovalErrors.NotAuthorizedToApprove);
 
             var fromStatus = user.RegistrationStatus;
