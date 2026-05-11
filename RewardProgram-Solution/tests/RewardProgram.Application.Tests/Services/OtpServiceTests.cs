@@ -127,9 +127,58 @@ public class OtpServiceTests : IDisposable
         newRow.Channel.Should().Be("sms");
         newRow.FallbackFired.Should().BeFalse(); // SMS was the primary, not a fallback
 
+        // The old WhatsApp row should now be marked used (since Twilio gave us
+        // a different Sid — they're two distinct verifications).
+        var oldRow = await _context.OtpCodes
+            .Where(o => o.PinId == "VE_old")
+            .SingleAsync();
+        oldRow.IsUsed.Should().BeTrue();
+
         // WhatsApp must not be called at all when Resend succeeds via SMS directly.
         await _twilio.DidNotReceive().SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
         await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Resend_TwilioReturnsSameSid_UpdatesInPlaceWithoutDuplicate()
+    {
+        // Twilio Verify dedups by (Service, To): a second create while a
+        // verification is still pending returns the SAME Sid. The row must
+        // refresh in place instead of attempting a duplicate INSERT (which
+        // would violate the unique PinId constraint and crash with 500).
+        const string mobile = "+966500000001";
+        const string sharedSid = "VE_dedup";
+
+        _context.OtpCodes.Add(new RewardProgram.Domain.Entities.OTP.OtpCode
+        {
+            PinId = sharedSid,
+            CurrentSid = sharedSid,
+            Channel = "whatsapp",
+            MobileNumber = mobile,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(9),
+            IsUsed = false,
+            FallbackFired = false
+        });
+        await _context.SaveChangesAsync();
+
+        _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>())
+            .Returns(Result.Success(sharedSid)); // Twilio dedups → same Sid
+
+        var result = await _sut.ResendAsync(mobile);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.PinId.Should().Be(sharedSid);
+
+        // Only ONE row should exist — the original was refreshed in place.
+        var rows = await _context.OtpCodes.ToListAsync();
+        rows.Should().HaveCount(1);
+
+        var row = rows[0];
+        row.PinId.Should().Be(sharedSid);
+        row.Channel.Should().Be("sms");      // refreshed to the new channel
+        row.IsUsed.Should().BeFalse();        // refreshed; usable for verify
+        row.VerificationAttempts.Should().Be(0);
     }
 
     [Fact]

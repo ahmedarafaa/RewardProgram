@@ -39,22 +39,7 @@ public class OtpService : IOtpService
 
         var (pinId, channel, fallbackFired) = sendResult.Value;
 
-        var otpCode = new OtpCode
-        {
-            PinId = pinId,
-            CurrentSid = pinId,
-            Channel = channel,
-            FallbackFired = fallbackFired,
-            MobileNumber = mobileNumber,
-            RegistrationData = registrationData,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(OtpCode.DefaultExpirationMinutes),
-            IsUsed = false,
-            VerificationAttempts = 0
-        };
-
-        await _context.OtpCodes.AddAsync(otpCode, ct);
-        await _context.SaveChangesAsync(ct);
+        await SaveOrRefreshOtpRowAsync(mobileNumber, pinId, channel, fallbackFired, registrationData, ct);
 
         _logger.LogInformation("OTP sent and stored for Mobile: {Mobile} via {Channel}",
             MobileNumberHelper.Mask(mobileNumber), channel);
@@ -85,40 +70,29 @@ public class OtpService : IOtpService
         if (rateLimitResult.IsFailure)
             return Result.Failure<SendOtpResponse>(rateLimitResult.Error);
 
-        // 4. Mark old OTP as used (invalidate it)
-        if (!lastOtp.IsUsed)
-        {
-            lastOtp.IsUsed = true;
-            await _context.SaveChangesAsync(ct);
-        }
-
-        // 5. Send new OTP — preferring SMS this time. The user pressed Resend,
-        //    which is a strong signal that the first attempt (WhatsApp) didn't
-        //    reach them. Going straight to SMS guarantees they get the code via
-        //    a different channel rather than retrying the same one. If SMS fails
-        //    synchronously (rare), the helper falls back to WhatsApp.
+        // 4. Send new OTP first — preferring SMS. We don't pre-mark the old row
+        //    as used here, because Twilio Verify dedups by (Service, To): if the
+        //    prior verification is still pending, Twilio returns the SAME Sid
+        //    regardless of the channel we asked for. In that case lastOtp IS the
+        //    row we're about to refresh — marking it used and then "un-using" it
+        //    would be confusing. If Twilio gives us a NEW Sid, we invalidate the
+        //    old one further down.
         var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "sms", ct);
         if (sendResult.IsFailure)
             return Result.Failure<SendOtpResponse>(sendResult.Error);
 
         var (newPinId, channel, fallbackFired) = sendResult.Value;
 
-        var newOtp = new OtpCode
+        // If Twilio issued a new Sid, mark the old row as used so verify lookups
+        // (PinId + !IsUsed) only match the fresh row. Same-Sid case: skip — the
+        // upsert below refreshes lastOtp in place.
+        if (!lastOtp.IsUsed && lastOtp.PinId != newPinId)
         {
-            PinId = newPinId,
-            CurrentSid = newPinId,
-            Channel = channel,
-            FallbackFired = fallbackFired,
-            MobileNumber = mobileNumber,
-            RegistrationData = lastOtp.RegistrationData,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(OtpCode.DefaultExpirationMinutes),
-            IsUsed = false,
-            VerificationAttempts = 0
-        };
+            lastOtp.IsUsed = true;
+        }
 
-        await _context.OtpCodes.AddAsync(newOtp, ct);
-        await _context.SaveChangesAsync(ct);
+        await SaveOrRefreshOtpRowAsync(
+            mobileNumber, newPinId, channel, fallbackFired, lastOtp.RegistrationData, ct);
 
         _logger.LogInformation("OTP resent for Mobile: {Mobile}, NewPinId: {NewPinId}, Channel: {Channel}",
             MobileNumberHelper.Mask(mobileNumber), newPinId, channel);
@@ -127,6 +101,60 @@ public class OtpService : IOtpService
             PinId: newPinId,
             MaskedMobileNumber: MobileNumberHelper.Mask(mobileNumber)
         ));
+    }
+
+    // Insert a new OtpCode row, OR refresh an existing row whose PinId matches
+    // (Twilio Verify dedups by (Service, To) and returns the same Sid when an
+    // earlier verification is still pending — so a fresh INSERT for that Sid
+    // would violate the unique PinId index and crash the request with 500
+    // *after* Twilio has already delivered the OTP). This unified path makes
+    // both SendAsync and ResendAsync idempotent against Twilio's dedup.
+    private async Task SaveOrRefreshOtpRowAsync(
+        string mobileNumber,
+        string pinId,
+        string channel,
+        bool fallbackFired,
+        string? registrationData,
+        CancellationToken ct)
+    {
+        var existing = await _context.OtpCodes
+            .FirstOrDefaultAsync(o => o.PinId == pinId, ct);
+
+        var now = DateTime.UtcNow;
+        var expiresAt = now.AddMinutes(OtpCode.DefaultExpirationMinutes);
+
+        if (existing is not null)
+        {
+            existing.CurrentSid = pinId;
+            existing.Channel = channel;
+            existing.FallbackFired = fallbackFired;
+            existing.IsUsed = false;
+            existing.VerificationAttempts = 0;
+            existing.CreatedAt = now;
+            existing.ExpiresAt = expiresAt;
+            // Carry forward any registration data already attached to this row
+            // unless the caller explicitly provides new payload.
+            if (registrationData is not null)
+                existing.RegistrationData = registrationData;
+        }
+        else
+        {
+            await _context.OtpCodes.AddAsync(new OtpCode
+            {
+                PinId = pinId,
+                CurrentSid = pinId,
+                Channel = channel,
+                FallbackFired = fallbackFired,
+                MobileNumber = mobileNumber,
+                RegistrationData = registrationData,
+                CreatedAt = now,
+                ExpiresAt = expiresAt,
+                IsUsed = false,
+                VerificationAttempts = 0
+            }, ct);
+        }
+
+        await _context.SaveChangesAsync(ct);
     }
 
     public async Task<Result<OtpVerificationResult>> VerifyAsync(string pinId, string otp, CancellationToken ct = default)
