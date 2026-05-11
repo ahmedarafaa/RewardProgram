@@ -199,8 +199,15 @@ public class AuthService : IAuthService
             Errors: errors));
     }
 
-    private static ValidationFieldError ToFieldError(string field, Error error)
-        => new(field, error.Code, error.Description);
+    private ValidationFieldError ToFieldError(string field, Error error)
+    {
+        // Look up the localized description for the error code; fall back to the
+        // hardcoded Arabic description on Error if the key is missing from the
+        // resx files. Same pattern as ResultExtension.ToProblem on the API layer.
+        var localized = _localizer[error.Code];
+        var message = localized.ResourceNotFound ? error.Description : localized.Value;
+        return new ValidationFieldError(field, error.Code, message);
+    }
 
     public async Task<Result<RegisterResponse>> RegisterShopOwnerAsync(RegisterShopOwnerRequest request, CancellationToken ct = default)
     {

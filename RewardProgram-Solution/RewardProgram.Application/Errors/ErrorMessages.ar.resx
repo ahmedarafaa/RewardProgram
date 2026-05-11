@@ -185,4 +185,11 @@
   <data name="Approval.RejectSuccess"><value>تم الرفض بنجاح</value></data>
   <data name="Auth.LogoutSuccess"><value>تم تسجيل الخروج بنجاح</value></data>
   <data name="Profile.AccountDeleted"><value>تم حذف الحساب بنجاح</value></data>
+  <!-- Infrastructure inline errors (Twilio + FileStorage) -->
+  <data name="File.UploadFailed"><value>فشل رفع الملف</value></data>
+  <data name="File.DeleteFailed"><value>فشل حذف الملف</value></data>
+  <data name="Twilio.UnexpectedStatus"><value>فشل إرسال رمز التحقق</value></data>
+  <data name="Twilio.Exception"><value>فشل التحقق من الرمز</value></data>
+  <data name="Twilio.SmsException"><value>فشل إرسال الرسالة النصية</value></data>
+  <data name="Twilio.WhatsAppException"><value>فشل إرسال رسالة الواتساب</value></data>
 </root>

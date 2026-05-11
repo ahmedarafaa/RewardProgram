@@ -185,4 +185,11 @@
   <data name="Approval.RejectSuccess"><value>Rejected successfully</value></data>
   <data name="Auth.LogoutSuccess"><value>Logged out successfully</value></data>
   <data name="Profile.AccountDeleted"><value>Account deleted successfully</value></data>
+  <!-- Infrastructure inline errors (Twilio + FileStorage) -->
+  <data name="File.UploadFailed"><value>File upload failed</value></data>
+  <data name="File.DeleteFailed"><value>File deletion failed</value></data>
+  <data name="Twilio.UnexpectedStatus"><value>Failed to send verification code</value></data>
+  <data name="Twilio.Exception"><value>Failed to verify the code</value></data>
+  <data name="Twilio.SmsException"><value>Failed to send SMS message</value></data>
+  <data name="Twilio.WhatsAppException"><value>Failed to send WhatsApp message</value></data>
 </root>
