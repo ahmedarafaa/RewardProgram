@@ -25,7 +25,7 @@ public class NotificationServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _sut = new NotificationService(_context, _userRepo, Substitute.For<IFirebaseMessagingService>(), Substitute.For<ILogger<NotificationService>>(), Substitute.For<IServiceScopeFactory>(), new MemoryCache(new MemoryCacheOptions()));
+        _sut = new NotificationService(_context, _userRepo, Substitute.For<IFirebaseMessagingService>(), Substitute.For<ILogger<NotificationService>>(), Substitute.For<IServiceScopeFactory>(), new MemoryCache(new MemoryCacheOptions()), new StubLocalizer<ErrorMessages>());
     }
 
     public void Dispose() => _context.Dispose();

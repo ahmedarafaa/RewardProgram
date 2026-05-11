@@ -265,6 +265,8 @@ public class AdminBarcodeService : IAdminBarcodeService
                     Type = WalletTransactionType.Cancelled,
                     ReferenceId = scanId,
                     Description = $"إلغاء مسح — {barcode.Product.Name}",
+                    DescriptionKey = "Wallet.Tx.ScanCancelled",
+                    DescriptionArgs = LocalizedTextRenderer.SerializeArgs(barcode.Product.Name),
                     SarRate = wt.SarRate,
                     SarAmount = -wt.SarAmount
                 }, ct);

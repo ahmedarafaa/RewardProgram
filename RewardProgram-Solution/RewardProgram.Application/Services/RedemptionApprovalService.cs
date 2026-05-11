@@ -329,24 +329,34 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         if (redemptionRequest.Status == RedemptionRequestStatus.Completed)
         {
             await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionCompleted,
-                "اكتمل طلب الاستبدال", "تم إتمام طلب الاستبدال بنجاح",
-                redemptionRequest.Id, ct);
+                title: "اكتمل طلب الاستبدال",
+                body: "تم إتمام طلب الاستبدال بنجاح",
+                referenceId: redemptionRequest.Id,
+                titleKey: "Notif.Redemption.CompletedTitle",
+                bodyKey: "Notif.Redemption.CompletedBody",
+                ct: ct);
         }
         else
         {
-            var (title, body) = fromStatus switch
+            var (title, body, titleKey, bodyKey) = fromStatus switch
             {
                 RedemptionRequestStatus.PendingSalesMan =>
-                    ("تحديث طلب الاستبدال", "تمت موافقة مندوب المبيعات على طلب الاستبدال"),
+                    ("تحديث طلب الاستبدال", "تمت موافقة مندوب المبيعات على طلب الاستبدال",
+                     "Notif.Redemption.UpdateTitle", "Notif.Redemption.SalesManApprovedBody"),
                 RedemptionRequestStatus.PendingZoneManager =>
-                    ("تحديث طلب الاستبدال", "تمت موافقة مدير المنطقة على طلب الاستبدال"),
+                    ("تحديث طلب الاستبدال", "تمت موافقة مدير المنطقة على طلب الاستبدال",
+                     "Notif.Redemption.UpdateTitle", "Notif.Redemption.ZoneManagerApprovedBody"),
                 RedemptionRequestStatus.PendingAdmin =>
-                    ("تمت موافقة الإدارة", "تمت موافقة الإدارة على طلب الاستبدال"),
-                _ => ("تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال")
+                    ("تمت موافقة الإدارة", "تمت موافقة الإدارة على طلب الاستبدال",
+                     "Notif.Redemption.AdminApprovedTitle", "Notif.Redemption.AdminApprovedBody"),
+                _ => ("تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال",
+                      "Notif.Redemption.UpdateTitle", "Notif.Redemption.GenericApprovedBody")
             };
 
             await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionApproved,
-                title, body, redemptionRequest.Id, ct);
+                title: title, body: body, referenceId: redemptionRequest.Id,
+                titleKey: titleKey, bodyKey: bodyKey,
+                ct: ct);
         }
 
         return Result.Success();
@@ -404,8 +414,13 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             redemptionRequest.Id, approverId);
 
         await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionRejected,
-            "تم رفض طلب الاستبدال", $"تم رفض طلب الاستبدال. السبب: {request.RejectionReason}",
-            redemptionRequest.Id, ct);
+            title: "تم رفض طلب الاستبدال",
+            body: $"تم رفض طلب الاستبدال. السبب: {request.RejectionReason}",
+            referenceId: redemptionRequest.Id,
+            titleKey: "Notif.Redemption.RejectedTitle",
+            bodyKey: "Notif.Redemption.RejectedBody",
+            bodyArgs: LocalizedTextRenderer.SerializeArgs(request.RejectionReason),
+            ct: ct);
 
         return Result.Success();
     }
@@ -533,8 +548,12 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             freshRequest.Id, handoverById);
 
         await _notificationService.CreateAsync(freshRequest.UserId, NotificationType.RedemptionCompleted,
-            "اكتمل طلب الاستبدال", "تم تسليم المبلغ بنجاح",
-            freshRequest.Id, ct);
+            title: "اكتمل طلب الاستبدال",
+            body: "تم تسليم المبلغ بنجاح",
+            referenceId: freshRequest.Id,
+            titleKey: "Notif.Redemption.CompletedTitle",
+            bodyKey: "Notif.Redemption.CashHandoverBody",
+            ct: ct);
 
         return Result.Success();
     }
@@ -659,6 +678,9 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         wallet.HeldSarBalance -= redemptionRequest.SarAmount;
 
         // Record redeemed transaction
+        var redeemKey = redemptionRequest.Method == RedemptionMethod.BankTransfer
+            ? "Wallet.Tx.RedeemBank"
+            : "Wallet.Tx.RedeemCash";
         await _context.WalletTransactions.AddAsync(new WalletTransaction
         {
             WalletId = wallet.Id,
@@ -668,6 +690,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             Description = redemptionRequest.Method == RedemptionMethod.BankTransfer
                 ? "استرداد — تحويل بنكي"
                 : "استرداد — نقدي",
+            DescriptionKey = redeemKey,
             SarRate = redemptionRequest.SarRate,
             SarAmount = -redemptionRequest.SarAmount
         }, ct);
@@ -689,6 +712,7 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             Type = WalletTransactionType.Refunded,
             ReferenceId = redemptionRequest.Id,
             Description = "استرجاع نقاط — طلب مرفوض أو ملغي",
+            DescriptionKey = "Wallet.Tx.Refund",
             SarRate = redemptionRequest.SarRate,
             SarAmount = redemptionRequest.SarAmount
         }, ct);

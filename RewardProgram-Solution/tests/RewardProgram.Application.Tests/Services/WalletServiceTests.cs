@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Wallet;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Services;
 using RewardProgram.Application.Tests.TestHelpers;
 using RewardProgram.Domain.Entities;
@@ -17,7 +18,7 @@ public class WalletServiceTests : IDisposable
     public WalletServiceTests()
     {
         _context = TestDbContext.Create();
-        _sut = new WalletService(_context, Substitute.For<ILogger<WalletService>>());
+        _sut = new WalletService(_context, Substitute.For<ILogger<WalletService>>(), new StubLocalizer<ErrorMessages>());
     }
 
     public void Dispose() => _context.Dispose();

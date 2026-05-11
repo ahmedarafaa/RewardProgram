@@ -151,6 +151,8 @@ public class InvitationService : IInvitationService
                     Type = WalletTransactionType.InvitationReward,
                     ReferenceId = inviter.Id,
                     Description = $"مكافأة تسجيل عبر دعوة من {inviter.Name}",
+                    DescriptionKey = "Wallet.Tx.InviteeBonus",
+                    DescriptionArgs = LocalizedTextRenderer.SerializeArgs(inviter.Name),
                     SarRate = sarRate,
                     SarAmount = inviteeSarAmount,
                     RemainingAmount = inviteePoints
@@ -187,6 +189,8 @@ public class InvitationService : IInvitationService
                         Type = WalletTransactionType.InvitationReward,
                         ReferenceId = invitee.Id,
                         Description = $"مكافأة دعوة — {invitee.Name}",
+                        DescriptionKey = "Wallet.Tx.InviterReward",
+                        DescriptionArgs = LocalizedTextRenderer.SerializeArgs(invitee.Name),
                         SarRate = sarRate,
                         SarAmount = inviterSarAmount,
                         RemainingAmount = inviterPoints
@@ -216,7 +220,12 @@ public class InvitationService : IInvitationService
             if (inviterRewarded)
             {
                 await _notificationService.CreateAsync(inviter.Id, NotificationType.InvitationReward,
-                    "مكافأة دعوة", $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}", ct: ct);
+                    title: "مكافأة دعوة",
+                    body: $"حصلت على {inviterPoints} نقطة مكافأة دعوة {invitee.Name}",
+                    titleKey: "Notif.InvitationReward.Title",
+                    bodyKey: "Notif.InvitationReward.Body",
+                    bodyArgs: LocalizedTextRenderer.SerializeArgs(inviterPoints, invitee.Name),
+                    ct: ct);
             }
         }
         catch (DbUpdateException ex)

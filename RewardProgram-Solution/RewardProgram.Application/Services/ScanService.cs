@@ -169,7 +169,9 @@ public class ScanService : IScanService
                 Amount = pointsForScanner,
                 Type = WalletTransactionType.Earned,
                 ReferenceId = scanRecord.Id,
-                Description = $"مسح باركود — {barcode.Product.Name}",
+                Description = $"مسح باركود — {barcode.Product.Name}", // legacy fallback
+                DescriptionKey = "Wallet.Tx.BarcodeScanned",
+                DescriptionArgs = LocalizedTextRenderer.SerializeArgs(barcode.Product.Name),
                 SarRate = sarRate,
                 SarAmount = scannerSarAmount,
                 RemainingAmount = pointsForScanner
@@ -192,6 +194,8 @@ public class ScanService : IScanService
                     Type = WalletTransactionType.Earned,
                     ReferenceId = scanRecord.Id,
                     Description = $"نقاط مؤجلة — {barcode.Product.Name}",
+                    DescriptionKey = "Wallet.Tx.DeferredPoints",
+                    DescriptionArgs = LocalizedTextRenderer.SerializeArgs(barcode.Product.Name),
                     SarRate = sarRate,
                     SarAmount = deferredSarAmount,
                     RemainingAmount = deferredPointsForFirstScanner.Value
@@ -213,8 +217,13 @@ public class ScanService : IScanService
                 try
                 {
                     await _notificationService.CreateAsync(firstScannerUserId, NotificationType.PointsEarned,
-                        "نقاط جديدة", $"حصلت على {deferredPointsForFirstScanner.Value} نقطة مؤجلة — {barcode.Product.Name}",
-                        scanRecord.Id, ct);
+                        title: "نقاط جديدة",
+                        body: $"حصلت على {deferredPointsForFirstScanner.Value} نقطة مؤجلة — {barcode.Product.Name}",
+                        referenceId: scanRecord.Id,
+                        titleKey: "Notif.NewPoints.Title",
+                        bodyKey: "Notif.NewPoints.DeferredBody",
+                        bodyArgs: LocalizedTextRenderer.SerializeArgs(deferredPointsForFirstScanner.Value, barcode.Product.Name),
+                        ct: ct);
                 }
                 catch (Exception ex)
                 {

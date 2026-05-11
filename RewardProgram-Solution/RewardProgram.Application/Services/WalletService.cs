@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -14,13 +15,16 @@ public class WalletService : IWalletService
 {
     private readonly IApplicationDbContext _context;
     private readonly ILogger<WalletService> _logger;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public WalletService(
         IApplicationDbContext context,
-        ILogger<WalletService> logger)
+        ILogger<WalletService> logger,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _logger = logger;
+        _localizer = localizer;
     }
 
     public async Task<Result<WalletBalanceResponse>> GetBalanceAsync(
@@ -67,20 +71,36 @@ public class WalletService : IWalletService
 
         var totalCount = await dbQuery.CountAsync(ct);
 
-        var items = await dbQuery
+        // Pull the raw rows (incl. DescriptionKey/Args) and render the localized
+        // Description in-memory per current culture. Old rows without a key fall
+        // back to the legacy Arabic Description (see LocalizedTextRenderer).
+        var rows = await dbQuery
             .OrderByDescending(t => t.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(t => new WalletTransactionResponse(
+            .Select(t => new
+            {
                 t.Id,
-                Math.Abs(t.Amount),
+                t.Amount,
                 t.SarRate,
-                Math.Abs(t.SarAmount),
+                t.SarAmount,
                 t.Type,
                 t.Description,
+                t.DescriptionKey,
+                t.DescriptionArgs,
                 t.CreatedAt
-            ))
+            })
             .ToListAsync(ct);
+
+        var items = rows.Select(t => new WalletTransactionResponse(
+            t.Id,
+            Math.Abs(t.Amount),
+            t.SarRate,
+            Math.Abs(t.SarAmount),
+            t.Type,
+            LocalizedTextRenderer.Render(_localizer, t.DescriptionKey, t.DescriptionArgs, t.Description),
+            t.CreatedAt
+        )).ToList();
 
         return Result.Success(new PaginatedResult<WalletTransactionResponse>(items, totalCount, page, pageSize));
     }

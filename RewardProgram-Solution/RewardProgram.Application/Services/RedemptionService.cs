@@ -329,6 +329,7 @@ public class RedemptionService : IRedemptionService
                 Type = WalletTransactionType.Expired,
                 ReferenceId = tx.Id,
                 Description = "نقاط منتهية الصلاحية",
+                DescriptionKey = "Wallet.Tx.PointsExpired",
                 SarRate = tx.SarRate,
                 SarAmount = -sarExpireAmount
             }, ct);

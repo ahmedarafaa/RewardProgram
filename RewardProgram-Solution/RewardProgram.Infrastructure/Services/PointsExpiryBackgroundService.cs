@@ -89,7 +89,8 @@ public class PointsExpiryBackgroundService : BackgroundService
                     Amount = -tx.RemainingAmount,
                     Type = WalletTransactionType.Expired,
                     ReferenceId = tx.Id,
-                    Description = "نقاط منتهية ا��صلاحية",
+                    Description = "نقاط منتهية الصلاحية",
+                    DescriptionKey = "Wallet.Tx.PointsExpired",
                     SarRate = tx.SarRate,
                     SarAmount = -txSarAmount
                 }, ct);

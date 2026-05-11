@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Notifications;
 using RewardProgram.Application.Contracts.Notifications;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
@@ -31,6 +33,7 @@ public class NotificationService : INotificationService
     private readonly ILogger<NotificationService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMemoryCache _cache;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
     public NotificationService(
         IApplicationDbContext context,
@@ -38,7 +41,8 @@ public class NotificationService : INotificationService
         IFirebaseMessagingService fcm,
         ILogger<NotificationService> logger,
         IServiceScopeFactory scopeFactory,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         _context = context;
         _userRepository = userRepository;
@@ -46,6 +50,7 @@ public class NotificationService : INotificationService
         _logger = logger;
         _scopeFactory = scopeFactory;
         _cache = cache;
+        _localizer = localizer;
     }
 
     // ── Device Registration ──
@@ -89,18 +94,35 @@ public class NotificationService : INotificationService
 
         var totalCount = await baseQuery.CountAsync(ct);
 
-        var items = await baseQuery
+        // Pull raw rows (incl. localization keys) and render Title/Body per the
+        // current culture in-memory. Old rows without keys fall back to the legacy
+        // pre-rendered Title/Body (typically Arabic).
+        var rows = await baseQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(n => new NotificationResponse(
+            .Select(n => new
+            {
                 n.Id,
                 n.Type,
                 n.Title,
                 n.Body,
+                n.TitleKey,
+                n.BodyKey,
+                n.BodyArgs,
                 n.ReferenceId,
                 n.IsRead,
-                n.CreatedAt))
+                n.CreatedAt
+            })
             .ToListAsync(ct);
+
+        var items = rows.Select(n => new NotificationResponse(
+            n.Id,
+            n.Type,
+            LocalizedTextRenderer.Render(_localizer, n.TitleKey, null, n.Title),
+            LocalizedTextRenderer.Render(_localizer, n.BodyKey, n.BodyArgs, n.Body),
+            n.ReferenceId,
+            n.IsRead,
+            n.CreatedAt)).ToList();
 
         return new PaginatedResult<NotificationResponse>(items, totalCount, page, pageSize);
     }
@@ -221,7 +243,11 @@ public class NotificationService : INotificationService
     // ── Internal — CreateAsync ──
 
     public async Task CreateAsync(string userId, NotificationType type, string title, string body,
-        string? referenceId = null, CancellationToken ct = default)
+        string? referenceId = null,
+        string? titleKey = null,
+        string? bodyKey = null,
+        string? bodyArgs = null,
+        CancellationToken ct = default)
     {
         var notification = new Notification
         {
@@ -229,7 +255,10 @@ public class NotificationService : INotificationService
             Type = type,
             Title = title,
             Body = body,
-            ReferenceId = referenceId
+            ReferenceId = referenceId,
+            TitleKey = titleKey,
+            BodyKey = bodyKey,
+            BodyArgs = bodyArgs
         };
 
         _context.Notifications.Add(notification);

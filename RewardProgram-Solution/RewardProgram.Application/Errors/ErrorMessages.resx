@@ -192,4 +192,31 @@
   <data name="Twilio.Exception"><value>فشل التحقق من الرمز</value></data>
   <data name="Twilio.SmsException"><value>فشل إرسال الرسالة النصية</value></data>
   <data name="Twilio.WhatsAppException"><value>فشل إرسال رسالة الواتساب</value></data>
+  <!-- Wallet transaction descriptions (rendered at read time per user locale) -->
+  <data name="Wallet.Tx.BarcodeScanned"><value>مسح باركود — {0}</value></data>
+  <data name="Wallet.Tx.DeferredPoints"><value>نقاط مؤجلة — {0}</value></data>
+  <data name="Wallet.Tx.ScanCancelled"><value>إلغاء مسح — {0}</value></data>
+  <data name="Wallet.Tx.PointsExpired"><value>نقاط منتهية الصلاحية</value></data>
+  <data name="Wallet.Tx.InviteeBonus"><value>مكافأة تسجيل عبر دعوة من {0}</value></data>
+  <data name="Wallet.Tx.InviterReward"><value>مكافأة دعوة — {0}</value></data>
+  <data name="Wallet.Tx.RedeemBank"><value>استرداد — تحويل بنكي</value></data>
+  <data name="Wallet.Tx.RedeemCash"><value>استرداد — نقدي</value></data>
+  <data name="Wallet.Tx.Refund"><value>استرجاع نقاط — طلب مرفوض أو ملغي</value></data>
+
+  <!-- Notification titles + bodies (rendered at read time per user locale) -->
+  <data name="Notif.InvitationReward.Title"><value>مكافأة دعوة</value></data>
+  <data name="Notif.InvitationReward.Body"><value>حصلت على {0} نقطة مكافأة دعوة {1}</value></data>
+  <data name="Notif.NewPoints.Title"><value>نقاط جديدة</value></data>
+  <data name="Notif.NewPoints.DeferredBody"><value>حصلت على {0} نقطة مؤجلة — {1}</value></data>
+  <data name="Notif.Redemption.UpdateTitle"><value>تحديث طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.CompletedTitle"><value>اكتمل طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.CompletedBody"><value>تم إتمام طلب الاستبدال بنجاح</value></data>
+  <data name="Notif.Redemption.SalesManApprovedBody"><value>تمت موافقة مندوب المبيعات على طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.ZoneManagerApprovedBody"><value>تمت موافقة مدير المنطقة على طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.AdminApprovedTitle"><value>تمت موافقة الإدارة</value></data>
+  <data name="Notif.Redemption.AdminApprovedBody"><value>تمت موافقة الإدارة على طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.GenericApprovedBody"><value>تمت الموافقة على طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.CashHandoverBody"><value>تم تسليم المبلغ بنجاح</value></data>
+  <data name="Notif.Redemption.RejectedTitle"><value>تم رفض طلب الاستبدال</value></data>
+  <data name="Notif.Redemption.RejectedBody"><value>تم رفض طلب الاستبدال. السبب: {0}</value></data>
 </root>

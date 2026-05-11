@@ -192,4 +192,31 @@
   <data name="Twilio.Exception"><value>Failed to verify the code</value></data>
   <data name="Twilio.SmsException"><value>Failed to send SMS message</value></data>
   <data name="Twilio.WhatsAppException"><value>Failed to send WhatsApp message</value></data>
+  <!-- Wallet transaction descriptions (rendered at read time per user locale) -->
+  <data name="Wallet.Tx.BarcodeScanned"><value>Barcode scan — {0}</value></data>
+  <data name="Wallet.Tx.DeferredPoints"><value>Deferred points — {0}</value></data>
+  <data name="Wallet.Tx.ScanCancelled"><value>Scan cancelled — {0}</value></data>
+  <data name="Wallet.Tx.PointsExpired"><value>Points expired</value></data>
+  <data name="Wallet.Tx.InviteeBonus"><value>Registration bonus via invitation from {0}</value></data>
+  <data name="Wallet.Tx.InviterReward"><value>Invitation reward — {0}</value></data>
+  <data name="Wallet.Tx.RedeemBank"><value>Redemption — Bank transfer</value></data>
+  <data name="Wallet.Tx.RedeemCash"><value>Redemption — Cash</value></data>
+  <data name="Wallet.Tx.Refund"><value>Points refund — request rejected or cancelled</value></data>
+
+  <!-- Notification titles + bodies (rendered at read time per user locale) -->
+  <data name="Notif.InvitationReward.Title"><value>Invitation reward</value></data>
+  <data name="Notif.InvitationReward.Body"><value>You earned {0} points as invitation reward for {1}</value></data>
+  <data name="Notif.NewPoints.Title"><value>New points</value></data>
+  <data name="Notif.NewPoints.DeferredBody"><value>You earned {0} deferred points — {1}</value></data>
+  <data name="Notif.Redemption.UpdateTitle"><value>Redemption update</value></data>
+  <data name="Notif.Redemption.CompletedTitle"><value>Redemption completed</value></data>
+  <data name="Notif.Redemption.CompletedBody"><value>Your redemption request was completed successfully</value></data>
+  <data name="Notif.Redemption.SalesManApprovedBody"><value>Salesman approved your redemption request</value></data>
+  <data name="Notif.Redemption.ZoneManagerApprovedBody"><value>Zone manager approved your redemption request</value></data>
+  <data name="Notif.Redemption.AdminApprovedTitle"><value>Admin approved</value></data>
+  <data name="Notif.Redemption.AdminApprovedBody"><value>Admin approved your redemption request</value></data>
+  <data name="Notif.Redemption.GenericApprovedBody"><value>Your redemption request was approved</value></data>
+  <data name="Notif.Redemption.CashHandoverBody"><value>Cash was delivered successfully</value></data>
+  <data name="Notif.Redemption.RejectedTitle"><value>Redemption rejected</value></data>
+  <data name="Notif.Redemption.RejectedBody"><value>Your redemption request was rejected. Reason: {0}</value></data>
 </root>
