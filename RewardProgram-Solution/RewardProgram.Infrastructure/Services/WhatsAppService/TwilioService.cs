@@ -14,16 +14,22 @@ namespace RewardProgram.Infrastructure.Services.WhatsAppService;
 
 public class TwilioService : ITwilioService
 {
+    private const string WebhookPath = "/api/webhooks/twilio/verify-status";
+
     private readonly TwilioOptions _options;
+    private readonly TwilioWebhookOptions _webhookOptions;
     private readonly ILogger<TwilioService> _logger;
     private readonly bool _useMockMode;
+    private readonly Uri? _statusCallbackUri;
 
     public TwilioService(
         IOptions<TwilioOptions> options,
+        IOptions<TwilioWebhookOptions> webhookOptions,
         IHostEnvironment environment,
         ILogger<TwilioService> logger)
     {
         _options = options.Value;
+        _webhookOptions = webhookOptions.Value;
         _logger = logger;
 
         // SECURITY: Mock mode is only allowed in Development and Staging.
@@ -50,6 +56,28 @@ public class TwilioService : ITwilioService
         {
             TwilioClient.Init(_options.AccountSid, _options.AuthToken);
         }
+
+        // Pre-compute the StatusCallback URI once at startup. Twilio's SDK takes a
+        // Uri here, not a string — we want to fail fast on a malformed PublicBaseUrl
+        // rather than every send. Null when the webhook feature is disabled OR no
+        // base URL is configured — TwilioService then omits StatusCallback entirely,
+        // which Twilio is happy with (it just doesn't fire callbacks for that send).
+        _statusCallbackUri = BuildStatusCallbackUri(_webhookOptions);
+        if (_statusCallbackUri is not null)
+        {
+            _logger.LogInformation("Twilio StatusCallback configured: {Uri}", _statusCallbackUri);
+        }
+    }
+
+    private static Uri? BuildStatusCallbackUri(TwilioWebhookOptions opts)
+    {
+        if (!opts.Enabled)
+            return null;
+        if (string.IsNullOrWhiteSpace(opts.PublicBaseUrl))
+            return null;
+
+        var baseUrl = opts.PublicBaseUrl.TrimEnd('/');
+        return new Uri(baseUrl + WebhookPath);
     }
 
     public Task<Result<string>> SendOtpAsync(string mobileNumber, CancellationToken ct = default)
@@ -82,6 +110,14 @@ public class TwilioService : ITwilioService
                 return Result.Success(mockVerificationSid);
             }
 
+            // Twilio Verify v2 doesn't accept a per-request statusCallback — that's
+            // only on the Messages API. For Verify, delivery-status webhooks are
+            // routed via Twilio Event Streams (out-of-band setup), which is heavier
+            // than this feature warrants. We rely on:
+            //   1. Sync-error retry in OtpService (catches most failure modes)
+            //   2. User-initiated /resend-otp for the silent-fail edge case
+            // The OtpFallbackService + webhook controller remain in place so an
+            // Event Streams sink can be wired up later without further code changes.
             var verification = await VerificationResource.CreateAsync(
                 to: formattedNumber,
                 channel: channel,
