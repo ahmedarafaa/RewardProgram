@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Contracts.Auth.UsersRegistrationDTO;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces.Auth;
 
 namespace RewardProgram.API.Controllers;
@@ -13,11 +15,13 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IOtpService _otpService;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
-    public AuthController(IAuthService authService, IOtpService otpService)
+    public AuthController(IAuthService authService, IOtpService otpService, IStringLocalizer<ErrorMessages> localizer)
     {
         _authService = authService;
         _otpService = otpService;
+        _localizer = localizer;
     }
 
     #region OTP
@@ -174,7 +178,7 @@ public class AuthController : ControllerBase
         var result = await _authService.RevokeTokenAsync(request.RefreshToken, userId, ct);
 
         return result.IsSuccess
-            ? Ok(new { message = "تم تسجيل الخروج بنجاح" })
+            ? Ok(new { message = _localizer["Auth.LogoutSuccess"].Value })
             : result.ToProblem();
     }
 

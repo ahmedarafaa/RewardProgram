@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Domain.Constants;
 using System.Security.Claims;
@@ -14,10 +16,12 @@ namespace RewardProgram.API.Controllers;
 public class ApprovalController : ControllerBase
 {
     private readonly IApprovalService _approvalService;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
-    public ApprovalController(IApprovalService approvalService)
+    public ApprovalController(IApprovalService approvalService, IStringLocalizer<ErrorMessages> localizer)
     {
         _approvalService = approvalService;
+        _localizer = localizer;
     }
 
     [HttpGet("pending")]
@@ -65,7 +69,7 @@ public class ApprovalController : ControllerBase
         var result = await _approvalService.ApproveAsync(request.UserId, approverId, ct);
 
         return result.IsSuccess
-            ? Ok(new { message = "تمت الموافقة بنجاح" })
+            ? Ok(new { message = _localizer["Approval.ApproveSuccess"].Value })
             : result.ToProblem();
     }
 
@@ -79,7 +83,7 @@ public class ApprovalController : ControllerBase
         var result = await _approvalService.RejectAsync(request.UserId, request.Reason, approverId, ct);
 
         return result.IsSuccess
-            ? Ok(new { message = "تم الرفض بنجاح" })
+            ? Ok(new { message = _localizer["Approval.RejectSuccess"].Value })
             : result.ToProblem();
     }
 }

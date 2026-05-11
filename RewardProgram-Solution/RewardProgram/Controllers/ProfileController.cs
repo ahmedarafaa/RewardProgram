@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Contracts.Profile;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Constants;
 
@@ -13,10 +15,12 @@ namespace RewardProgram.API.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly IProfileService _profileService;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
 
-    public ProfileController(IProfileService profileService)
+    public ProfileController(IProfileService profileService, IStringLocalizer<ErrorMessages> localizer)
     {
         _profileService = profileService;
+        _localizer = localizer;
     }
 
     [HttpGet]
@@ -50,7 +54,7 @@ public class ProfileController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var result = await _profileService.DeleteAccountAsync(userId, ct);
         return result.IsSuccess
-            ? Ok(new { message = "تم حذف الحساب بنجاح" })
+            ? Ok(new { message = _localizer["Profile.AccountDeleted"].Value })
             : result.ToProblem();
     }
 }

@@ -180,4 +180,9 @@
   <data name="AdminUser.ShopOwnerUpdated"><value>تم تعديل صاحب المحل بنجاح</value></data>
   <data name="AdminUser.SellerUpdated"><value>تم تعديل البائع بنجاح</value></data>
   <data name="AdminUser.TechnicianUpdated"><value>تم تعديل الفني بنجاح</value></data>
+  <!-- Controller-level success messages (approval, logout, delete account) -->
+  <data name="Approval.ApproveSuccess"><value>تمت الموافقة بنجاح</value></data>
+  <data name="Approval.RejectSuccess"><value>تم الرفض بنجاح</value></data>
+  <data name="Auth.LogoutSuccess"><value>تم تسجيل الخروج بنجاح</value></data>
+  <data name="Profile.AccountDeleted"><value>تم حذف الحساب بنجاح</value></data>
 </root>

@@ -180,4 +180,9 @@
   <data name="AdminUser.ShopOwnerUpdated"><value>Shop owner updated successfully</value></data>
   <data name="AdminUser.SellerUpdated"><value>Seller updated successfully</value></data>
   <data name="AdminUser.TechnicianUpdated"><value>Technician updated successfully</value></data>
+  <!-- Controller-level success messages (approval, logout, delete account) -->
+  <data name="Approval.ApproveSuccess"><value>Approved successfully</value></data>
+  <data name="Approval.RejectSuccess"><value>Rejected successfully</value></data>
+  <data name="Auth.LogoutSuccess"><value>Logged out successfully</value></data>
+  <data name="Profile.AccountDeleted"><value>Account deleted successfully</value></data>
 </root>
