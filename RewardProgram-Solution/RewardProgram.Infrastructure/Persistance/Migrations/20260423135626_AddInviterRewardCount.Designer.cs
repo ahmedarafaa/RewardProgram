@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RewardProgram.Infrastructure.Persistance;
 
@@ -11,9 +12,11 @@ using RewardProgram.Infrastructure.Persistance;
 namespace RewardProgram.Infrastructure.Persistance.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260423135626_AddInviterRewardCount")]
+    partial class AddInviterRewardCount
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -308,12 +311,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<string>("BodyArgs")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BodyKey")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -348,9 +345,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("TitleKey")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -370,9 +364,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("IsDeleted", "CreatedAt")
-                        .HasDatabaseName("IX_Notifications_IsDeleted_CreatedAt");
-
                     b.HasIndex("UserId", "IsRead", "CreatedAt");
 
                     b.ToTable("Notifications", (string)null);
@@ -386,31 +377,11 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Channel")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)")
-                        .HasDefaultValue("whatsapp");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CurrentSid")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FallbackEligibleAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("FallbackFired")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsUsed")
                         .ValueGeneratedOnAdd()
@@ -447,9 +418,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasIndex("MobileNumber", "IsUsed");
 
                     b.HasIndex("PinId", "IsUsed");
-
-                    b.HasIndex("FallbackFired", "IsUsed", "FallbackEligibleAt")
-                        .HasDatabaseName("IX_OtpCodes_FallbackDue");
 
                     b.ToTable("OtpCodes", (string)null);
                 });
@@ -944,9 +912,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeletedByAdminId")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -1017,12 +982,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.Property<int>("RegistrationStatus")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("RestoredAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RestoredByAdminId")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -1039,10 +998,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedSalesManId");
-
-                    b.HasIndex("CreatedAt")
-                        .IsDescending()
-                        .HasDatabaseName("IX_AspNetUsers_CreatedAt_Desc");
 
                     b.HasIndex("InvitationCode")
                         .IsUnique()
@@ -1676,12 +1631,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("DescriptionArgs")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DescriptionKey")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -1723,11 +1672,6 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasIndex("WalletId");
 
                     b.HasIndex("WalletId", "CreatedAt");
-
-                    b.HasIndex("WalletId", "ReferenceId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_WalletTransactions_InvitationReward_Unique")
-                        .HasFilter("[Type] = 5 AND [ReferenceId] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.ToTable("WalletTransactions", (string)null);
                 });

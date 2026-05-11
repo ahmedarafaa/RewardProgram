@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Auth;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
+using RewardProgram.Application.Options;
 using RewardProgram.Domain.Entities.OTP;
 
 namespace RewardProgram.Application.Services.Auth;
@@ -14,15 +16,18 @@ public class OtpService : IOtpService
 {
     private readonly ITwilioService _twilioService;
     private readonly IApplicationDbContext _context;
+    private readonly OtpFallbackOptions _fallbackOptions;
     private readonly ILogger<OtpService> _logger;
 
     public OtpService(
         ITwilioService twilioService,
         IApplicationDbContext context,
+        IOptions<OtpFallbackOptions> fallbackOptions,
         ILogger<OtpService> logger)
     {
         _twilioService = twilioService;
         _context = context;
+        _fallbackOptions = fallbackOptions.Value;
         _logger = logger;
     }
 
@@ -42,6 +47,10 @@ public class OtpService : IOtpService
         var otpCode = new OtpCode
         {
             PinId = pinId,
+            CurrentSid = pinId,
+            Channel = "whatsapp",
+            FallbackEligibleAt = ComputeFallbackEligibleAt(),
+            FallbackFired = false,
             MobileNumber = mobileNumber,
             RegistrationData = registrationData,
             CreatedAt = DateTime.UtcNow,
@@ -99,6 +108,10 @@ public class OtpService : IOtpService
         var newOtp = new OtpCode
         {
             PinId = newPinId,
+            CurrentSid = newPinId,
+            Channel = "whatsapp",
+            FallbackEligibleAt = ComputeFallbackEligibleAt(),
+            FallbackFired = false,
             MobileNumber = mobileNumber,
             RegistrationData = lastOtp.RegistrationData,
             CreatedAt = DateTime.UtcNow,
@@ -144,7 +157,12 @@ public class OtpService : IOtpService
 
         otpCode.VerificationAttempts++;
 
-        var result = await _twilioService.VerifyOtpAsync(pinId, otp, ct);
+        // Verify against CurrentSid — may have been rotated to the SMS-channel
+        // Sid by OtpFallbackWorker. PinId stays as the public token for lookup.
+        // Legacy rows from before the fallback feature have CurrentSid empty; fall
+        // back to PinId for them so existing pending OTPs remain verifiable.
+        var sidToVerify = string.IsNullOrEmpty(otpCode.CurrentSid) ? pinId : otpCode.CurrentSid;
+        var result = await _twilioService.VerifyOtpAsync(sidToVerify, otp, ct);
         if (result.IsFailure)
         {
             await _context.SaveChangesAsync(ct);
@@ -168,6 +186,17 @@ public class OtpService : IOtpService
             MobileNumber: otpCode.MobileNumber,
             RegistrationData: otpCode.RegistrationData
         ));
+    }
+
+    // Returns when (UTC) the SMS fallback worker may consider this row, or null
+    // if the feature is disabled. null also propagates naturally to mock mode in
+    // Dev/Staging via the Enabled flag, keeping the worker a no-op there.
+    private DateTime? ComputeFallbackEligibleAt()
+    {
+        if (!_fallbackOptions.Enabled)
+            return null;
+
+        return DateTime.UtcNow.AddSeconds(_fallbackOptions.FallbackDelaySeconds);
     }
 
     private async Task<Result> CheckRateLimitAsync(string mobileNumber, CancellationToken ct = default)

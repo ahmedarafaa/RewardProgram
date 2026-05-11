@@ -26,17 +26,21 @@ public class TwilioService : ITwilioService
         _options = options.Value;
         _logger = logger;
 
-        // SECURITY: Mock mode is only allowed in Development and Staging
-        _useMockMode = _options.UseMockMode &&
-            (environment.IsDevelopment() || environment.IsStaging());
+        // SECURITY: Mock mode is only allowed in Development and Staging.
+        // If UseMockMode is set in any other environment, fail startup rather
+        // than silently ignoring it — a misconfigured flag otherwise lets
+        // "123456" bypass OTP verification in production-like environments.
+        var mockAllowed = environment.IsDevelopment() || environment.IsStaging();
 
-        if (_options.UseMockMode && !_useMockMode)
+        if (_options.UseMockMode && !mockAllowed)
         {
-            _logger.LogWarning(
-                "Twilio UseMockMode is enabled in configuration but IGNORED because environment is {Environment}. " +
-                "Mock mode is only allowed in Development and Staging.",
-                environment.EnvironmentName);
+            throw new InvalidOperationException(
+                $"Twilio:UseMockMode is true but environment is '{environment.EnvironmentName}'. " +
+                "Mock mode is only permitted in Development or Staging. " +
+                "Set UseMockMode=false for this environment.");
         }
+
+        _useMockMode = _options.UseMockMode && mockAllowed;
 
         if (_useMockMode)
         {
@@ -48,8 +52,19 @@ public class TwilioService : ITwilioService
         }
     }
 
-    public async Task<Result<string>> SendOtpAsync(string mobileNumber, CancellationToken ct = default)
+    public Task<Result<string>> SendOtpAsync(string mobileNumber, CancellationToken ct = default)
+        => SendOtpAsync(mobileNumber, "whatsapp", ct);
+
+    public async Task<Result<string>> SendOtpAsync(string mobileNumber, string channel, CancellationToken ct = default)
     {
+        if (channel is not ("whatsapp" or "sms"))
+        {
+            return Result.Failure<string>(new Error(
+                "Twilio.InvalidChannel",
+                $"Unsupported Twilio channel: '{channel}'",
+                500));
+        }
+
         try
         {
             var formattedNumber = FormatMobileNumber(mobileNumber);
@@ -59,8 +74,9 @@ public class TwilioService : ITwilioService
                 var mockVerificationSid = $"VE{Guid.NewGuid():N}"[..34];
 
                 _logger.LogInformation(
-                    "[MOCK] OTP sent to {MobileNumber}, VerificationSid: {Sid}",
+                    "[MOCK] OTP sent to {MobileNumber} via {Channel}, VerificationSid: {Sid}",
                     MobileNumberHelper.Mask(mobileNumber),
+                    channel,
                     mockVerificationSid);
 
                 return Result.Success(mockVerificationSid);
@@ -68,21 +84,23 @@ public class TwilioService : ITwilioService
 
             var verification = await VerificationResource.CreateAsync(
                 to: formattedNumber,
-                channel: "whatsapp",
+                channel: channel,
                 pathServiceSid: _options.VerifyServiceSid
             );
 
             if (verification.Status == "pending")
             {
                 _logger.LogInformation(
-                    "OTP sent successfully to {MobileNumber}, VerificationSid: {Sid}",
+                    "OTP sent successfully to {MobileNumber} via {Channel}, VerificationSid: {Sid}",
                     MobileNumberHelper.Mask(mobileNumber),
+                    channel,
                     verification.Sid);
 
                 return Result.Success(verification.Sid);
             }
 
-            _logger.LogError("Unexpected Twilio verification status: {Status}", verification.Status);
+            _logger.LogError("Unexpected Twilio verification status: {Status} for channel {Channel}",
+                verification.Status, channel);
             return Result.Failure<string>(new Error(
                 "Twilio.UnexpectedStatus",
                 "فشل إرسال رمز التحقق",
@@ -90,8 +108,8 @@ public class TwilioService : ITwilioService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception while sending OTP to {MobileNumber}",
-                MobileNumberHelper.Mask(mobileNumber));
+            _logger.LogError(ex, "Exception while sending OTP to {MobileNumber} via {Channel}",
+                MobileNumberHelper.Mask(mobileNumber), channel);
 
             return Result.Failure<string>(new Error(
                 "Twilio.Exception",

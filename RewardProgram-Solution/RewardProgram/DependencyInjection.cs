@@ -10,6 +10,7 @@ using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Application.Interfaces.Auth;
 using RewardProgram.Application.Interfaces.Files;
+using RewardProgram.Application.Options;
 using RewardProgram.Application.Services;
 using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Services.Auth;
@@ -19,6 +20,7 @@ using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
 using RewardProgram.Infrastructure.Services;
 using RewardProgram.Infrastructure.Services.FileStorage;
+using RewardProgram.Infrastructure.Services.OtpFallback;
 using RewardProgram.Infrastructure.Services.WhatsAppService;
 using System.Text;
 
@@ -109,6 +111,7 @@ public static class DependencyInjection
         // Configure Twilio Options
         services.Configure<TwilioOptions>(configuration.GetSection(TwilioOptions.SectionName));
         services.Configure<InvitationOptions>(configuration.GetSection(InvitationOptions.SectionName));
+        services.Configure<OtpFallbackOptions>(configuration.GetSection(OtpFallbackOptions.SectionName));
 
         // Configure Verification Token Options (derived from JWT key to avoid key reuse)
         var jwtKey = configuration.GetSection(JwtOptions.SectionName)["Key"]!;
@@ -149,6 +152,7 @@ public static class DependencyInjection
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
         services.AddHostedService<PointsExpiryBackgroundService>();
         services.AddHostedService<OtpCleanupBackgroundService>();
+        services.AddHostedService<OtpFallbackWorker>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails(options =>
