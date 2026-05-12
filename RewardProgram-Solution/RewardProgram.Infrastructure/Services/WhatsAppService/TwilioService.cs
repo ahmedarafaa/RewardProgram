@@ -20,7 +20,6 @@ public class TwilioService : ITwilioService
     private readonly TwilioWebhookOptions _webhookOptions;
     private readonly ILogger<TwilioService> _logger;
     private readonly bool _useMockMode;
-    private readonly Uri? _statusCallbackUri;
 
     public TwilioService(
         IOptions<TwilioOptions> options,
@@ -32,17 +31,20 @@ public class TwilioService : ITwilioService
         _webhookOptions = webhookOptions.Value;
         _logger = logger;
 
-        // SECURITY: Mock mode is only allowed in Development and Staging.
-        // If UseMockMode is set in any other environment, fail startup rather
-        // than silently ignoring it — a misconfigured flag otherwise lets
-        // "123456" bypass OTP verification in production-like environments.
-        var mockAllowed = environment.IsDevelopment() || environment.IsStaging();
+        // SECURITY: Mock mode is only allowed in non-production environments
+        // (Development, Staging, UAT). If UseMockMode is set in any other
+        // environment, fail startup rather than silently ignoring it — a
+        // misconfigured flag otherwise lets "123456" bypass OTP verification
+        // in Production.
+        var mockAllowed = environment.IsDevelopment()
+            || environment.IsStaging()
+            || environment.IsEnvironment("UAT");
 
         if (_options.UseMockMode && !mockAllowed)
         {
             throw new InvalidOperationException(
                 $"Twilio:UseMockMode is true but environment is '{environment.EnvironmentName}'. " +
-                "Mock mode is only permitted in Development or Staging. " +
+                "Mock mode is only permitted in Development, Staging, or UAT. " +
                 "Set UseMockMode=false for this environment.");
         }
 
@@ -57,27 +59,16 @@ public class TwilioService : ITwilioService
             TwilioClient.Init(_options.AccountSid, _options.AuthToken);
         }
 
-        // Pre-compute the StatusCallback URI once at startup. Twilio's SDK takes a
-        // Uri here, not a string — we want to fail fast on a malformed PublicBaseUrl
-        // rather than every send. Null when the webhook feature is disabled OR no
-        // base URL is configured — TwilioService then omits StatusCallback entirely,
-        // which Twilio is happy with (it just doesn't fire callbacks for that send).
-        _statusCallbackUri = BuildStatusCallbackUri(_webhookOptions);
-        if (_statusCallbackUri is not null)
+        // Twilio Verify v2 doesn't accept a per-request StatusCallback (Messages
+        // API only). Delivery events are routed via Event Streams Webhook sinks
+        // configured in the Twilio Console. Log the URL Twilio should POST to —
+        // useful at startup to confirm the env's PublicBaseUrl matches what was
+        // configured on the sink.
+        if (_webhookOptions.Enabled && !string.IsNullOrWhiteSpace(_webhookOptions.PublicBaseUrl))
         {
-            _logger.LogInformation("Twilio StatusCallback configured: {Uri}", _statusCallbackUri);
+            var url = _webhookOptions.PublicBaseUrl.TrimEnd('/') + WebhookPath;
+            _logger.LogInformation("Twilio Event Streams webhook URL (configure on sink): {Uri}", url);
         }
-    }
-
-    private static Uri? BuildStatusCallbackUri(TwilioWebhookOptions opts)
-    {
-        if (!opts.Enabled)
-            return null;
-        if (string.IsNullOrWhiteSpace(opts.PublicBaseUrl))
-            return null;
-
-        var baseUrl = opts.PublicBaseUrl.TrimEnd('/');
-        return new Uri(baseUrl + WebhookPath);
     }
 
     public Task<Result<string>> SendOtpAsync(string mobileNumber, CancellationToken ct = default)
@@ -151,6 +142,39 @@ public class TwilioService : ITwilioService
                 "Twilio.Exception",
                 "فشل إرسال رمز التحقق",
                 500));
+        }
+    }
+
+    public async Task<Result> CancelVerificationAsync(string verificationSid, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(verificationSid))
+            return Result.Success();
+
+        if (_useMockMode)
+        {
+            _logger.LogInformation("[MOCK] Verification canceled, Sid: {Sid}", verificationSid);
+            return Result.Success();
+        }
+
+        try
+        {
+            await VerificationResource.UpdateAsync(
+                status: "canceled",
+                pathServiceSid: _options.VerifyServiceSid,
+                pathSid: verificationSid);
+
+            _logger.LogInformation("Verification canceled, Sid: {Sid}", verificationSid);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            // Best-effort: a verification that's already approved / canceled /
+            // expired returns 404 or 400 from Twilio. Either way, the dedup
+            // window is gone and the next CreateAsync will get a fresh Sid.
+            _logger.LogInformation(ex,
+                "Cancel verification failed for Sid {Sid} — likely already in a final state. Continuing.",
+                verificationSid);
+            return Result.Success();
         }
     }
 

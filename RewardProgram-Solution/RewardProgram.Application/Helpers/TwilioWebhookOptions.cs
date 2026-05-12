@@ -1,32 +1,38 @@
 namespace RewardProgram.Application.Helpers;
 
-/// Settings for the Twilio Verify status webhook.
+/// Settings for the Twilio Verify Event Streams webhook sink.
 ///
-/// TwilioService passes PublicBaseUrl + "/api/webhooks/twilio/verify-status" as
-/// the `StatusCallback` parameter on every VerificationResource.CreateAsync call.
-/// Twilio then POSTs to that URL whenever the Verification's status changes
-/// (delivered, failed, canceled, etc.). We use the "failed" / "canceled" signal
-/// to trigger an SMS fallback for the same number — no client-side timer.
+/// Twilio Verify v2 does NOT support per-request StatusCallback (that's Messages
+/// API only). Verification delivery events are routed through Event Streams: a
+/// Webhook sink in the Twilio Console POSTs CloudEvents JSON to our endpoint
+/// whenever a Verify message hits a terminal state (delivered / failed). We act
+/// on the "failed + whatsapp" combination to fire an SMS fallback.
 ///
-/// Per-request StatusCallback avoids the Twilio Console UI entirely — the URL is
-/// versioned in this options class, not hidden in a console setting that can
-/// drift between environments. The AuthToken (Twilio:AuthToken) is still used
-/// to validate the X-Twilio-Signature header on incoming webhook calls.
+/// Console setup (per environment):
+///   1. Monitor → Event Streams → Sinks → Create Webhook sink pointing to
+///      &lt;PublicBaseUrl&gt;/api/webhooks/twilio/verify-status
+///   2. (Optional) set a Bearer token on the sink → mirror it in
+///      EventStreamsBearerToken below for HMAC-style auth.
+///   3. Create a Subscription on the sink for event type
+///      com.twilio.verify.message_status.failed
 public class TwilioWebhookOptions
 {
     public const string SectionName = "TwilioWebhook";
 
-    /// Master switch. When false:
-    ///   - StatusCallback is NOT passed to Twilio (no webhook will ever fire)
-    ///   - The incoming webhook endpoint accepts POSTs but ignores them (returns 200)
-    /// Use this in environments that don't talk to real Twilio (Development /
-    /// Staging mock mode) so misconfigured callbacks are noise-free.
+    /// Master switch. When false the incoming webhook endpoint accepts POSTs but
+    /// ignores them (returns 200) — keeps Twilio from hammering us with retries
+    /// in environments where the sink is wired but auto-fallback isn't wanted.
     public bool Enabled { get; set; } = false;
 
-    /// Public URL where this app is reachable from Twilio. Used for two purposes:
-    ///   1. Composing the StatusCallback URL passed to Twilio on each Verify create.
-    ///   2. Signature-validation URL reconstruction (so reverse-proxied https:// is
-    ///      not mistaken for http:// when Request.Scheme is stripped by IIS).
-    /// Required when Enabled=true.
+    /// Public URL where this app is reachable from Twilio. Used for signature/
+    /// URL reconstruction so reverse-proxied https:// is not mistaken for http://
+    /// when Request.Scheme is stripped by IIS.
     public string? PublicBaseUrl { get; set; }
+
+    /// Optional shared secret. When set, the controller requires
+    /// `Authorization: Bearer &lt;EventStreamsBearerToken&gt;` on every webhook
+    /// call. Configure this on the Twilio Webhook sink at creation, then mirror
+    /// the value here. Leave null/empty to disable auth (only safe behind a
+    /// non-public URL or IP allowlist).
+    public string? EventStreamsBearerToken { get; set; }
 }

@@ -70,14 +70,21 @@ public class OtpService : IOtpService
         if (rateLimitResult.IsFailure)
             return Result.Failure<SendOtpResponse>(rateLimitResult.Error);
 
-        // 4. Send new OTP first — preferring SMS. We don't pre-mark the old row
-        //    as used here, because Twilio Verify dedups by (Service, To): if the
-        //    prior verification is still pending, Twilio returns the SAME Sid
-        //    regardless of the channel we asked for. In that case lastOtp IS the
-        //    row we're about to refresh — marking it used and then "un-using" it
-        //    would be confusing. If Twilio gives us a NEW Sid, we invalidate the
-        //    old one further down.
-        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "sms", ct);
+        // 4. Cancel the prior pending Twilio verification BEFORE sending. Twilio
+        //    Verify dedups by (Service, To): without the cancel, a fresh create
+        //    returns the prior pending Sid without actually delivering anything
+        //    new. Cancel is best-effort — if Twilio rejects it (already in a
+        //    final state), the next CreateAsync gets a fresh Sid anyway. We use
+        //    CurrentSid (the active Twilio handle), falling back to PinId for
+        //    legacy rows where CurrentSid wasn't populated.
+        var sidToCancel = string.IsNullOrEmpty(lastOtp.CurrentSid) ? lastOtp.PinId : lastOtp.CurrentSid;
+        await _twilioService.CancelVerificationAsync(sidToCancel, ct);
+
+        // 5. Send new OTP — WhatsApp first, mirroring SendAsync. Non-WhatsApp
+        //    users are auto-converted to SMS by the Twilio status webhook
+        //    (OtpFallbackService), so resend doesn't need to special-case them.
+        //    If WhatsApp sync-fails, we still fall back to SMS in-request.
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "whatsapp", ct);
         if (sendResult.IsFailure)
             return Result.Failure<SendOtpResponse>(sendResult.Error);
 
