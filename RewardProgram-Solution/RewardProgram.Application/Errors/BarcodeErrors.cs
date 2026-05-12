@@ -8,7 +8,7 @@ public static class BarcodeErrors
         new("Barcode.NotFound", "الباركود غير موجود", 404);
 
     public static readonly Error BarcodeAlreadyScanned =
-        new("Barcode.AlreadyScanned", "تم مسح هذا الباركود مسبقاً من قبل نفس الدور", 409);
+        new("Barcode.AlreadyScanned", "تم مسح هذا الباركود مسبقاً", 409);
 
     public static readonly Error BarcodeConsumed =
         new("Barcode.Consumed", "الباركود مستهلك بالكامل", 400);

@@ -71,7 +71,7 @@
 
   <!-- Barcode Errors -->
   <data name="Barcode.NotFound"><value>Barcode not found</value></data>
-  <data name="Barcode.AlreadyScanned"><value>This barcode has already been scanned by the same role</value></data>
+  <data name="Barcode.AlreadyScanned"><value>This barcode has already been scanned</value></data>
   <data name="Barcode.Consumed"><value>Barcode is fully consumed</value></data>
   <data name="Barcode.InvalidQuantity"><value>Quantity must be between 1 and 10,000</value></data>
   <data name="Barcode.ConcurrencyConflict"><value>A conflict occurred during processing, please try again</value></data>

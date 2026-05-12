@@ -71,7 +71,7 @@
 
   <!-- Barcode Errors -->
   <data name="Barcode.NotFound"><value>الباركود غير موجود</value></data>
-  <data name="Barcode.AlreadyScanned"><value>تم مسح هذا الباركود مسبقاً من قبل نفس الدور</value></data>
+  <data name="Barcode.AlreadyScanned"><value>تم مسح هذا الباركود مسبقاً</value></data>
   <data name="Barcode.Consumed"><value>الباركود مستهلك بالكامل</value></data>
   <data name="Barcode.InvalidQuantity"><value>الكمية يجب أن تكون بين 1 و 10000</value></data>
   <data name="Barcode.ConcurrencyConflict"><value>حدث تعارض أثناء المعالجة، يرجى المحاولة مرة أخرى</value></data>
