@@ -80,11 +80,11 @@ public class OtpService : IOtpService
         var sidToCancel = string.IsNullOrEmpty(lastOtp.CurrentSid) ? lastOtp.PinId : lastOtp.CurrentSid;
         await _twilioService.CancelVerificationAsync(sidToCancel, ct);
 
-        // 5. Send new OTP — WhatsApp first, mirroring SendAsync. Non-WhatsApp
-        //    users are auto-converted to SMS by the Twilio status webhook
-        //    (OtpFallbackService), so resend doesn't need to special-case them.
-        //    If WhatsApp sync-fails, we still fall back to SMS in-request.
-        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "whatsapp", ct);
+        // 5. Send new OTP — SMS first on resend. The user tapping Resend is a
+        //    strong signal that the WhatsApp send didn't reach them, so go
+        //    straight to SMS rather than retrying the same channel. If SMS
+        //    sync-fails, fall back to WhatsApp in-request.
+        var sendResult = await SendWithSyncFallbackAsync(mobileNumber, primaryChannel: "sms", ct);
         if (sendResult.IsFailure)
             return Result.Failure<SendOtpResponse>(sendResult.Error);
 

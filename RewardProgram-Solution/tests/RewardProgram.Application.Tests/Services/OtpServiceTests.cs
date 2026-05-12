@@ -90,16 +90,15 @@ public class OtpServiceTests : IDisposable
         (await _context.OtpCodes.CountAsync()).Should().Be(0); // no row created when both channels fail
     }
 
-    // ── Resend: WhatsApp-first (mirrors SendAsync) ───────────────────────
-    // Non-WhatsApp users are auto-converted to SMS by the Twilio status
-    // webhook (OtpFallbackService), so resend doesn't special-case them.
+    // ── Resend: SMS-first ────────────────────────────────────────────────
+    // User tapping Resend is a strong signal the prior WhatsApp didn't reach
+    // them, so go straight to SMS rather than retrying the same channel.
 
     [Fact]
-    public async Task Resend_PrefersWhatsAppAndDoesNotCallSms()
+    public async Task Resend_PrefersSmsAndDoesNotCallWhatsApp()
     {
         const string mobile = "+966500000001";
 
-        // Seed an earlier OTP that's outside the 30s cooldown window
         _context.OtpCodes.Add(new RewardProgram.Domain.Entities.OTP.OtpCode
         {
             PinId = "VE_old",
@@ -112,30 +111,27 @@ public class OtpServiceTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>())
-            .Returns(Result.Success("VE_wa_new"));
+        _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>())
+            .Returns(Result.Success("VE_sms"));
 
         var result = await _sut.ResendAsync(mobile);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.PinId.Should().Be("VE_wa_new");
+        result.Value.PinId.Should().Be("VE_sms");
 
-        // The new row should be on WhatsApp — Resend mirrors SendAsync.
         var newRow = await _context.OtpCodes
-            .Where(o => o.PinId == "VE_wa_new")
+            .Where(o => o.PinId == "VE_sms")
             .SingleAsync();
-        newRow.Channel.Should().Be("whatsapp");
-        newRow.FallbackFired.Should().BeFalse(); // WhatsApp was the primary, not a fallback
+        newRow.Channel.Should().Be("sms");
+        newRow.FallbackFired.Should().BeFalse(); // SMS was primary
 
-        // The old row should now be marked used (Twilio gave us a different Sid).
         var oldRow = await _context.OtpCodes
             .Where(o => o.PinId == "VE_old")
             .SingleAsync();
         oldRow.IsUsed.Should().BeTrue();
 
-        // SMS must not be called at all when Resend succeeds via WhatsApp directly.
-        await _twilio.DidNotReceive().SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>());
-        await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
+        await _twilio.DidNotReceive().SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
+        await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -161,7 +157,7 @@ public class OtpServiceTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>())
+        _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>())
             .Returns(Result.Success(sharedSid)); // Twilio dedups → same Sid
 
         var result = await _sut.ResendAsync(mobile);
@@ -169,24 +165,19 @@ public class OtpServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.PinId.Should().Be(sharedSid);
 
-        // Only ONE row should exist — the original was refreshed in place.
         var rows = await _context.OtpCodes.ToListAsync();
         rows.Should().HaveCount(1);
 
         var row = rows[0];
         row.PinId.Should().Be(sharedSid);
-        row.Channel.Should().Be("whatsapp");  // refreshed; same channel
-        row.IsUsed.Should().BeFalse();         // refreshed; usable for verify
+        row.Channel.Should().Be("sms");      // refreshed to new channel
+        row.IsUsed.Should().BeFalse();
         row.VerificationAttempts.Should().Be(0);
     }
 
     [Fact]
     public async Task Resend_CancelsPriorPendingVerificationBeforeSending()
     {
-        // Twilio Verify dedups by (Service, To): if the prior verification is
-        // still pending, a new create returns the same pending Sid WITHOUT
-        // sending anything new. Resend must cancel first so the create
-        // actually delivers.
         const string mobile = "+966500000001";
         const string oldSid = "VE_old_whatsapp";
 
@@ -204,23 +195,22 @@ public class OtpServiceTests : IDisposable
 
         _twilio.CancelVerificationAsync(oldSid, Arg.Any<CancellationToken>())
             .Returns(Result.Success());
-        _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>())
-            .Returns(Result.Success("VE_new_wa"));
+        _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>())
+            .Returns(Result.Success("VE_new_sms"));
 
         var result = await _sut.ResendAsync(mobile);
 
         result.IsSuccess.Should().BeTrue();
 
-        // Cancel must be called BEFORE the send, with the prior Sid.
         Received.InOrder(async () =>
         {
             await _twilio.CancelVerificationAsync(oldSid, Arg.Any<CancellationToken>());
-            await _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
+            await _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>());
         });
     }
 
     [Fact]
-    public async Task Resend_WhatsAppSyncError_FallsBackToSms()
+    public async Task Resend_SmsSyncError_FallsBackToWhatsApp()
     {
         const string mobile = "+966500000001";
 
@@ -236,22 +226,22 @@ public class OtpServiceTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>())
-            .Returns(Result.Failure<string>(new Error("Twilio.Exception", "wa-boom", 500)));
         _twilio.SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>())
-            .Returns(Result.Success("VE_sms"));
+            .Returns(Result.Failure<string>(new Error("Twilio.SmsException", "sms-boom", 500)));
+        _twilio.SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>())
+            .Returns(Result.Success("VE_wa"));
 
         var result = await _sut.ResendAsync(mobile);
 
         result.IsSuccess.Should().BeTrue();
 
         var newRow = await _context.OtpCodes
-            .Where(o => o.PinId == "VE_sms")
+            .Where(o => o.PinId == "VE_wa")
             .SingleAsync();
-        newRow.Channel.Should().Be("sms");
-        newRow.FallbackFired.Should().BeTrue(); // we fell back from WA to SMS
+        newRow.Channel.Should().Be("whatsapp");
+        newRow.FallbackFired.Should().BeTrue();
 
-        await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
         await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "sms", Arg.Any<CancellationToken>());
+        await _twilio.Received(1).SendOtpAsync(Arg.Any<string>(), "whatsapp", Arg.Any<CancellationToken>());
     }
 }
