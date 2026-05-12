@@ -30,6 +30,10 @@ public class TwilioVerifyWebhookController : ControllerBase
 {
     private const string FailedEventTypeSuffix = ".failed";
     private const string CanceledEventTypeSuffix = ".canceled";
+    // Twilio reports "Invalid Recipient" (63024) and similar non-WhatsApp-user
+    // errors as Undelivered, not Failed. Both indicate the user never got the
+    // OTP, so both should trigger the SMS fallback.
+    private const string UndeliveredEventTypeSuffix = ".undelivered";
 
     private readonly IOtpFallbackService _fallbackService;
     private readonly TwilioWebhookOptions _webhookOptions;
@@ -105,7 +109,8 @@ public class TwilioVerifyWebhookController : ControllerBase
         var eventType = TryGetString(evt, "type") ?? string.Empty;
         var isTerminalFailure =
             eventType.EndsWith(FailedEventTypeSuffix, StringComparison.OrdinalIgnoreCase) ||
-            eventType.EndsWith(CanceledEventTypeSuffix, StringComparison.OrdinalIgnoreCase);
+            eventType.EndsWith(CanceledEventTypeSuffix, StringComparison.OrdinalIgnoreCase) ||
+            eventType.EndsWith(UndeliveredEventTypeSuffix, StringComparison.OrdinalIgnoreCase);
 
         if (!isTerminalFailure)
             return; // delivered / read / pending → no-op
