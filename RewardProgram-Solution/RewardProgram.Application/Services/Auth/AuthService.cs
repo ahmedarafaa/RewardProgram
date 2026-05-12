@@ -55,7 +55,7 @@ public class AuthService : IAuthService
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
         // Validate mobile uniqueness
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
+        if (await _userRepository.IsMobileBlockedAsync(mobile, ct))
             return Result.Failure<SendOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Send OTP without registration data
@@ -79,7 +79,7 @@ public class AuthService : IAuthService
         var mobile = MobileNumberHelper.Normalize(request.MobileNumber);
 
         // Check mobile not already registered
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
+        if (await _userRepository.IsMobileBlockedAsync(mobile, ct))
             return Result.Failure<VerifyRegistrationOtpResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Verify OTP with Twilio (consumes the OTP)
@@ -223,7 +223,7 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
+        if (await _userRepository.IsMobileBlockedAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Validate CustomerCode exists in ErpCustomers
@@ -281,6 +281,11 @@ public class AuthService : IAuthService
 
         try
         {
+            // If a previously rejected user owns this mobile, tombstone them so
+            // the unique indexes (mobile/username/phone) are free for the new
+            // record. Atomic with the new INSERT — rollback unwinds both.
+            await _userRepository.ArchiveRejectedUserByMobileAsync(mobile, ct);
+
             var user = new ApplicationUser
             {
                 UserName = mobile,
@@ -396,7 +401,7 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
+        if (await _userRepository.IsMobileBlockedAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Validate CustomerCode exists in ErpCustomers
@@ -463,6 +468,11 @@ public class AuthService : IAuthService
 
         try
         {
+            // If a previously rejected user owns this mobile, tombstone them so
+            // the unique indexes (mobile/username/phone) are free for the new
+            // record. Atomic with the new INSERT — rollback unwinds both.
+            await _userRepository.ArchiveRejectedUserByMobileAsync(mobile, ct);
+
             // Determine address from ShopData or from registration data
             string street = shopDataExists ? existingShopData!.Street : request.NationalAddress!.Street;
             int buildingNumber = shopDataExists ? existingShopData!.BuildingNumber : request.NationalAddress!.BuildingNumber;
@@ -573,7 +583,7 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(AuthErrors.MobileMismatch);
 
         // Validate mobile uniqueness
-        if (await _userRepository.MobileExistsAsync(mobile, ct))
+        if (await _userRepository.IsMobileBlockedAsync(mobile, ct))
             return Result.Failure<RegisterResponse>(AuthErrors.MobileAlreadyRegistered);
 
         // Validate city and has ApprovalSalesManId
@@ -596,6 +606,11 @@ public class AuthService : IAuthService
 
         try
         {
+            // If a previously rejected user owns this mobile, tombstone them so
+            // the unique indexes (mobile/username/phone) are free for the new
+            // record. Atomic with the new INSERT — rollback unwinds both.
+            await _userRepository.ArchiveRejectedUserByMobileAsync(mobile, ct);
+
             var user = new ApplicationUser
             {
                 UserName = mobile,

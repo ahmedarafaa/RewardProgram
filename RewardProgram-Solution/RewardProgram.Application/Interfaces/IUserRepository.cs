@@ -8,7 +8,25 @@ public interface IUserRepository
     Task<ApplicationUser?> FindByIdAsync(string userId, CancellationToken ct = default);
     Task<ApplicationUser?> FindByMobileAsync(string mobileNumber, CancellationToken ct = default);
     Task<ApplicationUser?> FindByRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
-    Task<bool> MobileExistsAsync(string mobileNumber, CancellationToken ct = default);
+    /// <summary>
+    /// Returns true when registering this mobile should be blocked. Blocked = a
+    /// non-Rejected user already exists for the number. Rejected users are NOT
+    /// blocked — re-registration is allowed and the prior record gets archived
+    /// (tombstoned) inside the Register* transaction via
+    /// <see cref="ArchiveRejectedUserByMobileAsync"/>.
+    /// </summary>
+    Task<bool> IsMobileBlockedAsync(string mobileNumber, CancellationToken ct = default);
+
+    /// <summary>
+    /// If a Rejected user exists with this mobile, tombstones the record so the
+    /// number's unique indexes are freed for the new registration. Renames
+    /// MobileNumber/UserName/PhoneNumber with a `DEL_&lt;ticks&gt;_` prefix,
+    /// flags IsAccountDeleted + IsDisabled, clears FcmToken, revokes refresh
+    /// tokens. No-op if no Rejected user exists for that mobile. Designed to
+    /// run inside the same transaction as the new user's INSERT — if creation
+    /// fails the rollback also unwinds the archive.
+    /// </summary>
+    Task ArchiveRejectedUserByMobileAsync(string mobileNumber, CancellationToken ct = default);
     IQueryable<ApplicationUser> Query();
     Task<IdentityResult> CreateAsync(ApplicationUser user);
     Task<IdentityResult> UpdateAsync(ApplicationUser user);

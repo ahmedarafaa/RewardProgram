@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Domain.Entities.Users;
+using RewardProgram.Domain.Enums.UserEnums;
 
 namespace RewardProgram.Infrastructure.Persistance;
 
@@ -27,8 +28,40 @@ public class UserRepository : IUserRepository
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken), ct);
 
-    public async Task<bool> MobileExistsAsync(string mobileNumber, CancellationToken ct = default)
-        => await _userManager.Users.AnyAsync(u => u.MobileNumber == mobileNumber, ct);
+    public async Task<bool> IsMobileBlockedAsync(string mobileNumber, CancellationToken ct = default)
+        => await _userManager.Users.AnyAsync(
+            u => u.MobileNumber == mobileNumber
+              && u.RegistrationStatus != RegistrationStatus.Rejected,
+            ct);
+
+    public async Task ArchiveRejectedUserByMobileAsync(string mobileNumber, CancellationToken ct = default)
+    {
+        var user = await _userManager.Users.FirstOrDefaultAsync(
+            u => u.MobileNumber == mobileNumber
+              && u.RegistrationStatus == RegistrationStatus.Rejected,
+            ct);
+
+        if (user is null)
+            return;
+
+        // Ticks make the prefix collision-free across repeat-rejection cycles.
+        var prefix = $"DEL_{DateTime.UtcNow.Ticks}_";
+
+        user.MobileNumber = prefix + user.MobileNumber;
+        user.UserName = prefix + (user.UserName ?? string.Empty);
+        user.NormalizedUserName = _userManager.NormalizeName(user.UserName);
+        user.PhoneNumber = string.IsNullOrEmpty(user.PhoneNumber)
+            ? user.PhoneNumber
+            : prefix + user.PhoneNumber;
+
+        user.IsAccountDeleted = true;
+        user.IsDisabled = true;
+        user.FcmToken = null;
+        user.SecurityStamp = Guid.NewGuid().ToString();
+
+        await _userManager.UpdateAsync(user);
+        await RevokeAllRefreshTokensAsync(user.Id, ct);
+    }
 
     public IQueryable<ApplicationUser> Query() => _userManager.Users;
 
