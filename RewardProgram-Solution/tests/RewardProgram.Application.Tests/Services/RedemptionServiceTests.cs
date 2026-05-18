@@ -29,6 +29,7 @@ public class RedemptionServiceTests : IDisposable
         _sut = new RedemptionService(
             _context, _userRepo,
             Substitute.For<ITwilioService>(),
+            Substitute.For<INotificationService>(),
             Substitute.For<ILogger<RedemptionService>>());
     }
 

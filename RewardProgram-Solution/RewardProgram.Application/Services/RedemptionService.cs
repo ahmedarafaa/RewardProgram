@@ -19,25 +19,30 @@ public class RedemptionService : IRedemptionService
 {
     private const string CashOtpTemplateSid = "HX345d6229ba79de58919c1daab1d1dfbc";
 
-    // Cash OTP lifetime: 72 hours. Previously 14 days, which combined with
-    // attempts-reset-on-resend gave attackers a multi-week brute-force window.
-    // 72h covers normal handover scheduling + weekend without enabling abuse.
-    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromHours(72);
+    // Cash OTP lifetime: 14 days, per business requirement (cash handover may be
+    // delayed by salesman scheduling). Resend resets CashOtpAttempts to 0, so the
+    // 14-day window combined with the 30s resend cooldown allows a sizable
+    // brute-force surface — counter that with the 5-attempt cap per OTP and the
+    // delivery-rate limits enforced upstream by Twilio.
+    private static readonly TimeSpan CashOtpLifetime = TimeSpan.FromDays(14);
 
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<RedemptionService> _logger;
 
     public RedemptionService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         ITwilioService twilioService,
+        INotificationService notificationService,
         ILogger<RedemptionService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -162,7 +167,12 @@ public class RedemptionService : IRedemptionService
         _logger.LogInformation("Redemption request {Id} created by user {UserId} for {Points} points",
             redemptionRequest.Id, userId, request.PointsAmount);
 
-        // No self-notification — the user sees the new request in their own response/UI.
+        // Best-effort push notification carrying the OTP so the user has a durable
+        // in-app copy for the full 14-day window even if the WhatsApp message gets
+        // buried/deleted. Failure must not roll back — WhatsApp already delivered.
+        if (cashOtp is not null)
+            await SendCashOtpPushAsync(userId, redemptionRequest.Id, cashOtp,
+                request.PointsAmount, sarAmount, ct);
 
         return Result.Success(MapToResponse(redemptionRequest));
     }
@@ -284,6 +294,9 @@ public class RedemptionService : IRedemptionService
         await transaction.CommitAsync(ct);
         _logger.LogInformation("Cash OTP resent for request {RequestId}", redemptionRequest.Id);
 
+        await SendCashOtpPushAsync(userId, redemptionRequest.Id, newOtp,
+            redemptionRequest.PointsAmount, redemptionRequest.SarAmount, ct);
+
         return Result.Success();
     }
 
@@ -352,6 +365,37 @@ public class RedemptionService : IRedemptionService
         return await _context.Cities
             .Include(c => c.Region)
             .FirstOrDefaultAsync(c => c.Id == user.NationalAddress.CityId);
+    }
+
+    // Best-effort: fires a push notification (banner + persistent entry in the
+    // in-app notification list) containing the OTP, so the user has a durable
+    // copy independent of the WhatsApp message. Swallows exceptions — a failed
+    // push must never roll back the redemption since WhatsApp already delivered.
+    private async Task SendCashOtpPushAsync(
+        string userId, string redemptionRequestId, string otp,
+        decimal points, decimal sar, CancellationToken ct)
+    {
+        try
+        {
+            var pointsStr = points.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+            var sarStr = sar.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            var title = "رمز استلام مكافأتك النقدية";
+            var body = $"رمز التحقق: {otp} لاستلام {pointsStr} نقطة ({sarStr} ريال) — صالح 14 يوم";
+
+            await _notificationService.CreateAsync(
+                userId,
+                NotificationType.RedemptionCreated,
+                title,
+                body,
+                referenceId: redemptionRequestId,
+                ct: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Cash OTP push notification failed for user {UserId}, request {RequestId}. WhatsApp was already sent.",
+                userId, redemptionRequestId);
+        }
     }
 
     private static string GenerateOtp()
