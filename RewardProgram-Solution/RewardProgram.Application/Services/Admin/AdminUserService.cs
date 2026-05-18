@@ -779,6 +779,11 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.SalesMan)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
+        var mobileConflict = await CheckMobileChangeAsync(user, request.MobileNumber, ct);
+        if (mobileConflict.IsFailure)
+            return Result.Failure<AdminAddUserResponse>(mobileConflict.Error);
+
+        var mobileChanged = mobileConflict.Value;
         user.Name = request.Name;
 
         var updateResult = await _userRepository.UpdateAsync(user);
@@ -789,7 +794,11 @@ public class AdminUserService : IAdminUserService
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
         }
 
-        _logger.LogInformation("Admin {AdminId} updated SalesMan {UserId}", adminUserId, userId);
+        if (mobileChanged)
+            await _userRepository.RevokeAllRefreshTokensAsync(user.Id, ct);
+
+        _logger.LogInformation("Admin {AdminId} updated SalesMan {UserId} (mobileChanged={MobileChanged})",
+            adminUserId, userId, mobileChanged);
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
@@ -806,6 +815,11 @@ public class AdminUserService : IAdminUserService
         if (user.UserType != UserType.ZoneManager)
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UserTypeMismatch);
 
+        var mobileConflict = await CheckMobileChangeAsync(user, request.MobileNumber, ct);
+        if (mobileConflict.IsFailure)
+            return Result.Failure<AdminAddUserResponse>(mobileConflict.Error);
+
+        var mobileChanged = mobileConflict.Value;
         user.Name = request.Name;
 
         var updateResult = await _userRepository.UpdateAsync(user);
@@ -816,11 +830,37 @@ public class AdminUserService : IAdminUserService
             return Result.Failure<AdminAddUserResponse>(AdminUserErrors.UpdateUserFailed);
         }
 
-        _logger.LogInformation("Admin {AdminId} updated ZoneManager {UserId}", adminUserId, userId);
+        if (mobileChanged)
+            await _userRepository.RevokeAllRefreshTokensAsync(user.Id, ct);
+
+        _logger.LogInformation("Admin {AdminId} updated ZoneManager {UserId} (mobileChanged={MobileChanged})",
+            adminUserId, userId, mobileChanged);
 
         return Result.Success(new AdminAddUserResponse(
             user.Id, user.Name, user.MobileNumber,
             UserType.ZoneManager, _localizer["AdminUser.ZoneManagerUpdated"].Value));
+    }
+
+    // Returns Success(true) when the mobile was changed (caller should revoke
+    // refresh tokens), Success(false) when unchanged. Mutates user identifier
+    // fields in-place; persistence is the caller's responsibility.
+    private async Task<Result<bool>> CheckMobileChangeAsync(
+        ApplicationUser user, string newMobile, CancellationToken ct)
+    {
+        var mobile = MobileNumberHelper.Normalize(newMobile);
+        if (string.Equals(mobile, user.MobileNumber, StringComparison.Ordinal))
+            return Result.Success(false);
+
+        var existing = await _userRepository.FindByMobileAsync(mobile, ct);
+        if (existing is not null && existing.Id != user.Id)
+            return Result.Failure<bool>(existing.IsAccountDeleted
+                ? AdminUserErrors.MobileBelongsToDeletedAccount
+                : AdminUserErrors.MobileAlreadyExists);
+
+        user.UserName = mobile;
+        user.PhoneNumber = mobile;
+        user.MobileNumber = mobile;
+        return Result.Success(true);
     }
 
     #endregion

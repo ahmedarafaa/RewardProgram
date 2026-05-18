@@ -435,7 +435,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\"\n}",
+							"raw": "{\n  \"name\": \"أحمد المندوب - معدل\",\n  \"mobileNumber\": \"0512345678\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -462,7 +462,7 @@
 								}
 							]
 						},
-						"description": "Edit a SalesMan — name only.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable. To move cities use POST /api/admin/users/cities/reassign."
+						"description": "Edit a SalesMan — name and mobile number.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber: 05XXXXXXXX (10 digits) or +XXXXXXXXXX (international). Changing the mobile revokes all refresh tokens for that user. 409 if another active account has that number; 409 (distinct error) if it belongs to a deleted account.\nTo move cities use POST /api/admin/users/cities/reassign."
 					}
 				},
 				{
@@ -477,7 +477,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"خالد المدير - معدل\"\n}",
+							"raw": "{\n  \"name\": \"خالد المدير - معدل\",\n  \"mobileNumber\": \"0512345678\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -504,7 +504,7 @@
 								}
 							]
 						},
-						"description": "Edit a ZoneManager — name only.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber is immutable. To move the region use POST /api/admin/users/regions/reassign."
+						"description": "Edit a ZoneManager — name and mobile number.\n\nName: 3+ letters only (Arabic/English), no numbers.\nMobileNumber: 05XXXXXXXX (10 digits) or +XXXXXXXXXX (international). Changing the mobile revokes all refresh tokens for that user. 409 if another active account has that number; 409 (distinct error) if it belongs to a deleted account.\nTo move the region use POST /api/admin/users/regions/reassign."
 					}
 				}
 			]

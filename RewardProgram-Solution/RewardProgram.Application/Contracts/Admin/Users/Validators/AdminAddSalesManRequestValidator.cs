@@ -17,6 +17,6 @@ public class AdminAddSalesManRequestValidator : AbstractValidator<AdminAddSalesM
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
-            .Matches(@"^(05\d{8}|\+\d{10,15})$").WithMessage(L["MobileNumber.InvalidFormat"]);
+            .Matches(@"^(05\d{8}|\+9665\d{8})$").WithMessage(L["MobileNumber.SaudiOnly"]);
     }
 }

@@ -30,6 +30,7 @@
   <!-- Shared: Mobile -->
   <data name="MobileNumber.NotEmpty"><value>Mobile number is required</value></data>
   <data name="MobileNumber.InvalidFormat"><value>Mobile number must start with 05 and be 10 digits, or start with + followed by country code</value></data>
+  <data name="MobileNumber.SaudiOnly"><value>Mobile number must be a Saudi number: 05XXXXXXXX or +9665XXXXXXXX</value></data>
 
   <!-- Shared: Location -->
   <data name="CityId.NotEmpty"><value>City is required</value></data>

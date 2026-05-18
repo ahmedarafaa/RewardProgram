@@ -13,5 +13,9 @@ public class AdminEditSalesManRequestValidator : AbstractValidator<AdminEditSale
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"])
             .Matches(@"^[\p{L}\s]+$").WithMessage(L["Name.LettersOnly"]);
+
+        RuleFor(x => x.MobileNumber)
+            .NotEmpty().WithMessage(L["MobileNumber.NotEmpty"])
+            .Matches(@"^(05\d{8}|\+9665\d{8})$").WithMessage(L["MobileNumber.SaudiOnly"]);
     }
 }

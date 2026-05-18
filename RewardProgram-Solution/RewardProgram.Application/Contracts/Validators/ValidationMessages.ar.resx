@@ -30,6 +30,7 @@
   <!-- Shared: Mobile -->
   <data name="MobileNumber.NotEmpty"><value>رقم الجوال مطلوب</value></data>
   <data name="MobileNumber.InvalidFormat"><value>رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام أو يبدأ بـ + متبوعاً برمز الدولة</value></data>
+  <data name="MobileNumber.SaudiOnly"><value>رقم الجوال يجب أن يكون رقماً سعودياً: 05XXXXXXXX أو +9665XXXXXXXX</value></data>
 
   <!-- Shared: Location -->
   <data name="CityId.NotEmpty"><value>المدينة مطلوبة</value></data>
