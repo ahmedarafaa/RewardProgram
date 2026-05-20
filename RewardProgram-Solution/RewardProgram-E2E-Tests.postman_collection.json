@@ -1928,7 +1928,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Test Technician\",\n  \"mobileNumber\": \"{{technicianMobile}}\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"54321\",\n  \"district\": \"Test District\",\n  \"invitationCode\": \"{{sellerInvitationCode}}\"\n}",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Test Technician\",\n  \"mobileNumber\": \"{{technicianMobile}}\",\n  \"cityId\": \"{{cityId}}\",\n  \"district\": \"Test District\",\n  \"invitationCode\": \"{{sellerInvitationCode}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3495,7 +3495,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verificationToken\": \"tamperedInvalidToken.fakeSignature\",\n  \"name\": \"Test Invalid\",\n  \"mobileNumber\": \"0555999999\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"11111\",\n  \"district\": \"Test District\"\n}",
+              "raw": "{\n  \"verificationToken\": \"tamperedInvalidToken.fakeSignature\",\n  \"name\": \"Test Invalid\",\n  \"mobileNumber\": \"0555999999\",\n  \"cityId\": \"{{cityId}}\",\n  \"district\": \"Test District\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4125,7 +4125,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Reject Target\",\n  \"mobileNumber\": \"{{rejectMobile}}\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"11111\",\n  \"district\": \"Reject District\"\n}",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Reject Target\",\n  \"mobileNumber\": \"{{rejectMobile}}\",\n  \"cityId\": \"{{cityId}}\",\n  \"district\": \"Reject District\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4809,7 +4809,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Transactions loaded', () => pm.response.to.have.status(200));",
-                  "var json = pm.response.json();",
+                  "var json = pm.response.json().transactions;",
                   "pm.test('Has transactions', () => pm.expect(json.items.length).to.be.above(0));",
                   "pm.test('Has amount', () => pm.expect(json.items[0].amount).to.not.be.undefined);",
                   "pm.test('Has type', () => pm.expect(json.items[0].type).to.not.be.undefined);",
@@ -4862,7 +4862,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Filtered transactions loaded', () => pm.response.to.have.status(200));",
-                  "var json = pm.response.json();",
+                  "var json = pm.response.json().transactions;",
                   "pm.test('All are Earned type', () => {",
                   "    json.items.forEach(t => pm.expect(t.type).to.eql(1));",
                   "});",
@@ -4958,7 +4958,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Wallet transactions with date filter loaded', () => pm.response.to.have.status(200));",
-                  "var json = pm.response.json();",
+                  "var json = pm.response.json().transactions;",
                   "pm.test('Response has items', () => pm.expect(json.items).to.be.an('array'));",
                   "console.log('Wallet transactions (date filter): ' + json.totalCount + ' records');"
                 ]
@@ -5809,7 +5809,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Self Inviter\",\n  \"mobileNumber\": \"0555300001\",\n  \"cityId\": \"{{cityId}}\",\n  \"postalCode\": \"22222\",\n  \"district\": \"Test District\",\n  \"invitationCode\": \"{{sellerInvitationCode}}\"\n}",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"Self Inviter\",\n  \"mobileNumber\": \"0555300001\",\n  \"cityId\": \"{{cityId}}\",\n  \"district\": \"Test District\",\n  \"invitationCode\": \"{{sellerInvitationCode}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

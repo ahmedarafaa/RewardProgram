@@ -5,5 +5,6 @@ public record ScanBarcodeResponse(
     decimal PointsAwarded,
     decimal NewBalance,
     string BarcodeId,
-    string BarcodeCode
+    string BarcodeCode,
+    string? Message = null
 );

@@ -86,8 +86,9 @@
 
   <!-- File Errors -->
   <data name="File.ImageUploadFailed"><value>فشل رفع الصورة</value></data>
-  <data name="File.InvalidImageType"><value>صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG أو WEBP</value></data>
+  <data name="File.InvalidImageType"><value>صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG أو WEBP أو HEIC</value></data>
   <data name="File.ImageTooLarge"><value>حجم الصورة كبير جداً، الحد الأقصى 5 ميجابايت</value></data>
+  <data name="File.ImageProcessingFailed"><value>تعذرت معالجة الصورة، يرجى تجربة ملف آخر</value></data>
 
   <!-- Invitation Errors -->
   <data name="Invitation.InvalidCode"><value>رمز الدعوة غير صالح</value></data>
@@ -107,6 +108,38 @@
   <data name="Product.NotFound"><value>المنتج غير موجود</value></data>
   <data name="Product.CodeAlreadyExists"><value>كود المنتج مسجل مسبقاً</value></data>
   <data name="Product.HasBarcodes"><value>لا يمكن حذف منتج مرتبط بباركودات</value></data>
+  <data name="Product.Import.InvalidFile"><value>ملف غير صالح، يرجى رفع ملف Excel بصيغة xlsx</value></data>
+  <data name="Product.Import.FileTooLarge"><value>حجم الملف كبير جداً، الحد الأقصى 10 ميجابايت</value></data>
+  <data name="Product.Import.EmptyFile"><value>لا يحتوي الملف على أي صفوف بيانات</value></data>
+  <data name="Product.Import.TooManyRows"><value>عدد الصفوف يتجاوز الحد الأقصى المسموح (10000)</value></data>
+  <data name="ProductImport.Row.NameInvalid"><value>اسم المنتج مطلوب ويجب ألا يتجاوز 200 حرف</value></data>
+  <data name="ProductImport.Row.ProductCodeInvalid"><value>كود المنتج مطلوب ويجب ألا يتجاوز 50 حرف</value></data>
+  <data name="ProductImport.Row.PointValueInvalid"><value>قيمة النقاط يجب أن تكون رقماً صحيحاً أكبر من صفر</value></data>
+  <data name="ProductImport.Row.PriceInvalid"><value>السعر يجب أن يكون رقماً أكبر من أو يساوي صفر</value></data>
+  <data name="ProductImport.Row.CategoryTooLong"><value>التصنيف يجب ألا يتجاوز 100 حرف</value></data>
+  <data name="ProductImport.Row.DuplicateInFile"><value>كود المنتج مكرر في الملف</value></data>
+
+  <!-- Admin Account Errors -->
+  <data name="AdminAccount.NotFound"><value>حساب المسؤول غير موجود</value></data>
+  <data name="AdminAccount.UsernameAlreadyExists"><value>اسم المستخدم مسجل مسبقاً</value></data>
+  <data name="AdminAccount.CannotModifySystemAdmin"><value>لا يمكن تعديل أو حذف حساب مدير النظام</value></data>
+  <data name="AdminAccount.CreateFailed"><value>فشل إنشاء حساب المسؤول</value></data>
+  <data name="AdminAccount.UpdateFailed"><value>فشل تحديث حساب المسؤول</value></data>
+  <data name="AdminAccount.InvalidPermission"><value>صلاحية غير معروفة</value></data>
+  <data name="AdminAccount.HasHistory"><value>لا يمكن حذف الحساب لارتباطه بسجل نشاط — يمكنك تعطيله بدلاً من حذفه</value></data>
+
+  <!-- Admin Permission catalog (module + action labels) -->
+  <data name="Perm.Module.Users"><value>المستخدمون</value></data>
+  <data name="Perm.Module.Products"><value>المنتجات</value></data>
+  <data name="Perm.Module.Barcodes"><value>الباركود</value></data>
+  <data name="Perm.Module.Scans"><value>عمليات المسح</value></data>
+  <data name="Perm.Module.Redemptions"><value>طلبات الاسترداد</value></data>
+  <data name="Perm.Module.Analytics"><value>التحليلات</value></data>
+  <data name="Perm.Module.Content"><value>المحتوى</value></data>
+  <data name="Perm.Module.Settings"><value>الإعدادات</value></data>
+  <data name="Perm.Module.Notifications"><value>الإشعارات</value></data>
+  <data name="Perm.Action.View"><value>عرض</value></data>
+  <data name="Perm.Action.Manage"><value>إدارة</value></data>
 
   <!-- Redemption Errors -->
   <data name="Redemption.InsufficientBalance"><value>الرصيد المتاح غير كافٍ للاسترداد</value></data>
@@ -195,6 +228,7 @@
   <!-- Wallet transaction descriptions (rendered at read time per user locale) -->
   <data name="Wallet.Tx.BarcodeScanned"><value>مسح باركود — {0}</value></data>
   <data name="Wallet.Tx.DeferredPoints"><value>نقاط مؤجلة — {0}</value></data>
+  <data name="Scan.DeferredPointsPending"><value>ستحصل على باقي النقاط ({0}) عند قيام الفني بمسح هذا الباركود بعدك.</value></data>
   <data name="Wallet.Tx.ScanCancelled"><value>إلغاء مسح — {0}</value></data>
   <data name="Wallet.Tx.PointsExpired"><value>نقاط منتهية الصلاحية</value></data>
   <data name="Wallet.Tx.InviteeBonus"><value>مكافأة تسجيل عبر دعوة من {0}</value></data>
@@ -208,15 +242,214 @@
   <data name="Notif.InvitationReward.Body"><value>حصلت على {0} نقطة مكافأة دعوة {1}</value></data>
   <data name="Notif.NewPoints.Title"><value>نقاط جديدة</value></data>
   <data name="Notif.NewPoints.DeferredBody"><value>حصلت على {0} نقطة مؤجلة — {1}</value></data>
-  <data name="Notif.Redemption.UpdateTitle"><value>تحديث طلب الاستبدال</value></data>
   <data name="Notif.Redemption.CompletedTitle"><value>اكتمل طلب الاستبدال</value></data>
   <data name="Notif.Redemption.CompletedBody"><value>تم إتمام طلب الاستبدال بنجاح</value></data>
-  <data name="Notif.Redemption.SalesManApprovedBody"><value>تمت موافقة مندوب المبيعات على طلب الاستبدال</value></data>
-  <data name="Notif.Redemption.ZoneManagerApprovedBody"><value>تمت موافقة مدير المنطقة على طلب الاستبدال</value></data>
   <data name="Notif.Redemption.AdminApprovedTitle"><value>تمت موافقة الإدارة</value></data>
   <data name="Notif.Redemption.AdminApprovedBody"><value>تمت موافقة الإدارة على طلب الاستبدال</value></data>
-  <data name="Notif.Redemption.GenericApprovedBody"><value>تمت الموافقة على طلب الاستبدال</value></data>
   <data name="Notif.Redemption.CashHandoverBody"><value>تم تسليم المبلغ بنجاح</value></data>
   <data name="Notif.Redemption.RejectedTitle"><value>تم رفض طلب الاستبدال</value></data>
   <data name="Notif.Redemption.RejectedBody"><value>تم رفض طلب الاستبدال. السبب: {0}</value></data>
+
+  <!-- Export errors + labels -->
+  <data name="Export.TooManyRows"><value>نتائج كثيرة جداً للتصدير، يرجى تقليل النطاق وإعادة المحاولة</value></data>
+
+  <data name="Export.Sheet.Users"><value>المستخدمون</value></data>
+  <data name="Export.Sheet.Products"><value>المنتجات</value></data>
+  <data name="Export.Sheet.Barcodes"><value>الباركودات</value></data>
+  <data name="Export.Sheet.Scans"><value>عمليات المسح</value></data>
+  <data name="Export.Sheet.Notifications"><value>الإشعارات</value></data>
+  <data name="Export.Sheet.Redemptions"><value>الاستبدالات</value></data>
+
+  <data name="Export.Header.CreatedAt"><value>تاريخ الإنشاء</value></data>
+  <data name="Export.Header.Name"><value>الاسم</value></data>
+  <data name="Export.Header.Mobile"><value>الجوال</value></data>
+  <data name="Export.Header.Status"><value>الحالة</value></data>
+  <data name="Export.Header.Type"><value>النوع</value></data>
+  <data name="Export.Header.RegistrationStatus"><value>حالة التسجيل</value></data>
+  <data name="Export.Header.Roles"><value>الأدوار</value></data>
+  <data name="Export.Header.Region"><value>المنطقة</value></data>
+  <data name="Export.Header.City"><value>المدينة</value></data>
+  <data name="Export.Header.CustomerCode"><value>كود العميل</value></data>
+  <data name="Export.Header.StoreName"><value>اسم المتجر</value></data>
+  <data name="Export.Header.IsDisabled"><value>معطّل</value></data>
+  <data name="Export.Header.IsAccountDeleted"><value>الحساب محذوف</value></data>
+
+  <data name="Export.Header.ProductCode"><value>كود المنتج</value></data>
+  <data name="Export.Header.Category"><value>الفئة</value></data>
+  <data name="Export.Header.PointValue"><value>قيمة النقاط</value></data>
+  <data name="Export.Header.PriceSar"><value>السعر (ر.س)</value></data>
+  <data name="Export.Header.TotalBarcodes"><value>إجمالي الباركودات</value></data>
+  <data name="Export.Header.AvailableBarcodes"><value>المتاحة</value></data>
+
+  <data name="Export.Header.BarcodeCode"><value>الباركود</value></data>
+  <data name="Export.Header.Product"><value>المنتج</value></data>
+
+  <data name="Export.Header.ScannedAt"><value>تاريخ المسح</value></data>
+  <data name="Export.Header.User"><value>المستخدم</value></data>
+  <data name="Export.Header.ScannerRole"><value>دور الماسح</value></data>
+  <data name="Export.Header.PointsAwarded"><value>النقاط المضافة</value></data>
+  <data name="Export.Header.BarcodeStatus"><value>حالة الباركود</value></data>
+  <data name="Export.Header.Latitude"><value>خط العرض</value></data>
+  <data name="Export.Header.Longitude"><value>خط الطول</value></data>
+
+  <data name="Export.Header.SentAt"><value>تاريخ الإرسال</value></data>
+  <data name="Export.Header.Recipient"><value>المستلم</value></data>
+  <data name="Export.Header.Title"><value>العنوان</value></data>
+  <data name="Export.Header.Body"><value>المحتوى</value></data>
+  <data name="Export.Header.Reference"><value>المرجع</value></data>
+  <data name="Export.Header.Read"><value>مقروء</value></data>
+
+  <data name="Export.Header.Method"><value>الطريقة</value></data>
+  <data name="Export.Header.Points"><value>النقاط</value></data>
+  <data name="Export.Header.Sar"><value>الريال</value></data>
+
+  <data name="Export.Sheet.Summary"><value>الملخص</value></data>
+  <data name="Export.Sheet.UsersByType"><value>المستخدمون حسب النوع</value></data>
+  <data name="Export.Sheet.UsersByRegStatus"><value>حسب حالة التسجيل</value></data>
+  <data name="Export.Sheet.UsersByRegion"><value>المستخدمون حسب المنطقة</value></data>
+  <data name="Export.Sheet.UsersTrend"><value>تطور التسجيل</value></data>
+  <data name="Export.Sheet.Regions"><value>المناطق</value></data>
+  <data name="Export.Sheet.Cities"><value>المدن</value></data>
+  <data name="Export.Sheet.PointsByRegion"><value>النقاط حسب المنطقة</value></data>
+  <data name="Export.Sheet.PointsByRep"><value>النقاط حسب المندوب</value></data>
+  <data name="Export.Sheet.PointsTrend"><value>تطور النقاط</value></data>
+  <data name="Export.Sheet.PointsDetails"><value>تفاصيل النقاط</value></data>
+  <data name="Export.Sheet.TopSellers"><value>أفضل البائعين</value></data>
+  <data name="Export.Sheet.TopTechnicians"><value>أفضل الفنيين</value></data>
+  <data name="Export.Sheet.InactiveUsers"><value>المستخدمون غير النشطين</value></data>
+  <data name="Export.Sheet.TopProductsByBarcodes"><value>أكثر المنتجات</value></data>
+  <data name="Export.Sheet.RedemptionsByStatus"><value>الاستبدالات حسب الحالة</value></data>
+  <data name="Export.Sheet.RedemptionsByMethod"><value>الاستبدالات حسب الطريقة</value></data>
+  <data name="Export.Sheet.RedemptionsTrend"><value>تطور الاستبدالات</value></data>
+  <data name="Export.Sheet.SalesManPerformance"><value>أداء المندوبين</value></data>
+  <data name="Export.Sheet.RevenueByType"><value>الإيرادات حسب النوع</value></data>
+  <data name="Export.Sheet.PayoutTrend"><value>تطور المدفوعات</value></data>
+  <data name="Export.Sheet.TopInviters"><value>أفضل الداعين</value></data>
+  <data name="Export.Sheet.InvitationsTrend"><value>تطور الدعوات</value></data>
+  <data name="Export.Sheet.NotificationsByType"><value>الإشعارات حسب النوع</value></data>
+  <data name="Export.Sheet.NotificationsTrend"><value>تطور الإشعارات</value></data>
+
+  <data name="Export.Header.Count"><value>العدد</value></data>
+  <data name="Export.Header.Total"><value>الإجمالي</value></data>
+  <data name="Export.Header.Year"><value>السنة</value></data>
+  <data name="Export.Header.Month"><value>الشهر</value></data>
+  <data name="Export.Header.RegionAr"><value>المنطقة (عربي)</value></data>
+  <data name="Export.Header.RegionEn"><value>المنطقة (إنجليزي)</value></data>
+  <data name="Export.Header.CityAr"><value>المدينة (عربي)</value></data>
+  <data name="Export.Header.CityEn"><value>المدينة (إنجليزي)</value></data>
+  <data name="Export.Header.ZoneManager"><value>مدير المنطقة</value></data>
+  <data name="Export.Header.ApprovalSalesMan"><value>مندوب الاعتماد</value></data>
+  <data name="Export.Header.CityCount"><value>عدد المدن</value></data>
+  <data name="Export.Header.ShopOwnerCount"><value>عدد أصحاب المتاجر</value></data>
+  <data name="Export.Header.SellerCount"><value>عدد البائعين</value></data>
+  <data name="Export.Header.TechnicianCount"><value>عدد الفنيين</value></data>
+  <data name="Export.Header.UserCount"><value>عدد المستخدمين</value></data>
+  <data name="Export.Header.TotalEarned"><value>إجمالي النقاط المكتسبة</value></data>
+  <data name="Export.Header.SalesMan"><value>المندوب</value></data>
+  <data name="Export.Header.TotalScans"><value>إجمالي عمليات المسح</value></data>
+  <data name="Export.Header.Description"><value>الوصف</value></data>
+  <data name="Export.Header.LastScanDate"><value>تاريخ آخر مسح</value></data>
+  <data name="Export.Header.DaysSinceLastScan"><value>الأيام منذ آخر مسح</value></data>
+  <data name="Export.Header.ScannedCount"><value>المُمسوحة</value></data>
+  <data name="Export.Header.ConsumedCount"><value>المُستهلكة</value></data>
+  <data name="Export.Header.AssignedUsers"><value>المستخدمون المُسندون</value></data>
+  <data name="Export.Header.ApprovedUsers"><value>المستخدمون المعتمدون</value></data>
+  <data name="Export.Header.PendingApprovals"><value>قيد الاعتماد</value></data>
+  <data name="Export.Header.TransactionType"><value>نوع المعاملة</value></data>
+  <data name="Export.Header.TotalPoints"><value>إجمالي النقاط</value></data>
+  <data name="Export.Header.TotalInvited"><value>عدد الدعوات</value></data>
+  <data name="Export.Header.ApprovedCount"><value>عدد المعتمدين</value></data>
+  <data name="Export.Header.PointsEarned"><value>النقاط المكتسبة</value></data>
+
+  <data name="Export.Kpi.Label"><value>المؤشر</value></data>
+  <data name="Export.Kpi.Value"><value>القيمة</value></data>
+  <data name="Export.Kpi.TotalShopOwners"><value>إجمالي أصحاب المتاجر</value></data>
+  <data name="Export.Kpi.TotalSellers"><value>إجمالي البائعين</value></data>
+  <data name="Export.Kpi.TotalTechnicians"><value>إجمالي الفنيين</value></data>
+  <data name="Export.Kpi.TotalPendingApprovals"><value>الطلبات قيد الاعتماد</value></data>
+  <data name="Export.Kpi.TotalPointsEarned"><value>إجمالي النقاط المكتسبة</value></data>
+  <data name="Export.Kpi.TotalPointsRedeemed"><value>إجمالي النقاط المُستبدلة</value></data>
+  <data name="Export.Kpi.TotalSarRedeemed"><value>إجمالي الريال المُستبدل</value></data>
+  <data name="Export.Kpi.TotalActiveBarcodes"><value>الباركودات النشطة</value></data>
+  <data name="Export.Kpi.TotalScans"><value>إجمالي عمليات المسح</value></data>
+  <data name="Export.Kpi.PendingRedemptions"><value>الاستبدالات المعلقة</value></data>
+  <data name="Export.Kpi.TotalInvitations"><value>إجمالي الدعوات</value></data>
+  <data name="Export.Kpi.TotalNotificationsSent"><value>إجمالي الإشعارات المرسلة</value></data>
+  <data name="Export.Kpi.TotalDeletedAccounts"><value>الحسابات المحذوفة</value></data>
+  <data name="Export.Kpi.TotalEarned"><value>إجمالي المكتسبة</value></data>
+  <data name="Export.Kpi.TotalRedeemed"><value>إجمالي المُستبدلة</value></data>
+  <data name="Export.Kpi.TotalBalance"><value>إجمالي الرصيد</value></data>
+  <data name="Export.Kpi.TotalGenerated"><value>إجمالي المُولّدة</value></data>
+  <data name="Export.Kpi.TotalAvailable"><value>المتاحة</value></data>
+  <data name="Export.Kpi.TotalSellerScanned"><value>مسح من البائعين</value></data>
+  <data name="Export.Kpi.TotalTechnicianScanned"><value>مسح من الفنيين</value></data>
+  <data name="Export.Kpi.TotalConsumed"><value>المُستهلكة</value></data>
+  <data name="Export.Kpi.ScanRate"><value>معدل المسح (%)</value></data>
+  <data name="Export.Kpi.AverageProcessingDays"><value>متوسط أيام المعالجة</value></data>
+  <data name="Export.Kpi.TotalSarLiability"><value>إجمالي الالتزامات (ر.س)</value></data>
+  <data name="Export.Kpi.TotalSarHeld"><value>الريال المحتجز</value></data>
+  <data name="Export.Kpi.TotalSarPaidOut"><value>الريال المدفوع</value></data>
+  <data name="Export.Kpi.TotalPointsOutstanding"><value>النقاط المعلقة</value></data>
+  <data name="Export.Kpi.TotalInvitationsSent"><value>إجمالي الدعوات المرسلة</value></data>
+  <data name="Export.Kpi.TotalAccepted"><value>المقبولة</value></data>
+  <data name="Export.Kpi.TotalPending"><value>المعلقة</value></data>
+  <data name="Export.Kpi.ConversionRate"><value>معدل التحويل (%)</value></data>
+  <data name="Export.Kpi.TotalRewardPointsSpent"><value>النقاط المُنفقة كمكافآت</value></data>
+  <data name="Export.Kpi.TotalRewardSarSpent"><value>الريال المُنفق كمكافآت</value></data>
+  <data name="Export.Kpi.TotalAllTime"><value>إجمالي الكل</value></data>
+  <data name="Export.Kpi.TotalThisMonth"><value>هذا الشهر</value></data>
+  <data name="Export.Kpi.TotalToday"><value>اليوم</value></data>
+  <data name="Export.Kpi.TotalRead"><value>المقروءة</value></data>
+  <data name="Export.Kpi.TotalUnread"><value>غير المقروءة</value></data>
+  <data name="Export.Kpi.ReadRate"><value>معدل القراءة (%)</value></data>
+  <data name="Export.Kpi.AdminSentCount"><value>المرسلة من الإدارة</value></data>
+  <data name="Export.Kpi.SystemTriggeredCount"><value>المرسلة تلقائياً</value></data>
+
+  <data name="Enum.UserType.ShopOwner"><value>صاحب متجر</value></data>
+  <data name="Enum.UserType.Seller"><value>بائع</value></data>
+  <data name="Enum.UserType.Technician"><value>فني</value></data>
+  <data name="Enum.UserType.SalesMan"><value>مندوب مبيعات</value></data>
+  <data name="Enum.UserType.ZoneManager"><value>مدير منطقة</value></data>
+  <data name="Enum.UserType.SystemAdmin"><value>مسؤول النظام</value></data>
+
+  <data name="Enum.RegistrationStatus.PendingSalesman"><value>بانتظار مندوب المبيعات</value></data>
+  <data name="Enum.RegistrationStatus.PendingZoneManager"><value>بانتظار مدير المنطقة</value></data>
+  <data name="Enum.RegistrationStatus.Approved"><value>معتمد</value></data>
+  <data name="Enum.RegistrationStatus.Rejected"><value>مرفوض</value></data>
+
+  <data name="Enum.BarcodeStatus.Available"><value>متاح</value></data>
+  <data name="Enum.BarcodeStatus.SellerScanned"><value>مسح من البائع</value></data>
+  <data name="Enum.BarcodeStatus.TechnicianScanned"><value>مسح من الفني</value></data>
+  <data name="Enum.BarcodeStatus.Consumed"><value>مستهلك</value></data>
+
+  <data name="Enum.ScannerRole.Seller"><value>بائع</value></data>
+  <data name="Enum.ScannerRole.Technician"><value>فني</value></data>
+
+  <data name="Enum.RedemptionMethod.BankTransfer"><value>تحويل بنكي</value></data>
+  <data name="Enum.RedemptionMethod.Cash"><value>نقدي</value></data>
+
+  <data name="Enum.RedemptionRequestStatus.PendingSalesMan"><value>بانتظار مندوب المبيعات</value></data>
+  <data name="Enum.RedemptionRequestStatus.PendingZoneManager"><value>بانتظار مدير المنطقة</value></data>
+  <data name="Enum.RedemptionRequestStatus.PendingAdmin"><value>بانتظار الإدارة</value></data>
+  <data name="Enum.RedemptionRequestStatus.AdminApproved"><value>اعتمدت الإدارة</value></data>
+  <data name="Enum.RedemptionRequestStatus.Completed"><value>مكتمل</value></data>
+  <data name="Enum.RedemptionRequestStatus.Rejected"><value>مرفوض</value></data>
+  <data name="Enum.RedemptionRequestStatus.Cancelled"><value>ملغي</value></data>
+
+  <data name="Enum.WalletTransactionType.Earned"><value>مكتسبة</value></data>
+  <data name="Enum.WalletTransactionType.Redeemed"><value>مُستبدلة</value></data>
+  <data name="Enum.WalletTransactionType.Cancelled"><value>ملغاة</value></data>
+  <data name="Enum.WalletTransactionType.Expired"><value>منتهية</value></data>
+  <data name="Enum.WalletTransactionType.Refunded"><value>مستردة</value></data>
+  <data name="Enum.WalletTransactionType.InvitationReward"><value>مكافأة دعوة</value></data>
+
+  <data name="Enum.NotificationType.RegistrationApproved"><value>تم اعتماد التسجيل</value></data>
+  <data name="Enum.NotificationType.RegistrationRejected"><value>تم رفض التسجيل</value></data>
+  <data name="Enum.NotificationType.PointsEarned"><value>كسب نقاط</value></data>
+  <data name="Enum.NotificationType.RedemptionCreated"><value>طلب استبدال جديد</value></data>
+  <data name="Enum.NotificationType.RedemptionApproved"><value>اعتماد الاستبدال</value></data>
+  <data name="Enum.NotificationType.RedemptionRejected"><value>رفض الاستبدال</value></data>
+  <data name="Enum.NotificationType.RedemptionCompleted"><value>اكتمال الاستبدال</value></data>
+  <data name="Enum.NotificationType.InvitationReward"><value>مكافأة دعوة</value></data>
+  <data name="Enum.NotificationType.AdminMessage"><value>رسالة إدارية</value></data>
 </root>

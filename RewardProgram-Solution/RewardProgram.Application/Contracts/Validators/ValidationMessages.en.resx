@@ -54,7 +54,7 @@
   <data name="ShortAddress.NotEmpty"><value>Short address is required</value></data>
   <data name="ShortAddress.InvalidFormat"><value>Short address must be 4 letters followed by 4 digits</value></data>
   <data name="ShopImage.NotNull"><value>Shop image is required</value></data>
-  <data name="ShopImage.InvalidType"><value>Shop image must be in JPG or PNG format</value></data>
+  <data name="ShopImage.InvalidType"><value>Shop image must be in JPG, PNG, WEBP, or HEIC format</value></data>
   <data name="ShopImage.TooLarge"><value>Image size must not exceed 5 MB</value></data>
   <data name="NationalAddress.NotNull"><value>National address is required</value></data>
 
@@ -83,6 +83,10 @@
   <data name="Product.PointValue.GreaterThanZero"><value>Point value must be greater than zero</value></data>
   <data name="Product.Price.GreaterThanOrEqualZero"><value>Price must be zero or more</value></data>
   <data name="Product.Category.MaxLength"><value>Category must not exceed 100 characters</value></data>
+
+  <!-- Admin Account -->
+  <data name="AdminAccount.UsernameInvalid"><value>Username must be 3–50 characters and contain only letters, numbers, and . _ -</value></data>
+  <data name="AdminAccount.PasswordInvalid"><value>Password must be at least 8 characters</value></data>
 
   <!-- Barcode -->
   <data name="Barcode.Code.NotEmpty"><value>Barcode code is required</value></data>

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -106,6 +107,44 @@ public class AdminBarcodeService : IAdminBarcodeService
     public async Task<Result<PaginatedResult<AdminBarcodeListItemResponse>>> ListBarcodesAsync(
         AdminBarcodeListQuery query, CancellationToken ct = default)
     {
+        var dbQuery = BuildBarcodesFilteredQuery(query);
+
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        // EF Core 10 cannot translate `.Select(new Record(...)).OrderBy(r.Member)` — it
+        // tries to inline the ctor inside OrderBy. Order/Skip/Take the entity first,
+        // then project as the final step.
+        var items = await dbQuery
+            .OrderByDescending(b => b.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(BarcodeListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<AdminBarcodeListItemResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<List<AdminBarcodeListItemResponse>>> ExportBarcodesAsync(
+        AdminBarcodeListQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = BuildBarcodesFilteredQuery(query);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminBarcodeListItemResponse>>(ExportErrors.TooManyRows);
+
+        var items = await dbQuery
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(BarcodeListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(items);
+    }
+
+    private IQueryable<ProductBarcode> BuildBarcodesFilteredQuery(AdminBarcodeListQuery query)
+    {
         var dbQuery = _context.ProductBarcodes
             .AsNoTracking()
             .Include(b => b.Product)
@@ -117,32 +156,59 @@ public class AdminBarcodeService : IAdminBarcodeService
         if (query.Status.HasValue)
             dbQuery = dbQuery.Where(b => b.Status == query.Status.Value);
 
-        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
-
-        var totalCount = await dbQuery.CountAsync(ct);
-
-        var items = await dbQuery
-            .OrderByDescending(b => b.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(b => new AdminBarcodeListItemResponse(
-                b.Id,
-                b.Code,
-                b.Product.Name,
-                b.Product.PointValue,
-                b.Status,
-                b.CreatedAt
-            ))
-            .ToListAsync(ct);
-
-        return Result.Success(new PaginatedResult<AdminBarcodeListItemResponse>(items, totalCount, page, pageSize));
+        return dbQuery;
     }
+
+    // Expression (not a method returning IQueryable) so callers can compose it as the
+    // FINAL `.Select(...)` step after OrderBy/Skip/Take — see EF Core 10 comment above.
+    private static readonly Expression<Func<ProductBarcode, AdminBarcodeListItemResponse>> BarcodeListItemSelector =
+        b => new AdminBarcodeListItemResponse(
+            b.Id,
+            b.Code,
+            b.Product.Name,
+            b.Product.PointValue,
+            b.Status,
+            b.CreatedAt);
 
     public async Task<Result<PaginatedResult<AdminScanListItemResponse>>> GetAdminScanListAsync(
         AdminScanListQuery query, CancellationToken ct = default)
     {
+        var dbQuery = BuildScansFilteredQuery(query);
+
         var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
 
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        // EF Core 10 OrderBy-after-Select translation bug — see BarcodeListItemSelector.
+        var items = await dbQuery
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(ScanListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<List<AdminScanListItemResponse>>> ExportScansAsync(
+        AdminScanListQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = BuildScansFilteredQuery(query);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminScanListItemResponse>>(ExportErrors.TooManyRows);
+
+        var items = await dbQuery
+            .OrderByDescending(s => s.CreatedAt)
+            .Select(ScanListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(items);
+    }
+
+    private IQueryable<ScanRecord> BuildScansFilteredQuery(AdminScanListQuery query)
+    {
         var dbQuery = _context.ScanRecords
             .AsNoTracking()
             .Include(s => s.Barcode)
@@ -168,31 +234,24 @@ public class AdminBarcodeService : IAdminBarcodeService
         if (query.ToDate.HasValue)
             dbQuery = dbQuery.Where(s => s.CreatedAt <= query.ToDate.Value);
 
-        var totalCount = await dbQuery.CountAsync(ct);
-
-        var items = await dbQuery
-            .OrderByDescending(s => s.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(s => new AdminScanListItemResponse(
-                s.Id,
-                s.Barcode.Code,
-                s.Barcode.Product.Name,
-                s.Barcode.Product.ProductCode,
-                s.Barcode.Product.PointValue,
-                s.PointsAwarded,
-                s.ScannerRole,
-                s.Barcode.Status,
-                s.User.Name,
-                s.User.MobileNumber,
-                s.CreatedAt,
-                s.Latitude,
-                s.Longitude
-            ))
-            .ToListAsync(ct);
-
-        return Result.Success(new PaginatedResult<AdminScanListItemResponse>(items, totalCount, page, pageSize));
+        return dbQuery;
     }
+
+    private static readonly Expression<Func<ScanRecord, AdminScanListItemResponse>> ScanListItemSelector =
+        s => new AdminScanListItemResponse(
+            s.Id,
+            s.Barcode.Code,
+            s.Barcode.Product.Name,
+            s.Barcode.Product.ProductCode,
+            s.Barcode.Product.PointValue,
+            s.PointsAwarded,
+            s.ScannerRole,
+            s.Barcode.Status,
+            s.User.Name,
+            s.User.MobileNumber,
+            s.CreatedAt,
+            s.Latitude,
+            s.Longitude);
 
     public async Task<Result<AdminCancelScanResponse>> CancelScanAsync(
         string scanId, string adminUserId, CancellationToken ct = default)

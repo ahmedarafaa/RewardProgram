@@ -39,6 +39,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserNotificationPreference> UserNotificationPreferences { get; set; }
     public DbSet<ContactUsContent> ContactUsContents { get; set; }
     public DbSet<AboutAppContent> AboutAppContents { get; set; }
+    public DbSet<AdminUserPermission> AdminUserPermissions { get; set; }
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

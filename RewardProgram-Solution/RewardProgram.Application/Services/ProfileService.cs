@@ -15,17 +15,20 @@ public class ProfileService : IProfileService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IFileStorageService _fileStorage;
+    private readonly IImageProcessor _imageProcessor;
     private readonly ILogger<ProfileService> _logger;
 
     public ProfileService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IFileStorageService fileStorage,
+        IImageProcessor imageProcessor,
         ILogger<ProfileService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _fileStorage = fileStorage;
+        _imageProcessor = imageProcessor;
         _logger = logger;
     }
 
@@ -85,9 +88,14 @@ public class ProfileService : IProfileService
 
         var oldPhotoUrl = user.ProfileImageUrl;
 
+        var processed = await _imageProcessor.ProcessAsync(photo, ct);
+        if (processed.IsFailure)
+            return Result.Failure<string>(processed.Error);
+
+        await using var stream = processed.Value.Content;
         var uploadResult = await _fileStorage.UploadAsync(
-            photo.OpenReadStream(),
-            photo.FileName,
+            stream,
+            processed.Value.FileName,
             "profiles",
             ct);
 

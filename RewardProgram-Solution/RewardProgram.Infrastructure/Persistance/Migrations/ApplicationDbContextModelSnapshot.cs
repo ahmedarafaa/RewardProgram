@@ -669,6 +669,10 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<string>("CashOtpEncrypted")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<DateTime?>("CashOtpExpiresAt")
                         .HasColumnType("datetime2");
 
@@ -887,6 +891,29 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                     b.HasKey("UserId", "NotificationType");
 
                     b.ToTable("UserNotificationPreferences", (string)null);
+                });
+
+            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.AdminUserPermission", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Permission")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Permission")
+                        .IsUnique();
+
+                    b.ToTable("AdminUserPermissions", (string)null);
                 });
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.ApplicationRole", b =>
@@ -1897,6 +1924,17 @@ namespace RewardProgram.Infrastructure.Persistance.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RewardProgram.Domain.Entities.Users.AdminUserPermission", b =>
+                {
+                    b.HasOne("RewardProgram.Domain.Entities.Users.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RewardProgram.Domain.Entities.Users.ApplicationUser", b =>

@@ -30,6 +30,7 @@ public class RedemptionService : IRedemptionService
     private readonly IUserRepository _userRepository;
     private readonly ITwilioService _twilioService;
     private readonly INotificationService _notificationService;
+    private readonly ICashOtpProtector _cashOtpProtector;
     private readonly ILogger<RedemptionService> _logger;
 
     public RedemptionService(
@@ -37,12 +38,14 @@ public class RedemptionService : IRedemptionService
         IUserRepository userRepository,
         ITwilioService twilioService,
         INotificationService notificationService,
+        ICashOtpProtector cashOtpProtector,
         ILogger<RedemptionService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _twilioService = twilioService;
         _notificationService = notificationService;
+        _cashOtpProtector = cashOtpProtector;
         _logger = logger;
     }
 
@@ -129,6 +132,7 @@ public class RedemptionService : IRedemptionService
         {
             cashOtp = GenerateOtp();
             redemptionRequest.CashOtpHash = HashOtp(cashOtp);
+            redemptionRequest.CashOtpEncrypted = _cashOtpProtector.Protect(cashOtp);
             redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.Add(CashOtpLifetime);
             redemptionRequest.CashOtpAttempts = 0;
         }
@@ -181,10 +185,12 @@ public class RedemptionService : IRedemptionService
         string userId, CancellationToken ct = default)
     {
         var request = await _context.RedemptionRequests
+            .AsNoTracking()
             .Where(r => r.UserId == userId
                 && r.Status != RedemptionRequestStatus.Completed
                 && r.Status != RedemptionRequestStatus.Rejected
                 && r.Status != RedemptionRequestStatus.Cancelled)
+            .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
         return Result.Success(request is null ? null : MapToResponse(request));
@@ -196,6 +202,7 @@ public class RedemptionService : IRedemptionService
         var (page, pageSize) = Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
 
         var baseQuery = _context.RedemptionRequests
+            .AsNoTracking()
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt);
 
@@ -267,6 +274,7 @@ public class RedemptionService : IRedemptionService
 
         var newOtp = GenerateOtp();
         redemptionRequest.CashOtpHash = HashOtp(newOtp);
+        redemptionRequest.CashOtpEncrypted = _cashOtpProtector.Protect(newOtp);
         redemptionRequest.CashOtpExpiresAt = DateTime.UtcNow.Add(CashOtpLifetime);
         redemptionRequest.CashOtpAttempts = 0;
 
@@ -409,7 +417,7 @@ public class RedemptionService : IRedemptionService
         return Convert.ToHexStringLower(bytes);
     }
 
-    private static RedemptionRequestResponse MapToResponse(RedemptionRequest r) => new(
+    private RedemptionRequestResponse MapToResponse(RedemptionRequest r) => new(
         r.Id,
         r.Method,
         r.Status,
@@ -422,7 +430,25 @@ public class RedemptionService : IRedemptionService
         r.SwiftCode,
         r.AccountName,
         r.CashOtpExpiresAt,
+        GetVisibleCashOtp(r),
         r.RejectionReason,
         r.CreatedAt
     );
+
+    // The cash OTP is shown to the owner only while the redemption is in-flight
+    // (not completed/rejected/cancelled) and the OTP has not expired. Once the
+    // request reaches a terminal state the code drops off the wallet screen.
+    // Returns null if the encrypted copy is missing or the key ring is unavailable.
+    private string? GetVisibleCashOtp(RedemptionRequest r)
+    {
+        if (r.Method != RedemptionMethod.Cash)
+            return null;
+        if (r.Status is RedemptionRequestStatus.Completed
+            or RedemptionRequestStatus.Rejected
+            or RedemptionRequestStatus.Cancelled)
+            return null;
+        if (r.CashOtpExpiresAt is null || r.CashOtpExpiresAt <= DateTime.UtcNow)
+            return null;
+        return _cashOtpProtector.TryUnprotect(r.CashOtpEncrypted);
+    }
 }

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using RewardProgram.Application.Contracts.Auth;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Auth;
+using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Entities.Users;
 using System.IdentityModel.Tokens.Jwt;
@@ -16,13 +19,16 @@ public class TokenService : ITokenService
 {
     private readonly JwtOptions _jwtOptions;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IApplicationDbContext _context;
 
     public TokenService(
         IOptions<JwtOptions> jwtOptions,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IApplicationDbContext context)
     {
         _jwtOptions = jwtOptions.Value;
         _userManager = userManager;
+        _context = context;
     }
 
     public async Task<(string Token, int ExpiresIn)> GenerateAccessTokenAsync(ApplicationUser user)
@@ -53,6 +59,22 @@ public class TokenService : ITokenService
         foreach (var role in roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        // An Admin-role dashboard user carries their granted permissions as claims
+        // so authorization needs no per-request DB lookup. SystemAdmin bypasses
+        // permission checks entirely, so it needs no permission claims.
+        if (isAdmin && !roles.Contains(UserRoles.SystemAdmin))
+        {
+            var permissions = await _context.AdminUserPermissions
+                .Where(p => p.UserId == user.Id)
+                .Select(p => p.Permission)
+                .ToListAsync();
+
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim(AdminPermissions.ClaimType, permission));
+            }
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));

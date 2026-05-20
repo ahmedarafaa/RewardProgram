@@ -1,8 +1,10 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Admin.Products;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Tests.TestHelpers;
 using RewardProgram.Domain.Entities;
@@ -13,13 +15,19 @@ namespace RewardProgram.Application.Tests.Services.Admin;
 public class AdminProductServiceTests : IDisposable
 {
     private readonly TestDbContext _context;
+    private readonly IProductImportReader _importReader;
     private readonly AdminProductService _sut;
     private const string AdminId = "admin-1";
 
     public AdminProductServiceTests()
     {
         _context = TestDbContext.Create();
-        _sut = new AdminProductService(_context, Substitute.For<ILogger<AdminProductService>>());
+        _importReader = Substitute.For<IProductImportReader>();
+        _sut = new AdminProductService(
+            _context,
+            _importReader,
+            new StubLocalizer<ErrorMessages>(),
+            Substitute.For<ILogger<AdminProductService>>());
     }
 
     public void Dispose() => _context.Dispose();
@@ -168,6 +176,88 @@ public class AdminProductServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.TotalBarcodes.Should().Be(2);
         result.Value.AvailableBarcodes.Should().Be(1);
+    }
+
+    // ── ImportProducts ──
+
+    [Fact]
+    public async Task ImportProducts_NewAndExistingCodes_ShouldUpsert()
+    {
+        await SeedProduct(code: "P001", name: "Old Name", pointValue: 50);
+        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "Updated Name", "P001", "Cat", "120", "30"),
+            new(3, "Brand New", "P999", "Cat", "200", "75")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(1);
+        result.Value.Updated.Should().Be(1);
+        result.Value.Failed.Should().Be(0);
+
+        var updated = await _context.Products.FirstAsync(p => p.ProductCode == "P001");
+        updated.Name.Should().Be("Updated Name");
+        updated.PointValue.Should().Be(120);
+        _context.Products.Any(p => p.ProductCode == "P999").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ImportProducts_InvalidRow_ShouldReportError()
+    {
+        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "Good Product", "P010", null, "100", "25"),
+            new(3, "Bad Points", "P011", null, "notanumber", "25")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(1);
+        result.Value.Failed.Should().Be(1);
+        result.Value.Errors.Should().ContainSingle()
+            .Which.RowNumber.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ImportProducts_DuplicateCodeInFile_ShouldReportSecondOccurrence()
+    {
+        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "First", "DUP1", null, "100", "25"),
+            new(3, "Second", "DUP1", null, "100", "25")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(1);
+        result.Value.Failed.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ImportProducts_EmptyFile_ShouldFail()
+    {
+        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>());
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ProductErrors.ProductImportEmptyFile);
+    }
+
+    [Fact]
+    public async Task ImportProducts_UnreadableFile_ShouldFail()
+    {
+        _importReader.Read(Arg.Any<Stream>())
+            .Returns(_ => throw new InvalidOperationException("bad file"));
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ProductErrors.ProductImportInvalidFile);
     }
 
     // ── ListProducts ──

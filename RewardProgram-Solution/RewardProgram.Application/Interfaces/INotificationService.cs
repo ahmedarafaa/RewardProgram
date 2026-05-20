@@ -39,4 +39,5 @@ public interface INotificationService
     Task<Result<int>> SendToRoleAsync(string roleName, string title, string body, string sentByAdminId, CancellationToken ct);
     Task<Result<int>> BroadcastAsync(string title, string body, string sentByAdminId, CancellationToken ct);
     Task<PaginatedResult<AdminNotificationHistoryItem>> GetNotificationHistoryAsync(AdminNotificationListQuery query, CancellationToken ct);
+    Task<Result<List<AdminNotificationHistoryItem>>> ExportNotificationHistoryAsync(AdminNotificationListQuery query, CancellationToken ct);
 }

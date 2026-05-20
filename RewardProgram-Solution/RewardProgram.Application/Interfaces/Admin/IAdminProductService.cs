@@ -10,6 +10,8 @@ public interface IAdminProductService
     Task<Result<AdminProductResponse>> EditProductAsync(string productId, AdminEditProductRequest request, string adminUserId, CancellationToken ct = default);
     Task<Result> DeleteProductAsync(string productId, string adminUserId, CancellationToken ct = default);
     Task<Result<PaginatedResult<AdminProductResponse>>> ListProductsAsync(AdminProductListQuery query, CancellationToken ct = default);
+    Task<Result<List<AdminProductResponse>>> ExportProductsAsync(AdminProductListQuery query, CancellationToken ct = default);
     Task<Result<AdminProductResponse>> GetProductAsync(string productId, CancellationToken ct = default);
     Task<Result<PaginatedResult<CategoryItem>>> ListCategoriesAsync(AdminCategoryListQuery query, CancellationToken ct = default);
+    Task<Result<ProductImportResultResponse>> ImportProductsAsync(Stream xlsxStream, string adminUserId, CancellationToken ct = default);
 }

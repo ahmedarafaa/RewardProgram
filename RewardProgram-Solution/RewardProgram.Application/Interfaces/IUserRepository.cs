@@ -29,6 +29,25 @@ public interface IUserRepository
     Task ArchiveRejectedUserByMobileAsync(string mobileNumber, CancellationToken ct = default);
     IQueryable<ApplicationUser> Query();
     Task<IdentityResult> CreateAsync(ApplicationUser user);
+
+    /// <summary>
+    /// Creates a password-backed account (admin-dashboard users). Identity enforces
+    /// username uniqueness and the configured password policy.
+    /// </summary>
+    Task<IdentityResult> CreateAsync(ApplicationUser user, string password);
+
+    /// <summary>Finds a user by login username.</summary>
+    Task<ApplicationUser?> FindByUsernameAsync(string username);
+
+    /// <summary>Replaces a user's password.</summary>
+    Task<IdentityResult> SetPasswordAsync(ApplicationUser user, string newPassword);
+
+    /// <summary>Permanently deletes a user.</summary>
+    Task<IdentityResult> DeleteAsync(ApplicationUser user);
+
+    /// <summary>Removes the given roles from a user.</summary>
+    Task<IdentityResult> RemoveFromRolesAsync(ApplicationUser user, IEnumerable<string> roles);
+
     Task<IdentityResult> UpdateAsync(ApplicationUser user);
     Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role);
     Task<IList<string>> GetRolesAsync(ApplicationUser user);

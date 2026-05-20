@@ -752,6 +752,37 @@
 					]
 				},
 				{
+					"name": "Import Products",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Excel (.xlsx) workbook. Columns A-E: Name, ProductCode, Category, PointValue, Price (row 1 = header)."
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/products/import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products",
+								"import"
+							]
+						},
+						"description": "Bulk-import products from an .xlsx file. Each valid row is upserted by ProductCode (existing -> updated, new -> created). Invalid rows are skipped and listed in the per-row error report. Max 10000 rows, 10 MB file."
+					}
+				},
+				{
 					"name": "List Product Categories",
 					"request": {
 						"method": "GET",
@@ -1731,6 +1762,12 @@
 									"description": "To date (ISO 8601)"
 								},
 								{
+									"key": "regionId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter redemptions by region ID"
+								},
+								{
 									"key": "page",
 									"value": "1"
 								},
@@ -2015,6 +2052,122 @@
 							]
 						},
 						"description": "Returns shop-owners whose CustomerCode has at least one linked seller.\n\nReturns 404 in Production.\n\n**Response:**\n- `items` — array of {shopOwnerId, shopOwnerName, mobileNumber, registrationStatus, isDisabled, customerCode, storeName, totalSellers, sellers: [{id, name, mobileNumber, registrationStatus, isDisabled}]}\n- `count` — number of shop-owners returned"
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Accounts",
+			"description": "SystemAdmin-only management of admin-dashboard accounts and their permissions.",
+			"item": [
+				{
+					"name": "List Admin Accounts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts" ]
+						},
+						"description": "Lists all admin-dashboard accounts (SystemAdmin + Admin), each with its permission count."
+					}
+				},
+				{
+					"name": "Get Permission Catalog",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts/permissions",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts", "permissions" ]
+						},
+						"description": "Returns all grantable permissions grouped by module, with localized labels — the source for the permission-assignment UI."
+					}
+				},
+				{
+					"name": "Get Admin Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts/:id",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts", ":id" ],
+							"variable": [ { "key": "id", "value": "" } ]
+						},
+						"description": "Returns one admin account with its granted permissions."
+					}
+				},
+				{
+					"name": "Create Admin Account",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"redemptions.admin\",\n  \"name\": \"مسؤول الاسترداد\",\n  \"password\": \"Password@123\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts" ]
+						},
+						"description": "Creates an Admin-role account. It starts with NO permissions — grant them via Set Admin Permissions."
+					}
+				},
+				{
+					"name": "Update Admin Account",
+					"request": {
+						"method": "PUT",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"مسؤول الاسترداد\",\n  \"isDisabled\": false,\n  \"newPassword\": \"\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts/:id",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts", ":id" ],
+							"variable": [ { "key": "id", "value": "" } ]
+						},
+						"description": "Updates name / disabled state. newPassword is optional — leave empty to keep the current password. SystemAdmin accounts cannot be updated."
+					}
+				},
+				{
+					"name": "Set Admin Permissions",
+					"request": {
+						"method": "PUT",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"permissions\": [\"Redemptions.View\", \"Redemptions.Manage\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts/:id/permissions",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts", ":id", "permissions" ],
+							"variable": [ { "key": "id", "value": "" } ]
+						},
+						"description": "Replaces the account's full permission set. Permission keys come from Get Permission Catalog."
+					}
+				},
+				{
+					"name": "Delete Admin Account",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/accounts/:id",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "admin", "accounts", ":id" ],
+							"variable": [ { "key": "id", "value": "" } ]
+						},
+						"description": "Deletes an Admin account. Blocked for SystemAdmin accounts and for accounts with activity history (disable those instead)."
 					}
 				}
 			]

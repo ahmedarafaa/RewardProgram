@@ -8,8 +8,11 @@ public static class FileErrors
         new("File.ImageUploadFailed", "فشل رفع الصورة", 500);
 
     public static readonly Error InvalidImageType =
-        new("File.InvalidImageType", "صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG أو WEBP", 400);
+        new("File.InvalidImageType", "صيغة الصورة غير مدعومة، يرجى استخدام JPG أو PNG أو WEBP أو HEIC", 400);
 
     public static readonly Error ImageTooLarge =
         new("File.ImageTooLarge", "حجم الصورة كبير جداً، الحد الأقصى 5 ميجابايت", 400);
+
+    public static readonly Error ImageProcessingFailed =
+        new("File.ImageProcessingFailed", "تعذرت معالجة الصورة", 400);
 }

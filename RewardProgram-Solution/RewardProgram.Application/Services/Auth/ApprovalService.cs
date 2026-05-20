@@ -72,6 +72,7 @@ public class ApprovalService : IApprovalService
             .Include(u => u.ShopOwnerProfile)
             .Include(u => u.SellerProfile)
             .Include(u => u.AssignedSalesMan)
+            .Include(u => u.InvitedByUser)
             .ToListAsync(ct);
 
         // Resolve city/region names in bulk
@@ -176,7 +177,8 @@ public class ApprovalService : IApprovalService
                 PostalCode: u.NationalAddress?.PostalCode,
                 SubNumber: u.NationalAddress?.SubNumber,
                 District: u.NationalAddress?.District,
-                AssignedSalesManName: u.AssignedSalesMan?.Name
+                AssignedSalesManName: u.AssignedSalesMan?.Name,
+                InvitedByName: u.InvitedByUser?.Name
             );
         }).ToList();
 

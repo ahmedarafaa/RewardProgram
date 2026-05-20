@@ -1,10 +1,13 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Redemptions;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
+using RewardProgram.Domain.Entities;
 using RewardProgram.Domain.Enums;
 
 namespace RewardProgram.Application.Services.Admin;
@@ -21,6 +24,42 @@ public class AdminRedemptionService : IAdminRedemptionService
     public async Task<Result<PaginatedResult<AdminRedemptionListItemResponse>>> GetAllAsync(
         AdminRedemptionListQuery query, CancellationToken ct = default)
     {
+        var baseQuery = BuildRedemptionsFilteredQuery(query);
+
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+
+        // EF Core 10 OrderBy-after-Select translation bug — see RedemptionListItemSelector.
+        var items = await baseQuery
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(RedemptionListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(new PaginatedResult<AdminRedemptionListItemResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<List<AdminRedemptionListItemResponse>>> ExportAllAsync(
+        AdminRedemptionListQuery query, CancellationToken ct = default)
+    {
+        var baseQuery = BuildRedemptionsFilteredQuery(query);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminRedemptionListItemResponse>>(ExportErrors.TooManyRows);
+
+        var items = await baseQuery
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(RedemptionListItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(items);
+    }
+
+    private IQueryable<RedemptionRequest> BuildRedemptionsFilteredQuery(AdminRedemptionListQuery query)
+    {
         var baseQuery = _context.RedemptionRequests
             .Include(r => r.User)
             .AsQueryable();
@@ -34,33 +73,39 @@ public class AdminRedemptionService : IAdminRedemptionService
         if (query.Status.HasValue)
             baseQuery = baseQuery.Where(r => r.Status == query.Status.Value);
 
+        if (!string.IsNullOrEmpty(query.RegionId))
+        {
+            // NationalAddress is an owned entity holding only CityId — resolve the
+            // region's cities via a subquery, then match the user's city against them.
+            var regionCityIds = _context.Cities
+                .Where(c => c.RegionId == query.RegionId)
+                .Select(c => c.Id);
+            baseQuery = baseQuery.Where(r =>
+                r.User.NationalAddress != null
+                && regionCityIds.Contains(r.User.NationalAddress.CityId));
+        }
+
         if (query.FromDate.HasValue)
             baseQuery = baseQuery.Where(r => r.CreatedAt >= query.FromDate.Value);
 
         if (query.ToDate.HasValue)
             baseQuery = baseQuery.Where(r => r.CreatedAt <= query.ToDate.Value);
 
-        var (page, pageSize) = Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
-
-        var totalCount = await baseQuery.CountAsync(ct);
-
-        var items = await baseQuery
-            .OrderByDescending(r => r.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(r => new AdminRedemptionListItemResponse(
-                r.Id,
-                r.User.Name,
-                r.User.MobileNumber,
-                r.Method,
-                r.Status,
-                r.PointsAmount,
-                r.SarAmount,
-                r.CreatedAt))
-            .ToListAsync(ct);
-
-        return Result.Success(new PaginatedResult<AdminRedemptionListItemResponse>(items, totalCount, page, pageSize));
+        return baseQuery;
     }
+
+    // Expression so callers can compose it as the FINAL `.Select(...)` step after
+    // OrderBy/Skip/Take — see EF Core 10 comment in GetAllAsync.
+    private static readonly Expression<Func<RedemptionRequest, AdminRedemptionListItemResponse>> RedemptionListItemSelector =
+        r => new AdminRedemptionListItemResponse(
+            r.Id,
+            r.User.Name,
+            r.User.MobileNumber,
+            r.Method,
+            r.Status,
+            r.PointsAmount,
+            r.SarAmount,
+            r.CreatedAt);
 
     public async Task<Result<AdminRedemptionResponse>> GetByIdAsync(string id, CancellationToken ct = default)
     {

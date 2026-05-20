@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -14,14 +16,23 @@ namespace RewardProgram.Application.Services.Admin;
 
 public class AdminProductService : IAdminProductService
 {
+    // Products total ~1,100 — a generous ceiling that still bounds a single import.
+    private const int MaxImportRows = 10000;
+
     private readonly IApplicationDbContext _context;
+    private readonly IProductImportReader _importReader;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
     private readonly ILogger<AdminProductService> _logger;
 
     public AdminProductService(
         IApplicationDbContext context,
+        IProductImportReader importReader,
+        IStringLocalizer<ErrorMessages> localizer,
         ILogger<AdminProductService> logger)
     {
         _context = context;
+        _importReader = importReader;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -127,6 +138,42 @@ public class AdminProductService : IAdminProductService
     public async Task<Result<PaginatedResult<AdminProductResponse>>> ListProductsAsync(
         AdminProductListQuery query, CancellationToken ct = default)
     {
+        var dbQuery = BuildProductsFilteredQuery(query);
+
+        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+
+        var products = await dbQuery
+            .OrderBy(p => p.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var items = await MapProductsToResponsesAsync(products, ct);
+
+        return Result.Success(new PaginatedResult<AdminProductResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<List<AdminProductResponse>>> ExportProductsAsync(
+        AdminProductListQuery query, CancellationToken ct = default)
+    {
+        var dbQuery = BuildProductsFilteredQuery(query);
+
+        var totalCount = await dbQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminProductResponse>>(ExportErrors.TooManyRows);
+
+        var products = await dbQuery
+            .OrderBy(p => p.Name)
+            .ToListAsync(ct);
+
+        var items = await MapProductsToResponsesAsync(products, ct);
+        return Result.Success(items);
+    }
+
+    private IQueryable<Product> BuildProductsFilteredQuery(AdminProductListQuery query)
+    {
         var dbQuery = _context.Products.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -139,15 +186,14 @@ public class AdminProductService : IAdminProductService
         if (!string.IsNullOrWhiteSpace(query.Category))
             dbQuery = dbQuery.Where(p => p.Category == query.Category);
 
-        var (page, pageSize) = PaginationHelper.Normalize(query.Page, query.PageSize);
+        return dbQuery;
+    }
 
-        var totalCount = await dbQuery.CountAsync(ct);
-
-        var products = await dbQuery
-            .OrderBy(p => p.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
+    private async Task<List<AdminProductResponse>> MapProductsToResponsesAsync(
+        List<Product> products, CancellationToken ct)
+    {
+        if (products.Count == 0)
+            return [];
 
         var productIds = products.Select(p => p.Id).ToList();
 
@@ -162,13 +208,11 @@ public class AdminProductService : IAdminProductService
             })
             .ToDictionaryAsync(x => x.ProductId, ct);
 
-        var items = products.Select(p =>
+        return products.Select(p =>
         {
             barcodeStats.TryGetValue(p.Id, out var stats);
             return MapToResponse(p, stats?.Total ?? 0, stats?.Available ?? 0);
         }).ToList();
-
-        return Result.Success(new PaginatedResult<AdminProductResponse>(items, totalCount, page, pageSize));
     }
 
     public async Task<Result<AdminProductResponse>> GetProductAsync(
@@ -228,6 +272,143 @@ public class AdminProductService : IAdminProductService
             .FirstOrDefaultAsync(ct);
 
         return (stats?.Total ?? 0, stats?.Available ?? 0);
+    }
+
+    public async Task<Result<ProductImportResultResponse>> ImportProductsAsync(
+        Stream xlsxStream, string adminUserId, CancellationToken ct = default)
+    {
+        IReadOnlyList<ProductImportRow> rows;
+        try
+        {
+            rows = _importReader.Read(xlsxStream);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Product import: could not parse the uploaded file (admin {AdminId})", adminUserId);
+            return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportInvalidFile);
+        }
+
+        if (rows.Count == 0)
+            return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportEmptyFile);
+
+        if (rows.Count > MaxImportRows)
+            return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportTooManyRows);
+
+        // Load every product whose code appears in the file so each valid row
+        // becomes a case-insensitive upsert (update by ProductCode, else create).
+        var fileCodes = rows
+            .Select(r => r.ProductCode?.Trim())
+            .Where(c => !string.IsNullOrEmpty(c))
+            .Select(c => c!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var existing = await _context.Products
+            .Where(p => fileCodes.Contains(p.ProductCode))
+            .ToDictionaryAsync(p => p.ProductCode, StringComparer.OrdinalIgnoreCase, ct);
+
+        var errors = new List<ProductImportRowError>();
+        var seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var created = 0;
+        var updated = 0;
+
+        foreach (var row in rows)
+        {
+            var parsed = ValidateRow(row, errors);
+            if (parsed is null)
+                continue;
+
+            var (name, code, pointValue, price, category) = parsed.Value;
+
+            // A code repeated within the same file is reported rather than
+            // applied twice — the first occurrence already won the upsert.
+            if (!seenCodes.Add(code))
+            {
+                errors.Add(new ProductImportRowError(row.RowNumber, code,
+                    _localizer["ProductImport.Row.DuplicateInFile"]));
+                continue;
+            }
+
+            if (existing.TryGetValue(code, out var product))
+            {
+                product.Name = name;
+                product.PointValue = pointValue;
+                product.Price = price;
+                product.Category = category;
+                updated++;
+            }
+            else
+            {
+                await _context.Products.AddAsync(new Product
+                {
+                    Name = name,
+                    ProductCode = code,
+                    PointValue = pointValue,
+                    Price = price,
+                    Category = category
+                }, ct);
+                created++;
+            }
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Product import by admin {AdminId}: {Created} created, {Updated} updated, {Failed} failed of {Total} rows",
+            adminUserId, created, updated, errors.Count, rows.Count);
+
+        return Result.Success(new ProductImportResultResponse(
+            rows.Count, created, updated, errors.Count, errors));
+    }
+
+    // Validates one raw import row. On the first problem it appends a localized
+    // ProductImportRowError and returns null; otherwise returns the parsed values.
+    private (string Name, string Code, int PointValue, decimal Price, string? Category)?
+        ValidateRow(ProductImportRow row, List<ProductImportRowError> errors)
+    {
+        var name = row.Name?.Trim() ?? string.Empty;
+        var code = row.ProductCode?.Trim() ?? string.Empty;
+        var category = string.IsNullOrWhiteSpace(row.Category) ? null : row.Category.Trim();
+        var codeForError = code.Length > 0 ? code : null;
+
+        if (name.Length is 0 or > 200)
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, codeForError,
+                _localizer["ProductImport.Row.NameInvalid"]));
+            return null;
+        }
+
+        if (code.Length is 0 or > 50)
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, codeForError,
+                _localizer["ProductImport.Row.ProductCodeInvalid"]));
+            return null;
+        }
+
+        if (!decimal.TryParse(row.PointValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var pv)
+            || pv <= 0 || pv != Math.Truncate(pv) || pv > int.MaxValue)
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, code,
+                _localizer["ProductImport.Row.PointValueInvalid"]));
+            return null;
+        }
+
+        if (!decimal.TryParse(row.Price, NumberStyles.Number, CultureInfo.InvariantCulture, out var price)
+            || price < 0)
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, code,
+                _localizer["ProductImport.Row.PriceInvalid"]));
+            return null;
+        }
+
+        if (category is { Length: > 100 })
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, code,
+                _localizer["ProductImport.Row.CategoryTooLong"]));
+            return null;
+        }
+
+        return (name, code, (int)pv, price, category);
     }
 
     private static AdminProductResponse MapToResponse(Product product, int totalBarcodes, int availableBarcodes)

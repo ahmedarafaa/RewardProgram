@@ -32,5 +32,8 @@ public record PendingUserResponse(
     string? District,
 
     // Assignment info
-    string? AssignedSalesManName
+    string? AssignedSalesManName,
+
+    // Invitation (name of the user whose invitation code the joiner registered with)
+    string? InvitedByName
 );

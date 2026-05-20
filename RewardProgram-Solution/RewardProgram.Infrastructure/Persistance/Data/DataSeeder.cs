@@ -59,6 +59,7 @@ public static class DataSeeder
         var roles = new (string Name, bool IsDefault)[]
         {
             (UserRoles.SystemAdmin, false),
+            (UserRoles.Admin, false),
             (UserRoles.ZoneManager, false),
             (UserRoles.SalesMan, false),
             (UserRoles.ShopOwner, true),

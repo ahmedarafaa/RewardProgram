@@ -24,7 +24,7 @@ public class ScanServiceTests : IDisposable
     {
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
-        _sut = new ScanService(_context, _userRepo, Substitute.For<INotificationService>(), Substitute.For<ILogger<ScanService>>());
+        _sut = new ScanService(_context, _userRepo, Substitute.For<INotificationService>(), new StubLocalizer<ErrorMessages>(), Substitute.For<ILogger<ScanService>>());
     }
 
     public void Dispose() => _context.Dispose();
@@ -167,6 +167,9 @@ public class ScanServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.PointsAwarded.Should().Be(50); // 50% of 100
 
+        // Seller scanning first is told the remaining points unlock on the technician's scan
+        result.Value.Message.Should().NotBeNullOrEmpty();
+
         // Barcode should be SellerScanned
         var updatedBarcode = await _context.ProductBarcodes.FindAsync(barcode.Id);
         updatedBarcode!.Status.Should().Be(BarcodeStatus.SellerScanned);
@@ -184,6 +187,9 @@ public class ScanServiceTests : IDisposable
 
         result.IsSuccess.Should().BeTrue();
         result.Value.PointsAwarded.Should().Be(100);
+
+        // Technician earns the full value up front — no deferred-points message
+        result.Value.Message.Should().BeNull();
 
         var updatedBarcode = await _context.ProductBarcodes.FindAsync(barcode.Id);
         updatedBarcode!.Status.Should().Be(BarcodeStatus.TechnicianScanned);

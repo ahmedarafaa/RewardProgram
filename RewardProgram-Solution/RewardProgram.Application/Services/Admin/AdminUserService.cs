@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
@@ -260,17 +261,61 @@ public class AdminUserService : IAdminUserService
     public async Task<Result<PaginatedResult<AdminUserListItemResponse>>> ListUsersAsync(
         AdminUserListQuery query, CancellationToken ct = default)
     {
+        var zmRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.ZoneManager, ZmRoleCacheKey);
+        var smRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.SalesMan, SmRoleCacheKey);
+
+        var usersQuery = BuildUsersFilteredQuery(query, smRoleUserIds, zmRoleUserIds);
+
+        var totalCount = await usersQuery.CountAsync(ct);
+
+        var (page, pageSize) = Normalize(query.Page, query.PageSize);
+
+        // EF Core 10 cannot translate `.Select(new Record(...)).OrderBy(r.Member)` when
+        // the projection references an owned entity (here: NationalAddress) — it tries
+        // to inline the record ctor inside the OrderBy and fails. Order/Skip/Take on
+        // the entity first, then project as the final step.
+        var pageRows = await usersQuery
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(UserPageRowSelector)
+            .ToListAsync(ct);
+
+        var items = await EnrichUserPageRowsAsync(pageRows, smRoleUserIds, zmRoleUserIds, ct);
+
+        return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));
+    }
+
+    public async Task<Result<List<AdminUserListItemResponse>>> ExportUsersAsync(
+        AdminUserListQuery query, CancellationToken ct = default)
+    {
+        var zmRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.ZoneManager, ZmRoleCacheKey);
+        var smRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.SalesMan, SmRoleCacheKey);
+
+        var usersQuery = BuildUsersFilteredQuery(query, smRoleUserIds, zmRoleUserIds);
+
+        var totalCount = await usersQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminUserListItemResponse>>(ExportErrors.TooManyRows);
+
+        var pageRows = await usersQuery
+            .OrderByDescending(u => u.CreatedAt)
+            .Select(UserPageRowSelector)
+            .ToListAsync(ct);
+
+        var items = await EnrichUserPageRowsAsync(pageRows, smRoleUserIds, zmRoleUserIds, ct);
+        return Result.Success(items);
+    }
+
+    private IQueryable<ApplicationUser> BuildUsersFilteredQuery(
+        AdminUserListQuery query,
+        HashSet<string> smRoleUserIds,
+        HashSet<string> zmRoleUserIds)
+    {
         var usersQuery = _userRepository.Query()
             .AsNoTracking()
             .Where(u => u.UserType != UserType.SystemAdmin);
 
-        // Pre-load role memberships so dual-role users (SM + ZM) appear in BOTH tabs
-        // and so the response carries the full role list per user. Cached for 5 min
-        // since SM/ZM membership rarely changes (admin toggle/delete invalidates).
-        var zmRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.ZoneManager, ZmRoleCacheKey);
-        var smRoleUserIds = await GetCachedRoleUserIdsAsync(UserRoles.SalesMan, SmRoleCacheKey);
-
-        // Apply filters
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim();
@@ -319,31 +364,49 @@ public class AdminUserService : IAdminUserService
                     c.RegionId == rid && c.ApprovalSalesManId == u.Id && c.IsActive && !c.IsDeleted));
         }
 
-        // Count and paginate
-        var totalCount = await usersQuery.CountAsync(ct);
+        return usersQuery;
+    }
 
-        var (page, pageSize) = Normalize(query.Page, query.PageSize);
+    // Expression (not a method returning IQueryable) so callers can compose it as the
+    // FINAL `.Select(...)` step after OrderBy/Skip/Take. See the EF Core 10 comment in
+    // ListUsersAsync for the underlying translator bug this works around.
+    private static readonly Expression<Func<ApplicationUser, UserPageRow>> UserPageRowSelector =
+        u => new UserPageRow(
+            u.Id,
+            u.Name,
+            u.MobileNumber,
+            u.UserType,
+            u.RegistrationStatus,
+            u.IsDisabled,
+            u.IsAccountDeleted,
+            u.AccountDeletedAt,
+            u.DeletedByAdminId,
+            u.RestoredAt,
+            u.CreatedAt,
+            u.NationalAddress != null ? u.NationalAddress.CityId : null);
 
-        var users = await usersQuery
-            .OrderByDescending(u => u.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(u => new
-            {
-                u.Id,
-                u.Name,
-                u.MobileNumber,
-                u.UserType,
-                u.RegistrationStatus,
-                u.IsDisabled,
-                u.IsAccountDeleted,
-                u.AccountDeletedAt,
-                u.DeletedByAdminId,
-                u.RestoredAt,
-                u.CreatedAt,
-                CityId = u.NationalAddress != null ? u.NationalAddress.CityId : null
-            })
-            .ToListAsync(ct);
+    private sealed record UserPageRow(
+        string Id,
+        string Name,
+        string MobileNumber,
+        UserType UserType,
+        RegistrationStatus RegistrationStatus,
+        bool IsDisabled,
+        bool IsAccountDeleted,
+        DateTime? AccountDeletedAt,
+        string? DeletedByAdminId,
+        DateTime? RestoredAt,
+        DateTime CreatedAt,
+        string? CityId);
+
+    private async Task<List<AdminUserListItemResponse>> EnrichUserPageRowsAsync(
+        List<UserPageRow> users,
+        HashSet<string> smRoleUserIds,
+        HashSet<string> zmRoleUserIds,
+        CancellationToken ct)
+    {
+        if (users.Count == 0)
+            return [];
 
         // Bulk-load city + region names
         var cityIds = users
@@ -559,7 +622,7 @@ public class AdminUserService : IAdminUserService
                 ownedCities, managedRegion);
         }).ToList();
 
-        return Result.Success(new PaginatedResult<AdminUserListItemResponse>(items, totalCount, page, pageSize));
+        return items;
     }
 
     public async Task<Result<AdminUserDetailResponse>> GetUserByIdAsync(

@@ -21,6 +21,11 @@ public class RedemptionRequest : TrackableEntity
 
     // Cash handover fields
     public string? CashOtpHash { get; set; }
+    // Encrypted (reversible) copy of the cash OTP, kept only so it can be shown
+    // back to the owning user in their wallet history. Verification still uses
+    // CashOtpHash — this column is display-only and may be null if the Data
+    // Protection key ring is unavailable.
+    public string? CashOtpEncrypted { get; set; }
     public DateTime? CashOtpExpiresAt { get; set; }
     public int CashOtpAttempts { get; set; }
     public string? CashHandoverById { get; set; }

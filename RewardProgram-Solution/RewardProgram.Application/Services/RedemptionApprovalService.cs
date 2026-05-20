@@ -326,6 +326,9 @@ public class RedemptionApprovalService : IRedemptionApprovalService
         _logger.LogInformation("Redemption request {Id} approved by {ApproverId}: {From} → {To}",
             redemptionRequest.Id, approverId, fromStatus, redemptionRequest.Status);
 
+        // Per client direction: suppress mid-flow notifications on SM/ZM approvals.
+        // Only notify the user when the admin step transitions the request (either
+        // completing it for bank transfer or arming the cash-handover OTP).
         if (redemptionRequest.Status == RedemptionRequestStatus.Completed)
         {
             await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionCompleted,
@@ -336,26 +339,14 @@ public class RedemptionApprovalService : IRedemptionApprovalService
                 bodyKey: "Notif.Redemption.CompletedBody",
                 ct: ct);
         }
-        else
+        else if (fromStatus == RedemptionRequestStatus.PendingAdmin)
         {
-            var (title, body, titleKey, bodyKey) = fromStatus switch
-            {
-                RedemptionRequestStatus.PendingSalesMan =>
-                    ("تحديث طلب الاستبدال", "تمت موافقة مندوب المبيعات على طلب الاستبدال",
-                     "Notif.Redemption.UpdateTitle", "Notif.Redemption.SalesManApprovedBody"),
-                RedemptionRequestStatus.PendingZoneManager =>
-                    ("تحديث طلب الاستبدال", "تمت موافقة مدير المنطقة على طلب الاستبدال",
-                     "Notif.Redemption.UpdateTitle", "Notif.Redemption.ZoneManagerApprovedBody"),
-                RedemptionRequestStatus.PendingAdmin =>
-                    ("تمت موافقة الإدارة", "تمت موافقة الإدارة على طلب الاستبدال",
-                     "Notif.Redemption.AdminApprovedTitle", "Notif.Redemption.AdminApprovedBody"),
-                _ => ("تحديث طلب الاستبدال", "تمت الموافقة على طلب الاستبدال",
-                      "Notif.Redemption.UpdateTitle", "Notif.Redemption.GenericApprovedBody")
-            };
-
             await _notificationService.CreateAsync(redemptionRequest.UserId, NotificationType.RedemptionApproved,
-                title: title, body: body, referenceId: redemptionRequest.Id,
-                titleKey: titleKey, bodyKey: bodyKey,
+                title: "تمت موافقة الإدارة",
+                body: "تمت موافقة الإدارة على طلب الاستبدال",
+                referenceId: redemptionRequest.Id,
+                titleKey: "Notif.Redemption.AdminApprovedTitle",
+                bodyKey: "Notif.Redemption.AdminApprovedBody",
                 ct: ct);
         }
 

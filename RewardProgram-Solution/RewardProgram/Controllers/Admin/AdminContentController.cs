@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Contracts.Admin.Content;
 using RewardProgram.Application.Interfaces.Admin;
+using RewardProgram.API.Authorization;
 using RewardProgram.Domain.Constants;
 using System.Security.Claims;
 
@@ -9,7 +10,7 @@ namespace RewardProgram.API.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/content")]
-[Authorize(Roles = UserRoles.SystemAdmin)]
+[Authorize(Roles = UserRoles.AdminDashboard)]
 public class AdminContentController : ControllerBase
 {
     private readonly IAdminContentService _contentService;
@@ -20,6 +21,7 @@ public class AdminContentController : ControllerBase
     }
 
     [HttpGet("contact-us")]
+    [HasPermission(AdminPermissions.ContentView)]
     [ProducesResponseType(typeof(ContactUsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetContactUs(CancellationToken ct)
     {
@@ -28,6 +30,7 @@ public class AdminContentController : ControllerBase
     }
 
     [HttpPut("contact-us")]
+    [HasPermission(AdminPermissions.ContentManage)]
     [ProducesResponseType(typeof(ContactUsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateContactUs([FromBody] UpdateContactUsRequest request, CancellationToken ct)
@@ -38,6 +41,7 @@ public class AdminContentController : ControllerBase
     }
 
     [HttpGet("about-app")]
+    [HasPermission(AdminPermissions.ContentView)]
     [ProducesResponseType(typeof(AboutAppResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAboutApp(CancellationToken ct)
     {
@@ -46,6 +50,7 @@ public class AdminContentController : ControllerBase
     }
 
     [HttpPut("about-app")]
+    [HasPermission(AdminPermissions.ContentManage)]
     [ProducesResponseType(typeof(AboutAppResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateAboutApp([FromBody] UpdateAboutAppRequest request, CancellationToken ct)

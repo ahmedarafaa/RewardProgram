@@ -1,6 +1,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -14,6 +15,9 @@ using RewardProgram.Application.Services;
 using RewardProgram.Application.Services.Admin;
 using RewardProgram.Application.Services.Auth;
 using RewardProgram.Application.Services.Lookups;
+using RewardProgram.API.Authorization;
+using RewardProgram.API.Services;
+using RewardProgram.Domain.Constants;
 using RewardProgram.Domain.Entities.Users;
 using RewardProgram.Infrastructure.Authentication;
 using RewardProgram.Infrastructure.Persistance;
@@ -93,6 +97,20 @@ public static class DependencyInjection
 
         services.AddAuthConfig(configuration);
 
+        // Permission-based authorization for the admin dashboard: one policy per
+        // AdminPermissions entry. SystemAdmin bypasses every policy; an Admin must
+        // carry the matching permission claim.
+        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddAuthorization(options =>
+        {
+            foreach (var permission in AdminPermissions.All)
+            {
+                options.AddPolicy(
+                    HasPermissionAttribute.PolicyPrefix + permission,
+                    policy => policy.AddRequirements(new PermissionRequirement(permission)));
+            }
+        });
+
         var connectionString = configuration.GetConnectionString("DefaultConnection") ??
             throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -126,6 +144,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpFallbackService, OtpFallbackService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddSingleton<IImageProcessor, ImageProcessor>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<ILookupService, LookupService>();
@@ -139,6 +158,7 @@ public static class DependencyInjection
         services.AddScoped<IRedemptionService, RedemptionService>();
         services.AddScoped<IRedemptionApprovalService, RedemptionApprovalService>();
         services.AddScoped<IAdminRedemptionService, AdminRedemptionService>();
+        services.AddScoped<IAdminAccountService, AdminAccountService>();
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
@@ -149,6 +169,9 @@ public static class DependencyInjection
         ValidateFirebaseConfig(configuration);
         services.AddSingleton<IFirebaseMessagingService, FirebaseMessagingService>();
         services.AddSingleton<IBarcodePdfGenerator, BarcodePdfGenerator>();
+        services.AddSingleton<IExcelExporter, ExcelExporter>();
+        services.AddSingleton<ICashOtpProtector, CashOtpProtector>();
+        services.AddSingleton<IProductImportReader, ProductImportReader>();
         services.AddHostedService<PointsExpiryBackgroundService>();
         services.AddHostedService<OtpCleanupBackgroundService>();
 

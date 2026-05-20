@@ -15,6 +15,10 @@ public record RedemptionRequestResponse(
     string? SwiftCode,
     string? AccountName,
     DateTime? CashOtpExpiresAt,
+    // Cash-handover OTP, decrypted for the owning user. Populated only while the
+    // cash redemption is in-flight (not completed/rejected/cancelled) and the OTP
+    // has not expired; null otherwise. See RedemptionService.GetVisibleCashOtp.
+    string? CashOtp,
     string? RejectionReason,
     DateTime CreatedAt
 );

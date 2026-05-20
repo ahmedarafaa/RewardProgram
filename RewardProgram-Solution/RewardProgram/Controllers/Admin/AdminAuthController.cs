@@ -61,7 +61,7 @@ public class AdminAuthController : ControllerBase
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        if (!roles.Contains(UserRoles.SystemAdmin))
+        if (!roles.Contains(UserRoles.SystemAdmin) && !roles.Contains(UserRoles.Admin))
         {
             await _userManager.AccessFailedAsync(user);
             return Unauthorized401("AdminAuth.NotAuthorized");
@@ -83,7 +83,7 @@ public class AdminAuthController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    [Authorize(Roles = UserRoles.SystemAdmin)]
+    [Authorize(Roles = UserRoles.AdminDashboard)]
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

@@ -33,6 +33,7 @@ public class TestDbContext : DbContext, IApplicationDbContext
     public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
     public DbSet<ContactUsContent> ContactUsContents => Set<ContactUsContent>();
     public DbSet<AboutAppContent> AboutAppContents => Set<AboutAppContent>();
+    public DbSet<AdminUserPermission> AdminUserPermissions => Set<AdminUserPermission>();
 
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -161,6 +162,12 @@ public class TestDbContext : DbContext, IApplicationDbContext
 
         modelBuilder.Entity<ContactUsContent>(b => b.HasKey(e => e.Id));
         modelBuilder.Entity<AboutAppContent>(b => b.HasKey(e => e.Id));
+
+        modelBuilder.Entity<AdminUserPermission>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
+        });
     }
 
     public static TestDbContext Create()

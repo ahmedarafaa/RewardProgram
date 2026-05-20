@@ -7,7 +7,7 @@ namespace RewardProgram.Application.Contracts.Validators.RegisterValidators;
 
 public class RegisterSellerRequestValidator : AbstractValidator<RegisterSellerRequest>
 {
-    private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png" };
+    private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
 
     public RegisterSellerRequestValidator(IStringLocalizer<ValidationMessages> L)

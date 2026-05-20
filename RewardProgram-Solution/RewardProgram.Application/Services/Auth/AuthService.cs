@@ -23,6 +23,7 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IOtpService _otpService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IImageProcessor _imageProcessor;
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthService> _logger;
     private readonly VerificationTokenOptions _verificationTokenOptions;
@@ -33,6 +34,7 @@ public class AuthService : IAuthService
         IUserRepository userRepository,
         IOtpService otpService,
         IFileStorageService fileStorageService,
+        IImageProcessor imageProcessor,
         ITokenService tokenService,
         ILogger<AuthService> logger,
         IOptions<VerificationTokenOptions> verificationTokenOptions,
@@ -42,6 +44,7 @@ public class AuthService : IAuthService
         _userRepository = userRepository;
         _otpService = otpService;
         _fileStorageService = fileStorageService;
+        _imageProcessor = imageProcessor;
         _tokenService = tokenService;
         _logger = logger;
         _verificationTokenOptions = verificationTokenOptions.Value;
@@ -265,7 +268,7 @@ public class AuthService : IAuthService
             return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
         // Upload shop image
-        var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+        var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, _imageProcessor, ct);
         if (imageUploadResult.IsFailure)
             return Result.Failure<RegisterResponse>(imageUploadResult.Error);
 
@@ -435,7 +438,7 @@ public class AuthService : IAuthService
                 return Result.Failure<RegisterResponse>(uniqueValidation.Error);
 
             // Upload shop image
-            var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, ct);
+            var imageUploadResult = await FileUploadHelper.UploadShopImageAsync(request.ShopImage, _fileStorageService, _imageProcessor, ct);
             if (imageUploadResult.IsFailure)
                 return Result.Failure<RegisterResponse>(imageUploadResult.Error);
 
@@ -625,7 +628,6 @@ public class AuthService : IAuthService
                 NationalAddress = new NationalAddress
                 {
                     CityId = request.CityId,
-                    PostalCode = request.PostalCode,
                     District = request.District
                 }
             };
@@ -784,15 +786,13 @@ public class AuthService : IAuthService
         if (user.RegistrationStatus != RegistrationStatus.Approved)
             return Result.Failure<AuthResponse>(AuthErrors.UserNotApproved);
 
-        // Scope enforcement: admin refresh endpoint only accepts SystemAdmin users;
-        // public refresh endpoint rejects SystemAdmin users (prevents cross-scope refresh).
+        // Scope enforcement: the admin refresh endpoint accepts only admin-dashboard
+        // users (SystemAdmin or Admin); the public refresh endpoint rejects them.
+        // This prevents refreshing a token in the wrong scope.
         var roles = await _userRepository.GetRolesAsync(user);
-        var isSystemAdmin = roles.Contains(UserRoles.SystemAdmin);
+        var isAdminUser = roles.Contains(UserRoles.SystemAdmin) || roles.Contains(UserRoles.Admin);
 
-        if (isAdmin && !isSystemAdmin)
-            return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
-
-        if (!isAdmin && isSystemAdmin)
+        if (isAdmin != isAdminUser)
             return Result.Failure<AuthResponse>(AuthErrors.InvalidRefreshToken);
 
         // Revoke old token

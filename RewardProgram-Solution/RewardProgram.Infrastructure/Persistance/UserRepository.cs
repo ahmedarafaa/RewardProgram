@@ -67,6 +67,26 @@ public class UserRepository : IUserRepository
 
     public Task<IdentityResult> CreateAsync(ApplicationUser user) => _userManager.CreateAsync(user);
 
+    public Task<IdentityResult> CreateAsync(ApplicationUser user, string password)
+        => _userManager.CreateAsync(user, password);
+
+    public async Task<ApplicationUser?> FindByUsernameAsync(string username)
+        => await _userManager.FindByNameAsync(username);
+
+    public async Task<IdentityResult> SetPasswordAsync(ApplicationUser user, string newPassword)
+    {
+        var removeResult = await _userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+            return removeResult;
+
+        return await _userManager.AddPasswordAsync(user, newPassword);
+    }
+
+    public Task<IdentityResult> DeleteAsync(ApplicationUser user) => _userManager.DeleteAsync(user);
+
+    public Task<IdentityResult> RemoveFromRolesAsync(ApplicationUser user, IEnumerable<string> roles)
+        => _userManager.RemoveFromRolesAsync(user, roles);
+
     public Task<IdentityResult> UpdateAsync(ApplicationUser user) => _userManager.UpdateAsync(user);
 
     public Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role) => _userManager.AddToRoleAsync(user, role);

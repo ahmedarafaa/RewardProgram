@@ -20,6 +20,7 @@ public class ProfileServiceTests : IDisposable
     private readonly TestDbContext _context;
     private readonly IUserRepository _userRepo;
     private readonly IFileStorageService _fileStorage;
+    private readonly IImageProcessor _imageProcessor;
     private readonly ProfileService _sut;
 
     public ProfileServiceTests()
@@ -27,7 +28,8 @@ public class ProfileServiceTests : IDisposable
         _context = TestDbContext.Create();
         _userRepo = Substitute.For<IUserRepository>();
         _fileStorage = Substitute.For<IFileStorageService>();
-        _sut = new ProfileService(_context, _userRepo, _fileStorage,
+        _imageProcessor = Substitute.For<IImageProcessor>();
+        _sut = new ProfileService(_context, _userRepo, _fileStorage, _imageProcessor,
             Substitute.For<ILogger<ProfileService>>());
     }
 
@@ -168,6 +170,9 @@ public class ProfileServiceTests : IDisposable
         photo.FileName.Returns("new.jpg");
         photo.Length.Returns(1024);
         photo.OpenReadStream().Returns(new MemoryStream([0x01]));
+
+        _imageProcessor.ProcessAsync(photo, Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new ProcessedImage(new MemoryStream([0x02]), "new.jpg", "image/jpeg")));
 
         _fileStorage.UploadAsync(Arg.Any<Stream>(), Arg.Any<string>(), "profiles", Arg.Any<CancellationToken>())
             .Returns(Result.Success("/profiles/new-guid.jpg"));

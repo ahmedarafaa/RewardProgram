@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -379,6 +380,40 @@ public class NotificationService : INotificationService
     {
         var (page, pageSize) = Application.Helpers.PaginationHelper.Normalize(query.Page, query.PageSize);
 
+        var baseQuery = BuildNotificationHistoryQuery(query);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+
+        // EF Core 10 OrderBy-after-Select translation bug — see NotificationHistoryItemSelector.
+        var items = await baseQuery
+            .OrderByDescending(n => n.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(NotificationHistoryItemSelector)
+            .ToListAsync(ct);
+
+        return new PaginatedResult<AdminNotificationHistoryItem>(items, totalCount, page, pageSize);
+    }
+
+    public async Task<Result<List<AdminNotificationHistoryItem>>> ExportNotificationHistoryAsync(
+        AdminNotificationListQuery query, CancellationToken ct)
+    {
+        var baseQuery = BuildNotificationHistoryQuery(query);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminNotificationHistoryItem>>(ExportErrors.TooManyRows);
+
+        var items = await baseQuery
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(NotificationHistoryItemSelector)
+            .ToListAsync(ct);
+
+        return Result.Success(items);
+    }
+
+    private IQueryable<Domain.Entities.Notification> BuildNotificationHistoryQuery(AdminNotificationListQuery query)
+    {
         var baseQuery = _context.Notifications
             .Include(n => n.User)
             .Where(n => !n.IsDeleted);
@@ -395,26 +430,22 @@ public class NotificationService : INotificationService
         if (query.ToDate.HasValue)
             baseQuery = baseQuery.Where(n => n.CreatedAt < query.ToDate.Value.Date.AddDays(1));
 
-        var totalCount = await baseQuery.CountAsync(ct);
-
-        var items = await baseQuery
-            .OrderByDescending(n => n.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(n => new AdminNotificationHistoryItem(
-                n.Id,
-                n.UserId,
-                n.User != null ? n.User.Name : "Unknown",
-                n.Type,
-                n.Title,
-                n.Body,
-                n.ReferenceId,
-                n.IsRead,
-                n.CreatedAt))
-            .ToListAsync(ct);
-
-        return new PaginatedResult<AdminNotificationHistoryItem>(items, totalCount, page, pageSize);
+        return baseQuery;
     }
+
+    // Expression so callers can compose it as the FINAL `.Select(...)` step after
+    // OrderBy/Skip/Take — see EF Core 10 comment in GetNotificationHistoryAsync.
+    private static readonly Expression<Func<Domain.Entities.Notification, AdminNotificationHistoryItem>> NotificationHistoryItemSelector =
+        n => new AdminNotificationHistoryItem(
+            n.Id,
+            n.UserId,
+            n.User != null ? n.User.Name : "Unknown",
+            n.Type,
+            n.Title,
+            n.Body,
+            n.ReferenceId,
+            n.IsRead,
+            n.CreatedAt);
 
     // ── Private FCM Helpers (scope-safe: callers pre-fetch tokens, DB cleanup uses a fresh scope) ──
 

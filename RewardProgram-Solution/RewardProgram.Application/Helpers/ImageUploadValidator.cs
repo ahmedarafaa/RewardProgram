@@ -13,15 +13,16 @@ public static class ImageUploadValidator
     public const long DefaultMaxImageSizeBytes = 5 * 1024 * 1024; // 5 MB
 
     private static readonly HashSet<string> AllowedExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
-
-    private static readonly HashSet<string> AllowedContentTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "image/jpeg", "image/png", "image/webp" };
+        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif" };
 
     private static readonly byte[] JpegMagic = [0xFF, 0xD8, 0xFF];
     private static readonly byte[] PngMagic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     private static readonly byte[] WebpRiff = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
     private static readonly byte[] WebpWebp = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+    private static readonly byte[] FtypBox = [0x66, 0x74, 0x79, 0x70]; // "ftyp"
+
+    private static readonly HashSet<string> HeicBrands =
+        new(StringComparer.OrdinalIgnoreCase) { "heic", "heix", "heim", "heis", "hevc", "hevx", "mif1", "msf1" };
 
     public static Result Validate(IFormFile file, long maxSizeBytes = DefaultMaxImageSizeBytes)
     {
@@ -33,9 +34,6 @@ public static class ImageUploadValidator
 
         var extension = Path.GetExtension(file.FileName);
         if (string.IsNullOrEmpty(extension) || !AllowedExtensions.Contains(extension))
-            return Result.Failure(FileErrors.InvalidImageType);
-
-        if (!AllowedContentTypes.Contains(file.ContentType))
             return Result.Failure(FileErrors.InvalidImageType);
 
         if (!HasValidImageMagicBytes(file))
@@ -59,6 +57,14 @@ public static class ImageUploadValidator
 
         if (read >= 12 && StartsWith(header, WebpRiff) && header[8..12].SequenceEqual(WebpWebp))
             return true;
+
+        // HEIC/HEIF: ISO BMFF "ftyp" box at offset 4, major brand at offset 8.
+        if (read >= 12 && header[4..8].SequenceEqual(FtypBox))
+        {
+            var brand = System.Text.Encoding.ASCII.GetString(header[8..12]);
+            if (HeicBrands.Contains(brand))
+                return true;
+        }
 
         return false;
     }

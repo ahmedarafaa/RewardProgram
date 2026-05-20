@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RewardProgram.Application.Contracts.Admin.RewardSettings;
 using RewardProgram.Application.Interfaces.Admin;
+using RewardProgram.API.Authorization;
 using RewardProgram.Domain.Constants;
 using System.Security.Claims;
 
@@ -9,7 +10,7 @@ namespace RewardProgram.API.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/reward-settings")]
-[Authorize(Roles = UserRoles.SystemAdmin)]
+[Authorize(Roles = UserRoles.AdminDashboard)]
 public class AdminRewardSettingsController : ControllerBase
 {
     private readonly IAdminRewardSettingsService _settingsService;
@@ -20,6 +21,7 @@ public class AdminRewardSettingsController : ControllerBase
     }
 
     [HttpGet]
+    [HasPermission(AdminPermissions.SettingsView)]
     [ProducesResponseType(typeof(RewardSettingsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSettings(CancellationToken ct)
     {
@@ -28,6 +30,7 @@ public class AdminRewardSettingsController : ControllerBase
     }
 
     [HttpPut]
+    [HasPermission(AdminPermissions.SettingsManage)]
     [ProducesResponseType(typeof(RewardSettingsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateSettings([FromBody] UpdateRewardSettingsRequest request, CancellationToken ct)

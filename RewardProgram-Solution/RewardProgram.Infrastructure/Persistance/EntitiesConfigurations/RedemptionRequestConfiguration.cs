@@ -54,6 +54,9 @@ public class RedemptionRequestConfiguration : IEntityTypeConfiguration<Redemptio
         builder.Property(x => x.CashOtpHash)
             .HasMaxLength(64);
 
+        builder.Property(x => x.CashOtpEncrypted)
+            .HasMaxLength(512);
+
         builder.Property(x => x.CashOtpAttempts)
             .IsRequired()
             .HasDefaultValue(0);

@@ -7,5 +7,6 @@ namespace RewardProgram.Application.Interfaces.Admin;
 public interface IAdminRedemptionService
 {
     Task<Result<PaginatedResult<AdminRedemptionListItemResponse>>> GetAllAsync(AdminRedemptionListQuery query, CancellationToken ct = default);
+    Task<Result<List<AdminRedemptionListItemResponse>>> ExportAllAsync(AdminRedemptionListQuery query, CancellationToken ct = default);
     Task<Result<AdminRedemptionResponse>> GetByIdAsync(string id, CancellationToken ct = default);
 }

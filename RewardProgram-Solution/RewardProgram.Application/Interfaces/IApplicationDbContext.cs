@@ -30,6 +30,7 @@ public interface IApplicationDbContext
     DbSet<UserNotificationPreference> UserNotificationPreferences { get; }
     DbSet<ContactUsContent> ContactUsContents { get; }
     DbSet<AboutAppContent> AboutAppContents { get; }
+    DbSet<AdminUserPermission> AdminUserPermissions { get; }
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

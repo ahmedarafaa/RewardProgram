@@ -54,7 +54,7 @@
   <data name="ShortAddress.NotEmpty"><value>العنوان المختصر مطلوب</value></data>
   <data name="ShortAddress.InvalidFormat"><value>العنوان المختصر يجب أن يتكون من 4 أحرف و4 أرقام</value></data>
   <data name="ShopImage.NotNull"><value>صورة المحل مطلوبة</value></data>
-  <data name="ShopImage.InvalidType"><value>صورة المحل يجب أن تكون بصيغة JPG أو PNG</value></data>
+  <data name="ShopImage.InvalidType"><value>صورة المحل يجب أن تكون بصيغة JPG أو PNG أو WEBP أو HEIC</value></data>
   <data name="ShopImage.TooLarge"><value>حجم الصورة يجب ألا يتجاوز 5 ميجابايت</value></data>
   <data name="NationalAddress.NotNull"><value>العنوان الوطني مطلوب</value></data>
 
@@ -83,6 +83,10 @@
   <data name="Product.PointValue.GreaterThanZero"><value>قيمة النقاط يجب أن تكون أكبر من صفر</value></data>
   <data name="Product.Price.GreaterThanOrEqualZero"><value>السعر يجب أن يكون صفر أو أكثر</value></data>
   <data name="Product.Category.MaxLength"><value>المجموعة يجب ألا تتجاوز 100 حرف</value></data>
+
+  <!-- Admin Account -->
+  <data name="AdminAccount.UsernameInvalid"><value>اسم المستخدم يجب أن يكون بين 3 و50 حرفاً ويحتوي فقط على حروف وأرقام والرموز . _ -</value></data>
+  <data name="AdminAccount.PasswordInvalid"><value>كلمة المرور يجب ألا تقل عن 8 أحرف</value></data>
 
   <!-- Barcode -->
   <data name="Barcode.Code.NotEmpty"><value>كود الباركود مطلوب</value></data>

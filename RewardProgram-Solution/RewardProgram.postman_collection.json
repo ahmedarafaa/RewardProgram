@@ -615,7 +615,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"postalCode\": \"12345\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
+              "raw": "{\n  \"verificationToken\": \"{{verificationToken}}\",\n  \"name\": \"فني تجريبي\",\n  \"mobileNumber\": \"0555000003\",\n  \"cityId\": \"\",\n  \"district\": \"حي السلام\",\n  \"invitationCode\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

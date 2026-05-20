@@ -30,6 +30,7 @@ public class RedemptionServiceTests : IDisposable
             _context, _userRepo,
             Substitute.For<ITwilioService>(),
             Substitute.For<INotificationService>(),
+            new FakeCashOtpProtector(),
             Substitute.For<ILogger<RedemptionService>>());
     }
 
@@ -263,6 +264,78 @@ public class RedemptionServiceTests : IDisposable
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be(RedemptionRequestStatus.PendingZoneManager);
+    }
+
+    // ── Cash OTP visibility ──
+
+    [Fact]
+    public async Task GetActiveRequest_InFlightCashRedemption_ShouldExposeOtp()
+    {
+        _context.RedemptionRequests.Add(new RedemptionRequest
+        {
+            UserId = "user-1",
+            Method = RedemptionMethod.Cash,
+            Status = RedemptionRequestStatus.PendingSalesMan,
+            PointsAmount = 1000,
+            SarRate = 10,
+            SarAmount = 100,
+            CashOtpHash = "hash",
+            CashOtpEncrypted = "654321",
+            CashOtpExpiresAt = DateTime.UtcNow.AddDays(14)
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetActiveRequestAsync("user-1");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.CashOtp.Should().Be("654321");
+    }
+
+    [Fact]
+    public async Task GetHistory_CompletedCashRedemption_ShouldHideOtp()
+    {
+        _context.RedemptionRequests.Add(new RedemptionRequest
+        {
+            UserId = "user-1",
+            Method = RedemptionMethod.Cash,
+            Status = RedemptionRequestStatus.Completed,
+            PointsAmount = 1000,
+            SarRate = 10,
+            SarAmount = 100,
+            CashOtpHash = "hash",
+            CashOtpEncrypted = "654321",
+            CashOtpExpiresAt = DateTime.UtcNow.AddDays(14)
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetHistoryAsync("user-1", new RedemptionListQuery());
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].CashOtp.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetActiveRequest_ExpiredCashOtp_ShouldHideOtp()
+    {
+        _context.RedemptionRequests.Add(new RedemptionRequest
+        {
+            UserId = "user-1",
+            Method = RedemptionMethod.Cash,
+            Status = RedemptionRequestStatus.AdminApproved,
+            PointsAmount = 1000,
+            SarRate = 10,
+            SarAmount = 100,
+            CashOtpHash = "hash",
+            CashOtpEncrypted = "654321",
+            CashOtpExpiresAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetActiveRequestAsync("user-1");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.CashOtp.Should().BeNull();
     }
 
     // ── ExpireOldPoints ──

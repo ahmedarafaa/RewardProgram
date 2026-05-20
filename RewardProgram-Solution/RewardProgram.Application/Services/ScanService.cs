@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
@@ -18,17 +19,20 @@ public class ScanService : IScanService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
+    private readonly IStringLocalizer<ErrorMessages> _localizer;
     private readonly ILogger<ScanService> _logger;
 
     public ScanService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         INotificationService notificationService,
+        IStringLocalizer<ErrorMessages> localizer,
         ILogger<ScanService> logger)
     {
         _context = context;
         _userRepository = userRepository;
         _notificationService = notificationService;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -231,12 +235,19 @@ public class ScanService : IScanService
                 }
             }
 
+            // When a seller scans first they earn 50% now; tell them the rest
+            // is credited once a technician scans the same barcode after them.
+            string? message = null;
+            if (scannerRole == ScannerRole.Seller && barcode.Status == BarcodeStatus.SellerScanned)
+                message = _localizer["Scan.DeferredPointsPending", pointValue - pointsForScanner];
+
             return Result.Success(new ScanBarcodeResponse(
                 barcode.Product.Name,
                 pointsForScanner,
                 scannerWallet.Balance,
                 barcode.Id,
-                barcode.Code
+                barcode.Code,
+                message
             ));
         }
         catch (DbUpdateConcurrencyException)

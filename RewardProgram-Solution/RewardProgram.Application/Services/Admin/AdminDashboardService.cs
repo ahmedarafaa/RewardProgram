@@ -3,6 +3,8 @@ using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.Analytics;
 using RewardProgram.Application.Contracts.Admin.Dashboard;
+using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Enums;
@@ -316,6 +318,58 @@ public class AdminDashboardService : IAdminDashboardService
             items, totalCount, page, pageSize));
     }
 
+    public async Task<Result<List<AdminPointsDetailItemResponse>>> ExportPointsDetailsAsync(
+        AdminPointsDetailQuery query, CancellationToken ct = default)
+    {
+        var baseQuery =
+            from wt in _context.WalletTransactions
+            join w in _context.Wallets on wt.WalletId equals w.Id
+            join u in _userRepository.Query() on w.UserId equals u.Id
+            select new { wt, u };
+
+        if (!string.IsNullOrEmpty(query.UserId))
+            baseQuery = baseQuery.Where(x => x.u.Id == query.UserId);
+
+        if (!string.IsNullOrEmpty(query.RegionId))
+        {
+            var cityIdsInRegion = _context.Cities
+                .Where(c => c.RegionId == query.RegionId)
+                .Select(c => c.Id);
+
+            baseQuery = baseQuery.Where(x => x.u.NationalAddress != null
+                && cityIdsInRegion.Contains(x.u.NationalAddress.CityId!));
+        }
+
+        if (query.DateFrom.HasValue)
+            baseQuery = baseQuery.Where(x => x.wt.CreatedAt >= query.DateFrom.Value);
+
+        if (query.DateTo.HasValue)
+            baseQuery = baseQuery.Where(x => x.wt.CreatedAt <= query.DateTo.Value);
+
+        if (query.Type.HasValue)
+            baseQuery = baseQuery.Where(x => x.wt.Type == query.Type.Value);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<AdminPointsDetailItemResponse>>(ExportErrors.TooManyRows);
+
+        var items = await baseQuery
+            .OrderByDescending(x => x.wt.CreatedAt)
+            .Select(x => new AdminPointsDetailItemResponse(
+                x.wt.Id,
+                x.u.Id,
+                x.u.Name,
+                x.u.MobileNumber,
+                x.wt.Amount,
+                x.wt.SarAmount,
+                x.wt.Type,
+                x.wt.Description,
+                x.wt.CreatedAt))
+            .ToListAsync(ct);
+
+        return Result.Success(items);
+    }
+
     public async Task<Result<TopPerformersResponse>> GetTopPerformersAsync(int top = 10, CancellationToken ct = default)
     {
         top = Math.Clamp(top, 1, 100);
@@ -426,6 +480,59 @@ public class AdminDashboardService : IAdminDashboardService
 
         return Result.Success(new PaginatedResult<InactiveUserItem>(
             items, totalCount, query.Page, query.PageSize));
+    }
+
+    public async Task<Result<List<InactiveUserItem>>> ExportInactiveUsersAsync(
+        InactiveUsersQuery query, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-query.InactiveDays);
+
+        var activeUserIds = await _context.ScanRecords
+            .Where(s => s.DeletedAt == null && s.CreatedAt >= cutoff)
+            .Select(s => s.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var activeUserIdSet = activeUserIds.ToHashSet();
+
+        var lastScans = await _context.ScanRecords
+            .Where(s => s.DeletedAt == null && !activeUserIdSet.Contains(s.UserId))
+            .GroupBy(s => s.UserId)
+            .Select(g => new { UserId = g.Key, LastScan = g.Max(s => s.CreatedAt) })
+            .ToDictionaryAsync(x => x.UserId, x => x.LastScan, ct);
+
+        var now = DateTime.UtcNow;
+
+        var eligibleUsers = await _userRepository.Query()
+            .Where(u => (u.UserType == UserType.Seller || u.UserType == UserType.Technician)
+               && u.RegistrationStatus == RegistrationStatus.Approved
+               && !u.IsDisabled
+               && !activeUserIdSet.Contains(u.Id))
+            .Select(u => new { u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt })
+            .ToListAsync(ct);
+
+        if (eligibleUsers.Count > ExcelExportHelper.MaxExportRows)
+            return Result.Failure<List<InactiveUserItem>>(ExportErrors.TooManyRows);
+
+        var items = eligibleUsers
+            .Select(u => new
+            {
+                u.Id, u.Name, u.MobileNumber, u.UserType, u.CreatedAt,
+                LastScan = lastScans.TryGetValue(u.Id, out var ls) ? (DateTime?)ls : null
+            })
+            .OrderBy(x => x.LastScan)
+            .Select(x => new InactiveUserItem(
+                x.Id,
+                x.Name,
+                x.MobileNumber,
+                x.UserType,
+                x.LastScan,
+                x.LastScan.HasValue
+                    ? (int)(now - x.LastScan.Value).TotalDays
+                    : (int)(now - x.CreatedAt).TotalDays))
+            .ToList();
+
+        return Result.Success(items);
     }
 
     public async Task<Result<BarcodeAnalyticsResponse>> GetBarcodeAnalyticsAsync(CancellationToken ct = default)

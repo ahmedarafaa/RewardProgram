@@ -86,8 +86,9 @@
 
   <!-- File Errors -->
   <data name="File.ImageUploadFailed"><value>Failed to upload image</value></data>
-  <data name="File.InvalidImageType"><value>Unsupported image format, please use JPG, PNG, or WEBP</value></data>
+  <data name="File.InvalidImageType"><value>Unsupported image format, please use JPG, PNG, WEBP, or HEIC</value></data>
   <data name="File.ImageTooLarge"><value>Image size is too large, maximum is 5 MB</value></data>
+  <data name="File.ImageProcessingFailed"><value>Image could not be processed, please try a different file</value></data>
 
   <!-- Invitation Errors -->
   <data name="Invitation.InvalidCode"><value>Invalid invitation code</value></data>
@@ -107,6 +108,38 @@
   <data name="Product.NotFound"><value>Product not found</value></data>
   <data name="Product.CodeAlreadyExists"><value>Product code already exists</value></data>
   <data name="Product.HasBarcodes"><value>Cannot delete a product that has barcodes</value></data>
+  <data name="Product.Import.InvalidFile"><value>Invalid file. Please upload an Excel (.xlsx) file.</value></data>
+  <data name="Product.Import.FileTooLarge"><value>File is too large. The maximum size is 10 MB.</value></data>
+  <data name="Product.Import.EmptyFile"><value>The file does not contain any data rows.</value></data>
+  <data name="Product.Import.TooManyRows"><value>The number of rows exceeds the allowed limit (10000).</value></data>
+  <data name="ProductImport.Row.NameInvalid"><value>Product name is required and must not exceed 200 characters.</value></data>
+  <data name="ProductImport.Row.ProductCodeInvalid"><value>Product code is required and must not exceed 50 characters.</value></data>
+  <data name="ProductImport.Row.PointValueInvalid"><value>Point value must be a whole number greater than zero.</value></data>
+  <data name="ProductImport.Row.PriceInvalid"><value>Price must be a number greater than or equal to zero.</value></data>
+  <data name="ProductImport.Row.CategoryTooLong"><value>Category must not exceed 100 characters.</value></data>
+  <data name="ProductImport.Row.DuplicateInFile"><value>This product code appears more than once in the file.</value></data>
+
+  <!-- Admin Account Errors -->
+  <data name="AdminAccount.NotFound"><value>Admin account not found</value></data>
+  <data name="AdminAccount.UsernameAlreadyExists"><value>This username is already taken</value></data>
+  <data name="AdminAccount.CannotModifySystemAdmin"><value>System administrator accounts cannot be modified or deleted</value></data>
+  <data name="AdminAccount.CreateFailed"><value>Failed to create the admin account</value></data>
+  <data name="AdminAccount.UpdateFailed"><value>Failed to update the admin account</value></data>
+  <data name="AdminAccount.InvalidPermission"><value>Unknown permission</value></data>
+  <data name="AdminAccount.HasHistory"><value>This account has activity history and cannot be deleted — disable it instead</value></data>
+
+  <!-- Admin Permission catalog (module + action labels) -->
+  <data name="Perm.Module.Users"><value>Users</value></data>
+  <data name="Perm.Module.Products"><value>Products</value></data>
+  <data name="Perm.Module.Barcodes"><value>Barcodes</value></data>
+  <data name="Perm.Module.Scans"><value>Scans</value></data>
+  <data name="Perm.Module.Redemptions"><value>Redemptions</value></data>
+  <data name="Perm.Module.Analytics"><value>Analytics</value></data>
+  <data name="Perm.Module.Content"><value>Content</value></data>
+  <data name="Perm.Module.Settings"><value>Settings</value></data>
+  <data name="Perm.Module.Notifications"><value>Notifications</value></data>
+  <data name="Perm.Action.View"><value>View</value></data>
+  <data name="Perm.Action.Manage"><value>Manage</value></data>
 
   <!-- Redemption Errors -->
   <data name="Redemption.InsufficientBalance"><value>Insufficient balance for redemption</value></data>
@@ -195,6 +228,7 @@
   <!-- Wallet transaction descriptions (rendered at read time per user locale) -->
   <data name="Wallet.Tx.BarcodeScanned"><value>Barcode scan — {0}</value></data>
   <data name="Wallet.Tx.DeferredPoints"><value>Deferred points — {0}</value></data>
+  <data name="Scan.DeferredPointsPending"><value>You will receive the remaining {0} points when a technician scans this barcode after you.</value></data>
   <data name="Wallet.Tx.ScanCancelled"><value>Scan cancelled — {0}</value></data>
   <data name="Wallet.Tx.PointsExpired"><value>Points expired</value></data>
   <data name="Wallet.Tx.InviteeBonus"><value>Registration bonus via invitation from {0}</value></data>
@@ -208,15 +242,214 @@
   <data name="Notif.InvitationReward.Body"><value>You earned {0} points as invitation reward for {1}</value></data>
   <data name="Notif.NewPoints.Title"><value>New points</value></data>
   <data name="Notif.NewPoints.DeferredBody"><value>You earned {0} deferred points — {1}</value></data>
-  <data name="Notif.Redemption.UpdateTitle"><value>Redemption update</value></data>
   <data name="Notif.Redemption.CompletedTitle"><value>Redemption completed</value></data>
   <data name="Notif.Redemption.CompletedBody"><value>Your redemption request was completed successfully</value></data>
-  <data name="Notif.Redemption.SalesManApprovedBody"><value>Salesman approved your redemption request</value></data>
-  <data name="Notif.Redemption.ZoneManagerApprovedBody"><value>Zone manager approved your redemption request</value></data>
   <data name="Notif.Redemption.AdminApprovedTitle"><value>Admin approved</value></data>
   <data name="Notif.Redemption.AdminApprovedBody"><value>Admin approved your redemption request</value></data>
-  <data name="Notif.Redemption.GenericApprovedBody"><value>Your redemption request was approved</value></data>
   <data name="Notif.Redemption.CashHandoverBody"><value>Cash was delivered successfully</value></data>
   <data name="Notif.Redemption.RejectedTitle"><value>Redemption rejected</value></data>
   <data name="Notif.Redemption.RejectedBody"><value>Your redemption request was rejected. Reason: {0}</value></data>
+
+  <!-- Export errors + labels -->
+  <data name="Export.TooManyRows"><value>Too many results to export. Please narrow the filters and try again.</value></data>
+
+  <data name="Export.Sheet.Users"><value>Users</value></data>
+  <data name="Export.Sheet.Products"><value>Products</value></data>
+  <data name="Export.Sheet.Barcodes"><value>Barcodes</value></data>
+  <data name="Export.Sheet.Scans"><value>Scans</value></data>
+  <data name="Export.Sheet.Notifications"><value>Notifications</value></data>
+  <data name="Export.Sheet.Redemptions"><value>Redemptions</value></data>
+
+  <data name="Export.Header.CreatedAt"><value>Created At</value></data>
+  <data name="Export.Header.Name"><value>Name</value></data>
+  <data name="Export.Header.Mobile"><value>Mobile</value></data>
+  <data name="Export.Header.Status"><value>Status</value></data>
+  <data name="Export.Header.Type"><value>Type</value></data>
+  <data name="Export.Header.RegistrationStatus"><value>Registration Status</value></data>
+  <data name="Export.Header.Roles"><value>Roles</value></data>
+  <data name="Export.Header.Region"><value>Region</value></data>
+  <data name="Export.Header.City"><value>City</value></data>
+  <data name="Export.Header.CustomerCode"><value>Customer Code</value></data>
+  <data name="Export.Header.StoreName"><value>Store Name</value></data>
+  <data name="Export.Header.IsDisabled"><value>Disabled</value></data>
+  <data name="Export.Header.IsAccountDeleted"><value>Account Deleted</value></data>
+
+  <data name="Export.Header.ProductCode"><value>Product Code</value></data>
+  <data name="Export.Header.Category"><value>Category</value></data>
+  <data name="Export.Header.PointValue"><value>Point Value</value></data>
+  <data name="Export.Header.PriceSar"><value>Price (SAR)</value></data>
+  <data name="Export.Header.TotalBarcodes"><value>Total Barcodes</value></data>
+  <data name="Export.Header.AvailableBarcodes"><value>Available</value></data>
+
+  <data name="Export.Header.BarcodeCode"><value>Barcode</value></data>
+  <data name="Export.Header.Product"><value>Product</value></data>
+
+  <data name="Export.Header.ScannedAt"><value>Scanned At</value></data>
+  <data name="Export.Header.User"><value>User</value></data>
+  <data name="Export.Header.ScannerRole"><value>Scanner Role</value></data>
+  <data name="Export.Header.PointsAwarded"><value>Points Awarded</value></data>
+  <data name="Export.Header.BarcodeStatus"><value>Barcode Status</value></data>
+  <data name="Export.Header.Latitude"><value>Latitude</value></data>
+  <data name="Export.Header.Longitude"><value>Longitude</value></data>
+
+  <data name="Export.Header.SentAt"><value>Sent At</value></data>
+  <data name="Export.Header.Recipient"><value>Recipient</value></data>
+  <data name="Export.Header.Title"><value>Title</value></data>
+  <data name="Export.Header.Body"><value>Body</value></data>
+  <data name="Export.Header.Reference"><value>Reference</value></data>
+  <data name="Export.Header.Read"><value>Read</value></data>
+
+  <data name="Export.Header.Method"><value>Method</value></data>
+  <data name="Export.Header.Points"><value>Points</value></data>
+  <data name="Export.Header.Sar"><value>SAR</value></data>
+
+  <data name="Export.Sheet.Summary"><value>Summary</value></data>
+  <data name="Export.Sheet.UsersByType"><value>Users by Type</value></data>
+  <data name="Export.Sheet.UsersByRegStatus"><value>By Registration Status</value></data>
+  <data name="Export.Sheet.UsersByRegion"><value>Users by Region</value></data>
+  <data name="Export.Sheet.UsersTrend"><value>Registration Trend</value></data>
+  <data name="Export.Sheet.Regions"><value>Regions</value></data>
+  <data name="Export.Sheet.Cities"><value>Cities</value></data>
+  <data name="Export.Sheet.PointsByRegion"><value>Points by Region</value></data>
+  <data name="Export.Sheet.PointsByRep"><value>Points by Salesman</value></data>
+  <data name="Export.Sheet.PointsTrend"><value>Points Trend</value></data>
+  <data name="Export.Sheet.PointsDetails"><value>Points Details</value></data>
+  <data name="Export.Sheet.TopSellers"><value>Top Sellers</value></data>
+  <data name="Export.Sheet.TopTechnicians"><value>Top Technicians</value></data>
+  <data name="Export.Sheet.InactiveUsers"><value>Inactive Users</value></data>
+  <data name="Export.Sheet.TopProductsByBarcodes"><value>Top Products</value></data>
+  <data name="Export.Sheet.RedemptionsByStatus"><value>Redemptions by Status</value></data>
+  <data name="Export.Sheet.RedemptionsByMethod"><value>Redemptions by Method</value></data>
+  <data name="Export.Sheet.RedemptionsTrend"><value>Redemptions Trend</value></data>
+  <data name="Export.Sheet.SalesManPerformance"><value>Salesman Performance</value></data>
+  <data name="Export.Sheet.RevenueByType"><value>Revenue by Type</value></data>
+  <data name="Export.Sheet.PayoutTrend"><value>Payout Trend</value></data>
+  <data name="Export.Sheet.TopInviters"><value>Top Inviters</value></data>
+  <data name="Export.Sheet.InvitationsTrend"><value>Invitations Trend</value></data>
+  <data name="Export.Sheet.NotificationsByType"><value>Notifications by Type</value></data>
+  <data name="Export.Sheet.NotificationsTrend"><value>Notifications Trend</value></data>
+
+  <data name="Export.Header.Count"><value>Count</value></data>
+  <data name="Export.Header.Total"><value>Total</value></data>
+  <data name="Export.Header.Year"><value>Year</value></data>
+  <data name="Export.Header.Month"><value>Month</value></data>
+  <data name="Export.Header.RegionAr"><value>Region (Arabic)</value></data>
+  <data name="Export.Header.RegionEn"><value>Region (English)</value></data>
+  <data name="Export.Header.CityAr"><value>City (Arabic)</value></data>
+  <data name="Export.Header.CityEn"><value>City (English)</value></data>
+  <data name="Export.Header.ZoneManager"><value>Zone Manager</value></data>
+  <data name="Export.Header.ApprovalSalesMan"><value>Approval Salesman</value></data>
+  <data name="Export.Header.CityCount"><value>City Count</value></data>
+  <data name="Export.Header.ShopOwnerCount"><value>Shop Owners</value></data>
+  <data name="Export.Header.SellerCount"><value>Sellers</value></data>
+  <data name="Export.Header.TechnicianCount"><value>Technicians</value></data>
+  <data name="Export.Header.UserCount"><value>User Count</value></data>
+  <data name="Export.Header.TotalEarned"><value>Total Points Earned</value></data>
+  <data name="Export.Header.SalesMan"><value>Salesman</value></data>
+  <data name="Export.Header.TotalScans"><value>Total Scans</value></data>
+  <data name="Export.Header.Description"><value>Description</value></data>
+  <data name="Export.Header.LastScanDate"><value>Last Scan Date</value></data>
+  <data name="Export.Header.DaysSinceLastScan"><value>Days Since Last Scan</value></data>
+  <data name="Export.Header.ScannedCount"><value>Scanned</value></data>
+  <data name="Export.Header.ConsumedCount"><value>Consumed</value></data>
+  <data name="Export.Header.AssignedUsers"><value>Assigned Users</value></data>
+  <data name="Export.Header.ApprovedUsers"><value>Approved Users</value></data>
+  <data name="Export.Header.PendingApprovals"><value>Pending Approvals</value></data>
+  <data name="Export.Header.TransactionType"><value>Transaction Type</value></data>
+  <data name="Export.Header.TotalPoints"><value>Total Points</value></data>
+  <data name="Export.Header.TotalInvited"><value>Total Invited</value></data>
+  <data name="Export.Header.ApprovedCount"><value>Approved Count</value></data>
+  <data name="Export.Header.PointsEarned"><value>Points Earned</value></data>
+
+  <data name="Export.Kpi.Label"><value>Metric</value></data>
+  <data name="Export.Kpi.Value"><value>Value</value></data>
+  <data name="Export.Kpi.TotalShopOwners"><value>Total Shop Owners</value></data>
+  <data name="Export.Kpi.TotalSellers"><value>Total Sellers</value></data>
+  <data name="Export.Kpi.TotalTechnicians"><value>Total Technicians</value></data>
+  <data name="Export.Kpi.TotalPendingApprovals"><value>Pending Approvals</value></data>
+  <data name="Export.Kpi.TotalPointsEarned"><value>Total Points Earned</value></data>
+  <data name="Export.Kpi.TotalPointsRedeemed"><value>Total Points Redeemed</value></data>
+  <data name="Export.Kpi.TotalSarRedeemed"><value>Total SAR Redeemed</value></data>
+  <data name="Export.Kpi.TotalActiveBarcodes"><value>Active Barcodes</value></data>
+  <data name="Export.Kpi.TotalScans"><value>Total Scans</value></data>
+  <data name="Export.Kpi.PendingRedemptions"><value>Pending Redemptions</value></data>
+  <data name="Export.Kpi.TotalInvitations"><value>Total Invitations</value></data>
+  <data name="Export.Kpi.TotalNotificationsSent"><value>Total Notifications Sent</value></data>
+  <data name="Export.Kpi.TotalDeletedAccounts"><value>Deleted Accounts</value></data>
+  <data name="Export.Kpi.TotalEarned"><value>Total Earned</value></data>
+  <data name="Export.Kpi.TotalRedeemed"><value>Total Redeemed</value></data>
+  <data name="Export.Kpi.TotalBalance"><value>Total Balance</value></data>
+  <data name="Export.Kpi.TotalGenerated"><value>Total Generated</value></data>
+  <data name="Export.Kpi.TotalAvailable"><value>Available</value></data>
+  <data name="Export.Kpi.TotalSellerScanned"><value>Seller Scanned</value></data>
+  <data name="Export.Kpi.TotalTechnicianScanned"><value>Technician Scanned</value></data>
+  <data name="Export.Kpi.TotalConsumed"><value>Consumed</value></data>
+  <data name="Export.Kpi.ScanRate"><value>Scan Rate (%)</value></data>
+  <data name="Export.Kpi.AverageProcessingDays"><value>Avg Processing Days</value></data>
+  <data name="Export.Kpi.TotalSarLiability"><value>Total SAR Liability</value></data>
+  <data name="Export.Kpi.TotalSarHeld"><value>SAR Held</value></data>
+  <data name="Export.Kpi.TotalSarPaidOut"><value>SAR Paid Out</value></data>
+  <data name="Export.Kpi.TotalPointsOutstanding"><value>Points Outstanding</value></data>
+  <data name="Export.Kpi.TotalInvitationsSent"><value>Total Invitations Sent</value></data>
+  <data name="Export.Kpi.TotalAccepted"><value>Accepted</value></data>
+  <data name="Export.Kpi.TotalPending"><value>Pending</value></data>
+  <data name="Export.Kpi.ConversionRate"><value>Conversion Rate (%)</value></data>
+  <data name="Export.Kpi.TotalRewardPointsSpent"><value>Reward Points Spent</value></data>
+  <data name="Export.Kpi.TotalRewardSarSpent"><value>Reward SAR Spent</value></data>
+  <data name="Export.Kpi.TotalAllTime"><value>All Time</value></data>
+  <data name="Export.Kpi.TotalThisMonth"><value>This Month</value></data>
+  <data name="Export.Kpi.TotalToday"><value>Today</value></data>
+  <data name="Export.Kpi.TotalRead"><value>Read</value></data>
+  <data name="Export.Kpi.TotalUnread"><value>Unread</value></data>
+  <data name="Export.Kpi.ReadRate"><value>Read Rate (%)</value></data>
+  <data name="Export.Kpi.AdminSentCount"><value>Admin Sent</value></data>
+  <data name="Export.Kpi.SystemTriggeredCount"><value>System Triggered</value></data>
+
+  <data name="Enum.UserType.ShopOwner"><value>Shop Owner</value></data>
+  <data name="Enum.UserType.Seller"><value>Seller</value></data>
+  <data name="Enum.UserType.Technician"><value>Technician</value></data>
+  <data name="Enum.UserType.SalesMan"><value>Salesman</value></data>
+  <data name="Enum.UserType.ZoneManager"><value>Zone Manager</value></data>
+  <data name="Enum.UserType.SystemAdmin"><value>System Admin</value></data>
+
+  <data name="Enum.RegistrationStatus.PendingSalesman"><value>Pending Salesman</value></data>
+  <data name="Enum.RegistrationStatus.PendingZoneManager"><value>Pending Zone Manager</value></data>
+  <data name="Enum.RegistrationStatus.Approved"><value>Approved</value></data>
+  <data name="Enum.RegistrationStatus.Rejected"><value>Rejected</value></data>
+
+  <data name="Enum.BarcodeStatus.Available"><value>Available</value></data>
+  <data name="Enum.BarcodeStatus.SellerScanned"><value>Seller Scanned</value></data>
+  <data name="Enum.BarcodeStatus.TechnicianScanned"><value>Technician Scanned</value></data>
+  <data name="Enum.BarcodeStatus.Consumed"><value>Consumed</value></data>
+
+  <data name="Enum.ScannerRole.Seller"><value>Seller</value></data>
+  <data name="Enum.ScannerRole.Technician"><value>Technician</value></data>
+
+  <data name="Enum.RedemptionMethod.BankTransfer"><value>Bank Transfer</value></data>
+  <data name="Enum.RedemptionMethod.Cash"><value>Cash</value></data>
+
+  <data name="Enum.RedemptionRequestStatus.PendingSalesMan"><value>Pending Salesman</value></data>
+  <data name="Enum.RedemptionRequestStatus.PendingZoneManager"><value>Pending Zone Manager</value></data>
+  <data name="Enum.RedemptionRequestStatus.PendingAdmin"><value>Pending Admin</value></data>
+  <data name="Enum.RedemptionRequestStatus.AdminApproved"><value>Admin Approved</value></data>
+  <data name="Enum.RedemptionRequestStatus.Completed"><value>Completed</value></data>
+  <data name="Enum.RedemptionRequestStatus.Rejected"><value>Rejected</value></data>
+  <data name="Enum.RedemptionRequestStatus.Cancelled"><value>Cancelled</value></data>
+
+  <data name="Enum.WalletTransactionType.Earned"><value>Earned</value></data>
+  <data name="Enum.WalletTransactionType.Redeemed"><value>Redeemed</value></data>
+  <data name="Enum.WalletTransactionType.Cancelled"><value>Cancelled</value></data>
+  <data name="Enum.WalletTransactionType.Expired"><value>Expired</value></data>
+  <data name="Enum.WalletTransactionType.Refunded"><value>Refunded</value></data>
+  <data name="Enum.WalletTransactionType.InvitationReward"><value>Invitation Reward</value></data>
+
+  <data name="Enum.NotificationType.RegistrationApproved"><value>Registration Approved</value></data>
+  <data name="Enum.NotificationType.RegistrationRejected"><value>Registration Rejected</value></data>
+  <data name="Enum.NotificationType.PointsEarned"><value>Points Earned</value></data>
+  <data name="Enum.NotificationType.RedemptionCreated"><value>Redemption Created</value></data>
+  <data name="Enum.NotificationType.RedemptionApproved"><value>Redemption Approved</value></data>
+  <data name="Enum.NotificationType.RedemptionRejected"><value>Redemption Rejected</value></data>
+  <data name="Enum.NotificationType.RedemptionCompleted"><value>Redemption Completed</value></data>
+  <data name="Enum.NotificationType.InvitationReward"><value>Invitation Reward</value></data>
+  <data name="Enum.NotificationType.AdminMessage"><value>Admin Message</value></data>
 </root>
