@@ -44,7 +44,7 @@ public class AdminAccountServiceTests : IDisposable
         var result = _sut.GetPermissionCatalog();
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(9); // 9 modules
+        result.Value.Should().HaveCount(10); // 10 modules (incl. ErpCustomers)
         result.Value.SelectMany(m => m.Permissions).Should().HaveCount(AdminPermissions.All.Count);
     }
 

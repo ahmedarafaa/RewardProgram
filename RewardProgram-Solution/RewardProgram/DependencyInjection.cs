@@ -150,6 +150,7 @@ public static class DependencyInjection
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAdminProductService, AdminProductService>();
+        services.AddScoped<IAdminErpCustomerService, AdminErpCustomerService>();
         services.AddScoped<IAdminBarcodeService, AdminBarcodeService>();
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IWalletService, WalletService>();
@@ -172,6 +173,7 @@ public static class DependencyInjection
         services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddSingleton<ICashOtpProtector, CashOtpProtector>();
         services.AddSingleton<IProductImportReader, ProductImportReader>();
+        services.AddSingleton<IErpCustomerImportReader, ErpCustomerImportReader>();
         services.AddHostedService<PointsExpiryBackgroundService>();
         services.AddHostedService<OtpCleanupBackgroundService>();
 

@@ -84,6 +84,12 @@
   <data name="Product.Price.GreaterThanOrEqualZero"><value>Price must be zero or more</value></data>
   <data name="Product.Category.MaxLength"><value>Category must not exceed 100 characters</value></data>
 
+  <!-- ERP Customer -->
+  <data name="ErpCustomer.CustomerCode.NotEmpty"><value>Customer code is required</value></data>
+  <data name="ErpCustomer.CustomerCode.MaxLength"><value>Customer code must not exceed 50 characters</value></data>
+  <data name="ErpCustomer.CustomerName.NotEmpty"><value>Customer name is required</value></data>
+  <data name="ErpCustomer.CustomerName.MaxLength"><value>Customer name must not exceed 200 characters</value></data>
+
   <!-- Admin Account -->
   <data name="AdminAccount.UsernameInvalid"><value>Username must be 3–50 characters and contain only letters, numbers, and . _ -</value></data>
   <data name="AdminAccount.PasswordInvalid"><value>Password must be at least 8 characters</value></data>

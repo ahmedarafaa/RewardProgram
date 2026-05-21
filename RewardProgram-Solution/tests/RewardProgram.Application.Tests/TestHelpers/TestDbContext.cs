@@ -58,11 +58,15 @@ public class TestDbContext : DbContext, IApplicationDbContext
         {
             b.HasKey(p => p.Id);
             b.HasOne(p => p.User).WithOne(u => u.ShopOwnerProfile).HasForeignKey<ShopOwnerProfile>(p => p.UserId);
+            b.HasOne(p => p.ErpCustomer).WithMany(c => c.ShopOwners)
+                .HasForeignKey(p => p.CustomerCode).HasPrincipalKey(c => c.CustomerCode);
         });
         modelBuilder.Entity<SellerProfile>(b =>
         {
             b.HasKey(p => p.Id);
             b.HasOne(p => p.User).WithOne(u => u.SellerProfile).HasForeignKey<SellerProfile>(p => p.UserId);
+            b.HasOne(p => p.ErpCustomer).WithMany(c => c.Sellers)
+                .HasForeignKey(p => p.CustomerCode).HasPrincipalKey(c => c.CustomerCode);
         });
         modelBuilder.Entity<TechnicianProfile>(b =>
         {
@@ -86,7 +90,12 @@ public class TestDbContext : DbContext, IApplicationDbContext
         });
 
         modelBuilder.Entity<District>(b => b.HasKey(e => e.Id));
-        modelBuilder.Entity<ErpCustomer>(b => b.HasKey(e => e.Id));
+        modelBuilder.Entity<ErpCustomer>(b =>
+        {
+            b.HasKey(e => e.Id);
+            // Mirror the production soft-delete filter so import/add revival is tested faithfully.
+            b.HasQueryFilter(e => !e.IsDeleted);
+        });
 
         modelBuilder.Entity<ShopData>(b =>
         {

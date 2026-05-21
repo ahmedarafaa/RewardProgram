@@ -46,6 +46,10 @@ public static class AdminPermissions
     public const string NotificationsView = "Notifications.View";
     public const string NotificationsManage = "Notifications.Manage";
 
+    // ERP Customers — directory management (incl. import)
+    public const string ErpCustomersView = "ErpCustomers.View";
+    public const string ErpCustomersManage = "ErpCustomers.Manage";
+
     /// <summary>Every defined permission, in display order.</summary>
     public static readonly IReadOnlyList<string> All =
     [
@@ -58,6 +62,7 @@ public static class AdminPermissions
         ContentView, ContentManage,
         SettingsView, SettingsManage,
         NotificationsView, NotificationsManage,
+        ErpCustomersView, ErpCustomersManage,
     ];
 
     private static readonly HashSet<string> Defined = new(All, StringComparer.Ordinal);

@@ -953,6 +953,224 @@
 			]
 		},
 		{
+			"name": "ERP Customers",
+			"description": "ERP customer directory — add, edit, delete, list and bulk-import. Requires the ErpCustomers permission.",
+			"item": [
+				{
+					"name": "List ERP Customers",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers?page=1&pageSize=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "export",
+									"value": "xlsx",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Paginated list of ERP customers. Search matches CustomerCode or CustomerName. Add ?export=xlsx to download the list as Excel."
+					}
+				},
+				{
+					"name": "Get ERP Customer",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{erpCustomerId}}",
+									"description": "ERP customer ID"
+								}
+							]
+						},
+						"description": "Get a single ERP customer, including hasShopData and linkedUserCount."
+					}
+				},
+				{
+					"name": "Add ERP Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerCode\": \"CUST-001\",\n  \"customerName\": \"عميل تجريبي\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers"
+							]
+						},
+						"description": "Add an ERP customer. CustomerCode: required, max 50, unique. CustomerName: required, max 200. Re-adding a soft-deleted code revives that record."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    if (json.id) {",
+									"        pm.collectionVariables.set('erpCustomerId', json.id);",
+									"        console.log('erpCustomerId saved: ' + json.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Edit ERP Customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"عميل معدل\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{erpCustomerId}}",
+									"description": "ERP customer ID"
+								}
+							]
+						},
+						"description": "Edit an ERP customer. Only CustomerName can change — CustomerCode is immutable."
+					}
+				},
+				{
+					"name": "Delete ERP Customer",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{erpCustomerId}}",
+									"description": "ERP customer ID"
+								}
+							]
+						},
+						"description": "Delete an ERP customer. Blocked if it is linked to shop data or any shop-owner/seller account. Returns 204 No Content on success."
+					}
+				},
+				{
+					"name": "Import ERP Customers",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Excel (.xlsx) workbook. The first row must have headers for Customer Code and Customer Name (Arabic or English) — column order does not matter."
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/erp-customers/import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"erp-customers",
+								"import"
+							]
+						},
+						"description": "Bulk-import ERP customers from an .xlsx file. Each valid row is upserted by CustomerCode. Invalid rows are skipped and listed in the per-row error report. Max 20000 rows, 10 MB file."
+					}
+				}
+			]
+		},
+		{
 			"name": "Barcodes",
 			"description": "Barcode generation and listing. Requires SystemAdmin JWT.",
 			"item": [

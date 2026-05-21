@@ -84,6 +84,12 @@
   <data name="Product.Price.GreaterThanOrEqualZero"><value>السعر يجب أن يكون صفر أو أكثر</value></data>
   <data name="Product.Category.MaxLength"><value>المجموعة يجب ألا تتجاوز 100 حرف</value></data>
 
+  <!-- ERP Customer -->
+  <data name="ErpCustomer.CustomerCode.NotEmpty"><value>كود العميل مطلوب</value></data>
+  <data name="ErpCustomer.CustomerCode.MaxLength"><value>كود العميل يجب ألا يتجاوز 50 حرف</value></data>
+  <data name="ErpCustomer.CustomerName.NotEmpty"><value>اسم العميل مطلوب</value></data>
+  <data name="ErpCustomer.CustomerName.MaxLength"><value>اسم العميل يجب ألا يتجاوز 200 حرف</value></data>
+
   <!-- Admin Account -->
   <data name="AdminAccount.UsernameInvalid"><value>اسم المستخدم يجب أن يكون بين 3 و50 حرفاً ويحتوي فقط على حروف وأرقام والرموز . _ -</value></data>
   <data name="AdminAccount.PasswordInvalid"><value>كلمة المرور يجب ألا تقل عن 8 أحرف</value></data>
