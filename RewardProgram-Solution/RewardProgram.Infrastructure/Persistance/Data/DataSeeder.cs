@@ -30,7 +30,7 @@ public static class DataSeeder
         var isUat = env.IsEnvironment("UAT");
 
         await SeedRolesAsync(roleManager, logger);
-        var users = await SeedUsersAsync(userManager, logger, env, config, isUat);
+        var users = await SeedUsersAsync(userManager, logger, env, config);
         await SeedRegionsAndCitiesAsync(context, users, logger);
         await SeedErpCustomersAsync(context, logger);
         await PatchErpCustomerShortAddressesAsync(context, logger);
@@ -86,7 +86,7 @@ public static class DataSeeder
     #region Users
 
     private static async Task<Dictionary<string, ApplicationUser>> SeedUsersAsync(
-        UserManager<ApplicationUser> userManager, ILogger logger, IHostEnvironment env, IConfiguration config, bool isUat)
+        UserManager<ApplicationUser> userManager, ILogger logger, IHostEnvironment env, IConfiguration config)
     {
         var users = new Dictionary<string, ApplicationUser>();
         _mobileCounter = 1;
@@ -100,8 +100,8 @@ public static class DataSeeder
             usernameOverride: "admin",
             password: adminPassword);
 
-        // Dev/Staging test admin (not UAT, not Production)
-        if (!isUat && !env.IsProduction())
+        // Test admin — Development only (excluded from Staging, UAT and Production)
+        if (env.IsDevelopment())
         {
             var testAdminPassword = config["Seeder:TestAdminPassword"] ?? "Admin@123";
             await CreateUser(userManager, users, logger,
