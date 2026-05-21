@@ -154,6 +154,7 @@
   <data name="Perm.Module.Content"><value>Content</value></data>
   <data name="Perm.Module.Settings"><value>Settings</value></data>
   <data name="Perm.Module.Notifications"><value>Notifications</value></data>
+  <data name="Perm.Module.ErpCustomers"><value>ERP Customers</value></data>
   <data name="Perm.Action.View"><value>View</value></data>
   <data name="Perm.Action.Manage"><value>Manage</value></data>
 

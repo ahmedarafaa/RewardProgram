@@ -154,6 +154,7 @@
   <data name="Perm.Module.Content"><value>المحتوى</value></data>
   <data name="Perm.Module.Settings"><value>الإعدادات</value></data>
   <data name="Perm.Module.Notifications"><value>الإشعارات</value></data>
+  <data name="Perm.Module.ErpCustomers"><value>عملاء ERP</value></data>
   <data name="Perm.Action.View"><value>عرض</value></data>
   <data name="Perm.Action.Manage"><value>إدارة</value></data>
 
