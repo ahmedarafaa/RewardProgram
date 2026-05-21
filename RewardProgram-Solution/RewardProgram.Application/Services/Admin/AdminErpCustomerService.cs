@@ -252,16 +252,20 @@ public class AdminErpCustomerService : IAdminErpCustomerService
             .Where(e => fileCodes.Contains(e.CustomerCode))
             .ToListAsync(ct);
 
-        // GroupBy guards against the (collation-dependent) chance of two codes
-        // differing only by case mapping to the same case-insensitive key.
+        // Key on the TRIMMED code so the dictionary lookup aligns with the
+        // trimmed row code. SQL Server's IN match is trailing-space-insensitive,
+        // so the query above can return a row whose stored code has trailing
+        // whitespace; keying on the raw value would then miss it and the row
+        // would be wrongly treated as new. GroupBy also guards against two codes
+        // differing only by case collapsing to the same key.
         var existing = matched
             .Where(e => !e.IsDeleted)
-            .GroupBy(e => e.CustomerCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(e => e.CustomerCode.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var softDeleted = matched
             .Where(e => e.IsDeleted)
-            .GroupBy(e => e.CustomerCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(e => e.CustomerCode.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var errors = new List<ErpCustomerImportRowError>();

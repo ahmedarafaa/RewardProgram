@@ -127,7 +127,6 @@ public class AdminProductController : ControllerBase
     [HasPermission(AdminPermissions.ProductsManage)]
     [ProducesResponseType(typeof(AdminProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> EditProduct(string id, [FromBody] AdminEditProductRequest request, CancellationToken ct)
     {
         var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;

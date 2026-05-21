@@ -67,54 +67,43 @@ public class AdminProductServiceTests : IDisposable
         result.Error.Should().Be(ProductErrors.ProductCodeAlreadyExists);
     }
 
+    [Fact]
+    public async Task AddProduct_ShouldTrimProductCodeAndName()
+    {
+        var request = new AdminAddProductRequest("  Trimmed  ", "  TR001  ", 10, null);
+
+        var result = await _sut.AddProductAsync(request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ProductCode.Should().Be("TR001");
+        result.Value.Name.Should().Be("Trimmed");
+    }
+
     // ── EditProduct ──
 
     [Fact]
-    public async Task EditProduct_ValidRequest_ShouldUpdateAllFields()
+    public async Task EditProduct_ValidRequest_ShouldUpdateEditableFields()
     {
-        var product = await SeedProduct();
+        var product = await SeedProduct(); // seeded with code "P001"
 
-        var request = new AdminEditProductRequest("Updated", "P002", 200, "New Cat");
+        var request = new AdminEditProductRequest("Updated", 200, "New Cat");
         var result = await _sut.EditProductAsync(product.Id, request, AdminId);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Updated");
-        result.Value.ProductCode.Should().Be("P002");
         result.Value.PointValue.Should().Be(200);
+        result.Value.Category.Should().Be("New Cat");
+        result.Value.ProductCode.Should().Be("P001"); // immutable — unchanged
     }
 
     [Fact]
     public async Task EditProduct_NotFound_ShouldFail()
     {
-        var request = new AdminEditProductRequest("X", "X", 1, null);
+        var request = new AdminEditProductRequest("X", 1, null);
         var result = await _sut.EditProductAsync("non-existent", request, AdminId);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(ProductErrors.ProductNotFound);
-    }
-
-    [Fact]
-    public async Task EditProduct_DuplicateCodeWithOtherProduct_ShouldFail()
-    {
-        var p1 = await SeedProduct("P001");
-        await SeedProduct("P002", "Product 2");
-
-        var request = new AdminEditProductRequest("Updated", "P002", 100, null);
-        var result = await _sut.EditProductAsync(p1.Id, request, AdminId);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(ProductErrors.ProductCodeAlreadyExists);
-    }
-
-    [Fact]
-    public async Task EditProduct_SameCode_ShouldSucceed()
-    {
-        var product = await SeedProduct("P001");
-
-        var request = new AdminEditProductRequest("Updated", "P001", 200, null);
-        var result = await _sut.EditProductAsync(product.Id, request, AdminId);
-
-        result.IsSuccess.Should().BeTrue();
     }
 
     // ── DeleteProduct ──

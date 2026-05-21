@@ -49,8 +49,13 @@ public class AdminProductService : IAdminProductService
     public async Task<Result<AdminProductResponse>> AddProductAsync(
         AdminAddProductRequest request, string adminUserId, CancellationToken ct = default)
     {
+        // Trim so the stored code matches what the Excel import (which trims)
+        // looks up — a stray space would otherwise break the upsert match.
+        var code = request.ProductCode.Trim();
+        var name = request.Name.Trim();
+
         var codeExists = await _context.Products
-            .AnyAsync(p => p.ProductCode == request.ProductCode, ct);
+            .AnyAsync(p => p.ProductCode == code, ct);
 
         if (codeExists)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductCodeAlreadyExists);
@@ -59,8 +64,8 @@ public class AdminProductService : IAdminProductService
         // A manually-added product keeps the Price column default (0) until imported.
         var product = new Product
         {
-            Name = request.Name,
-            ProductCode = request.ProductCode,
+            Name = name,
+            ProductCode = code,
             PointValue = request.PointValue,
             Category = request.Category
         };
@@ -68,7 +73,7 @@ public class AdminProductService : IAdminProductService
         await _context.Products.AddAsync(product, ct);
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Product '{ProductCode}' created by admin {AdminId}", request.ProductCode, adminUserId);
+        _logger.LogInformation("Product '{ProductCode}' created by admin {AdminId}", code, adminUserId);
 
         return Result.Success(MapToResponse(product, 0, 0));
     }
@@ -81,21 +86,15 @@ public class AdminProductService : IAdminProductService
         if (product is null)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductNotFound);
 
-        var codeExists = await _context.Products
-            .AnyAsync(p => p.ProductCode == request.ProductCode && p.Id != productId, ct);
-
-        if (codeExists)
-            return Result.Failure<AdminProductResponse>(ProductErrors.ProductCodeAlreadyExists);
-
-        // Price is intentionally left untouched — it is managed only via Excel import.
-        product.Name = request.Name;
-        product.ProductCode = request.ProductCode;
+        // ProductCode and Price are immutable here — ProductCode is the ERP key
+        // and the Excel-import match key; Price is managed only via Excel import.
+        product.Name = request.Name.Trim();
         product.PointValue = request.PointValue;
         product.Category = request.Category;
 
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Product '{ProductCode}' updated by admin {AdminId}", request.ProductCode, adminUserId);
+        _logger.LogInformation("Product '{ProductCode}' updated by admin {AdminId}", product.ProductCode, adminUserId);
 
         var barcodeStats = await GetBarcodeStatsAsync(productId, ct);
         return Result.Success(MapToResponse(product, barcodeStats.Total, barcodeStats.Available));
@@ -330,16 +329,20 @@ public class AdminProductService : IAdminProductService
             .Where(p => fileCodes.Contains(p.ProductCode))
             .ToListAsync(ct);
 
-        // GroupBy guards against the (collation-dependent) chance of two codes
-        // differing only by case mapping to the same case-insensitive key.
+        // Key on the TRIMMED code so the dictionary lookup aligns with the
+        // trimmed row code. SQL Server's IN match is trailing-space-insensitive,
+        // so the query above can return a row whose stored code has trailing
+        // whitespace; keying on the raw value would then miss it and the row
+        // would be wrongly treated as new. GroupBy also guards against two codes
+        // differing only by case collapsing to the same key.
         var existing = matched
             .Where(p => !p.IsDeleted)
-            .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(p => p.ProductCode.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var softDeleted = matched
             .Where(p => p.IsDeleted)
-            .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(p => p.ProductCode.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var errors = new List<ProductImportRowError>();

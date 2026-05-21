@@ -731,7 +731,7 @@
 								"products"
 							]
 						},
-						"description": "Add a new product.\n\nName: required, max 200 chars.\nProductCode: required, max 50 chars, unique.\nPointValue: required, > 0.\nPrice: required, >= 0.\nCategory: optional, max 100 chars."
+						"description": "Add a new product.\n\nName: required, max 200 chars.\nProductCode: required, max 50 chars, unique, trimmed.\nPointValue: required, > 0.\nCategory: optional, max 100 chars.\n\nPrice is not set here — it is managed only via Excel import."
 					},
 					"event": [
 						{
@@ -895,7 +895,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"منتج معدل\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 15,\n  \"category\": \"فئة معدلة\"\n}",
+							"raw": "{\n  \"name\": \"منتج معدل\",\n  \"pointValue\": 15,\n  \"category\": \"فئة معدلة\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -921,7 +921,7 @@
 								}
 							]
 						},
-						"description": "Edit a product. Same validation as Add Product."
+						"description": "Edit a product — Name, PointValue and Category only. ProductCode is immutable (ERP key + Excel-import match key) and Price is managed only via Excel import, so neither is accepted here."
 					}
 				},
 				{
