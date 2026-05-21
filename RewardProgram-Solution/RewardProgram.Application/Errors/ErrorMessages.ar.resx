@@ -115,7 +115,7 @@
   <data name="ProductImport.Row.NameInvalid"><value>اسم المنتج مطلوب ويجب ألا يتجاوز 200 حرف</value></data>
   <data name="ProductImport.Row.ProductCodeInvalid"><value>كود المنتج مطلوب ويجب ألا يتجاوز 50 حرف</value></data>
   <data name="ProductImport.Row.PointValueInvalid"><value>قيمة النقاط يجب أن تكون رقماً صحيحاً أكبر من صفر</value></data>
-  <data name="ProductImport.Row.PriceInvalid"><value>السعر يجب أن يكون رقماً أكبر من أو يساوي صفر</value></data>
+  <data name="ProductImport.Row.PriceInvalid"><value>السعر يجب أن يكون رقماً موجباً لا يتجاوز 99,999,999.99 وبحد أقصى منزلتين عشريتين</value></data>
   <data name="ProductImport.Row.CategoryTooLong"><value>التصنيف يجب ألا يتجاوز 100 حرف</value></data>
   <data name="ProductImport.Row.DuplicateInFile"><value>كود المنتج مكرر في الملف</value></data>
 

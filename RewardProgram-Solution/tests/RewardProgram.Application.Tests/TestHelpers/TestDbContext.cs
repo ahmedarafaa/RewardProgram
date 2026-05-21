@@ -106,7 +106,12 @@ public class TestDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<OtpCode>(b => b.HasKey(e => e.Id));
 
         // Product / Barcode / Scan
-        modelBuilder.Entity<Product>(b => b.HasKey(e => e.Id));
+        modelBuilder.Entity<Product>(b =>
+        {
+            b.HasKey(e => e.Id);
+            // Mirror the production soft-delete filter so import revival is tested faithfully.
+            b.HasQueryFilter(e => !e.IsDeleted);
+        });
 
         modelBuilder.Entity<ProductBarcode>(b =>
         {

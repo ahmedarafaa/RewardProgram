@@ -184,7 +184,7 @@ public class AdminProductServiceTests : IDisposable
     public async Task ImportProducts_NewAndExistingCodes_ShouldUpsert()
     {
         await SeedProduct(code: "P001", name: "Old Name", pointValue: 50);
-        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
         {
             new(2, "Updated Name", "P001", "Cat", "120", "30"),
             new(3, "Brand New", "P999", "Cat", "200", "75")
@@ -206,7 +206,7 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task ImportProducts_InvalidRow_ShouldReportError()
     {
-        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
         {
             new(2, "Good Product", "P010", null, "100", "25"),
             new(3, "Bad Points", "P011", null, "notanumber", "25")
@@ -224,7 +224,7 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task ImportProducts_DuplicateCodeInFile_ShouldReportSecondOccurrence()
     {
-        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
         {
             new(2, "First", "DUP1", null, "100", "25"),
             new(3, "Second", "DUP1", null, "100", "25")
@@ -240,7 +240,7 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task ImportProducts_EmptyFile_ShouldFail()
     {
-        _importReader.Read(Arg.Any<Stream>()).Returns(new List<ProductImportRow>());
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>());
 
         var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
 
@@ -251,13 +251,84 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task ImportProducts_UnreadableFile_ShouldFail()
     {
-        _importReader.Read(Arg.Any<Stream>())
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>())
             .Returns(_ => throw new InvalidOperationException("bad file"));
 
         var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(ProductErrors.ProductImportInvalidFile);
+    }
+
+    [Fact]
+    public async Task ImportProducts_PriceExceedsColumnMax_ShouldReportErrorNotCrash()
+    {
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "Good", "P100", null, "100", "25"),
+            new(3, "Overflow", "P101", null, "100", "100000000")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(1);
+        result.Value.Failed.Should().Be(1);
+        result.Value.Errors.Should().ContainSingle().Which.RowNumber.Should().Be(3);
+        _context.Products.Any(p => p.ProductCode == "P101").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ImportProducts_PriceWithTooManyDecimals_ShouldReportError()
+    {
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "Fractional", "P102", null, "100", "19.999")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(0);
+        result.Value.Failed.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ImportProducts_SoftDeletedCode_ShouldReviveProduct()
+    {
+        var product = await SeedProduct(code: "P500", name: "Deleted Product");
+        product.IsDeleted = true;
+        await _context.SaveChangesAsync();
+
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "Revived Product", "P500", "Cat", "150", "40")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(0);
+        result.Value.Updated.Should().Be(1);
+
+        var revived = await _context.Products.FirstAsync(p => p.ProductCode == "P500");
+        revived.Id.Should().Be(product.Id);
+        revived.IsDeleted.Should().BeFalse();
+        revived.Name.Should().Be("Revived Product");
+    }
+
+    [Fact]
+    public async Task ImportProducts_ExceedsRowLimit_ShouldFail()
+    {
+        var rows = Enumerable.Range(0, 10_001)
+            .Select(i => new ProductImportRow(i + 2, $"Name {i}", $"C{i}", null, "10", "5"))
+            .ToList();
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(rows);
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ProductErrors.ProductImportTooManyRows);
     }
 
     // ── ListProducts ──

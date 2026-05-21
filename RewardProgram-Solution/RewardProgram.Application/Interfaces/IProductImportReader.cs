@@ -10,8 +10,10 @@ public interface IProductImportReader
 {
     /// <summary>
     /// Reads data rows from the first worksheet (the header row is skipped, and
-    /// fully blank rows are ignored). Throws if the stream is not a readable
-    /// .xlsx workbook.
+    /// fully blank rows are ignored). Reading stops once <paramref name="maxRows"/>
+    /// data rows plus one extra have been collected, so the caller can reject an
+    /// oversized file without the reader materializing an unbounded list. Throws
+    /// if the stream is not a readable .xlsx workbook.
     /// </summary>
-    IReadOnlyList<ProductImportRow> Read(Stream xlsxStream);
+    IReadOnlyList<ProductImportRow> Read(Stream xlsxStream, int maxRows);
 }

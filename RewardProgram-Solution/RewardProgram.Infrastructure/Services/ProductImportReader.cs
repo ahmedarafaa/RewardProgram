@@ -13,20 +13,26 @@ namespace RewardProgram.Infrastructure.Services;
 /// </summary>
 public class ProductImportReader : IProductImportReader
 {
-    public IReadOnlyList<ProductImportRow> Read(Stream xlsxStream)
+    public IReadOnlyList<ProductImportRow> Read(Stream xlsxStream, int maxRows)
     {
         using var workbook = new XLWorkbook(xlsxStream);
         var sheet = workbook.Worksheets.First();
 
         var rows = new List<ProductImportRow>();
+        var headerSkipped = false;
+
         foreach (var row in sheet.RowsUsed())
         {
-            // Row 1 is the header.
-            if (row.RowNumber() == 1)
+            // The first non-blank row is the header, wherever it sits — an
+            // exported file may carry blank rows above it.
+            if (!headerSkipped)
+            {
+                headerSkipped = true;
                 continue;
+            }
 
             var name = ReadCell(row.Cell(1));
-            var code = ReadCell(row.Cell(2));
+            var code = ReadCodeCell(row.Cell(2));
             var category = ReadCell(row.Cell(3));
             var pointValue = ReadCell(row.Cell(4));
             var price = ReadCell(row.Cell(5));
@@ -38,6 +44,11 @@ public class ProductImportReader : IProductImportReader
 
             rows.Add(new ProductImportRow(
                 row.RowNumber(), name, code, category, pointValue, price));
+
+            // Stop one row past the cap so the caller can reject an oversized
+            // file without us materializing an unbounded list.
+            if (rows.Count > maxRows)
+                break;
         }
 
         return rows;
@@ -53,5 +64,23 @@ public class ProductImportReader : IProductImportReader
         return cell.DataType == XLDataType.Number
             ? cell.GetValue<double>().ToString(CultureInfo.InvariantCulture)
             : cell.GetString().Trim();
+    }
+
+    // ProductCode is an identifier, never a quantity: a numeric cell is rendered
+    // without a decimal point, group separators, or scientific notation so the
+    // value still matches the stored ProductCode. (Leading zeros that Excel
+    // dropped when the code was typed as a number cannot be recovered here.)
+    private static string ReadCodeCell(IXLCell cell)
+    {
+        if (cell.IsEmpty())
+            return string.Empty;
+
+        if (cell.DataType != XLDataType.Number)
+            return cell.GetString().Trim();
+
+        var value = cell.GetValue<double>();
+        return value == Math.Floor(value) && !double.IsInfinity(value)
+            ? value.ToString("F0", CultureInfo.InvariantCulture)
+            : value.ToString(CultureInfo.InvariantCulture);
     }
 }

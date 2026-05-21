@@ -54,6 +54,7 @@ public class AdminProductController : ControllerBase
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ProductImportResultResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ImportProducts(IFormFile file, CancellationToken ct)
     {
         if (file is null || file.Length == 0)

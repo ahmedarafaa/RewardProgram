@@ -19,6 +19,16 @@ public class AdminProductService : IAdminProductService
     // Products total ~1,100 — a generous ceiling that still bounds a single import.
     private const int MaxImportRows = 10000;
 
+    // Upper bound for the Price column (SQL decimal(10,2) → 8 integer digits).
+    // A value past this would overflow on save and abort the whole batch.
+    private const decimal MaxPrice = 99_999_999.99m;
+
+    // Numeric parsing for import cells: a plain decimal only — no thousands
+    // separators (so a text "1,5" cannot silently parse as 15) and no exponent.
+    private const NumberStyles ImportNumberStyles =
+        NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite
+        | NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+
     private readonly IApplicationDbContext _context;
     private readonly IProductImportReader _importReader;
     private readonly IStringLocalizer<ErrorMessages> _localizer;
@@ -280,7 +290,7 @@ public class AdminProductService : IAdminProductService
         IReadOnlyList<ProductImportRow> rows;
         try
         {
-            rows = _importReader.Read(xlsxStream);
+            rows = _importReader.Read(xlsxStream, MaxImportRows);
         }
         catch (Exception ex)
         {
@@ -296,16 +306,31 @@ public class AdminProductService : IAdminProductService
             return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportTooManyRows);
 
         // Load every product whose code appears in the file so each valid row
-        // becomes a case-insensitive upsert (update by ProductCode, else create).
+        // becomes a case-insensitive upsert. Query filters are ignored so a code
+        // that belongs to a soft-deleted product revives that row instead of
+        // creating a duplicate (and a stale ghost) alongside it.
         var fileCodes = rows
             .Select(r => r.ProductCode?.Trim())
             .Where(c => !string.IsNullOrEmpty(c))
             .Select(c => c!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var existing = await _context.Products
+        var matched = await _context.Products
+            .IgnoreQueryFilters()
             .Where(p => fileCodes.Contains(p.ProductCode))
-            .ToDictionaryAsync(p => p.ProductCode, StringComparer.OrdinalIgnoreCase, ct);
+            .ToListAsync(ct);
+
+        // GroupBy guards against the (collation-dependent) chance of two codes
+        // differing only by case mapping to the same case-insensitive key.
+        var existing = matched
+            .Where(p => !p.IsDeleted)
+            .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var softDeleted = matched
+            .Where(p => p.IsDeleted)
+            .GroupBy(p => p.ProductCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var errors = new List<ProductImportRowError>();
         var seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -337,6 +362,19 @@ public class AdminProductService : IAdminProductService
                 product.Category = category;
                 updated++;
             }
+            else if (softDeleted.TryGetValue(code, out var revived))
+            {
+                // Re-importing a code revives the previously deleted product —
+                // keeping its Id and history — instead of leaving a stale row.
+                revived.IsDeleted = false;
+                revived.DeletedAt = null;
+                revived.DeletedBy = null;
+                revived.Name = name;
+                revived.PointValue = pointValue;
+                revived.Price = price;
+                revived.Category = category;
+                updated++;
+            }
             else
             {
                 await _context.Products.AddAsync(new Product
@@ -351,7 +389,20 @@ public class AdminProductService : IAdminProductService
             }
         }
 
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            // Validation above mirrors every column constraint, so a failure
+            // here is unexpected — surface a clean error rather than a raw 500,
+            // and keep the (rolled-back) batch all-or-nothing.
+            _logger.LogError(ex,
+                "Product import by admin {AdminId}: persisting {Total} rows failed",
+                adminUserId, rows.Count);
+            return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportFailed);
+        }
 
         _logger.LogInformation(
             "Product import by admin {AdminId}: {Created} created, {Updated} updated, {Failed} failed of {Total} rows",
@@ -385,7 +436,7 @@ public class AdminProductService : IAdminProductService
             return null;
         }
 
-        if (!decimal.TryParse(row.PointValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var pv)
+        if (!decimal.TryParse(row.PointValue, ImportNumberStyles, CultureInfo.InvariantCulture, out var pv)
             || pv <= 0 || pv != Math.Truncate(pv) || pv > int.MaxValue)
         {
             errors.Add(new ProductImportRowError(row.RowNumber, code,
@@ -393,8 +444,11 @@ public class AdminProductService : IAdminProductService
             return null;
         }
 
-        if (!decimal.TryParse(row.Price, NumberStyles.Number, CultureInfo.InvariantCulture, out var price)
-            || price < 0)
+        // Reject anything the Price column cannot store losslessly — a negative
+        // value, an overflow of decimal(10,2), or more than two decimal places —
+        // so a bad cell becomes a per-row error instead of aborting the save.
+        if (!decimal.TryParse(row.Price, ImportNumberStyles, CultureInfo.InvariantCulture, out var price)
+            || price < 0 || price > MaxPrice || decimal.Round(price, 2) != price)
         {
             errors.Add(new ProductImportRowError(row.RowNumber, code,
                 _localizer["ProductImport.Row.PriceInvalid"]));

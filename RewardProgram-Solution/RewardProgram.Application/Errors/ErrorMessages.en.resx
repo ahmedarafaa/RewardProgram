@@ -115,7 +115,7 @@
   <data name="ProductImport.Row.NameInvalid"><value>Product name is required and must not exceed 200 characters.</value></data>
   <data name="ProductImport.Row.ProductCodeInvalid"><value>Product code is required and must not exceed 50 characters.</value></data>
   <data name="ProductImport.Row.PointValueInvalid"><value>Point value must be a whole number greater than zero.</value></data>
-  <data name="ProductImport.Row.PriceInvalid"><value>Price must be a number greater than or equal to zero.</value></data>
+  <data name="ProductImport.Row.PriceInvalid"><value>Price must be a non-negative number up to 99,999,999.99 with at most 2 decimal places.</value></data>
   <data name="ProductImport.Row.CategoryTooLong"><value>Category must not exceed 100 characters.</value></data>
   <data name="ProductImport.Row.DuplicateInFile"><value>This product code appears more than once in the file.</value></data>
 
