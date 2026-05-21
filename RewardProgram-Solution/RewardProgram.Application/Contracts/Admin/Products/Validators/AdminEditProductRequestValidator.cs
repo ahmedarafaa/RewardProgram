@@ -19,9 +19,6 @@ public class AdminEditProductRequestValidator : AbstractValidator<AdminEditProdu
         RuleFor(x => x.PointValue)
             .GreaterThan(0).WithMessage(L["Product.PointValue.GreaterThanZero"]);
 
-        RuleFor(x => x.Price)
-            .GreaterThanOrEqualTo(0).WithMessage(L["Product.Price.NotNegative"]);
-
         RuleFor(x => x.Category)
             .MaximumLength(100).WithMessage(L["Product.Category.MaxLength"])
             .When(x => x.Category is not null);

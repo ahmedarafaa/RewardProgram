@@ -45,7 +45,7 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task AddProduct_ValidRequest_ShouldSucceed()
     {
-        var request = new AdminAddProductRequest("New Product", "NP001", 100, 50, "Electronics");
+        var request = new AdminAddProductRequest("New Product", "NP001", 100, "Electronics");
 
         var result = await _sut.AddProductAsync(request, AdminId);
 
@@ -60,7 +60,7 @@ public class AdminProductServiceTests : IDisposable
     {
         await SeedProduct("P001");
 
-        var request = new AdminAddProductRequest("Another", "P001", 50, 25, null);
+        var request = new AdminAddProductRequest("Another", "P001", 50, null);
         var result = await _sut.AddProductAsync(request, AdminId);
 
         result.IsFailure.Should().BeTrue();
@@ -74,7 +74,7 @@ public class AdminProductServiceTests : IDisposable
     {
         var product = await SeedProduct();
 
-        var request = new AdminEditProductRequest("Updated", "P002", 200, 100, "New Cat");
+        var request = new AdminEditProductRequest("Updated", "P002", 200, "New Cat");
         var result = await _sut.EditProductAsync(product.Id, request, AdminId);
 
         result.IsSuccess.Should().BeTrue();
@@ -86,7 +86,7 @@ public class AdminProductServiceTests : IDisposable
     [Fact]
     public async Task EditProduct_NotFound_ShouldFail()
     {
-        var request = new AdminEditProductRequest("X", "X", 1, 1, null);
+        var request = new AdminEditProductRequest("X", "X", 1, null);
         var result = await _sut.EditProductAsync("non-existent", request, AdminId);
 
         result.IsFailure.Should().BeTrue();
@@ -99,7 +99,7 @@ public class AdminProductServiceTests : IDisposable
         var p1 = await SeedProduct("P001");
         await SeedProduct("P002", "Product 2");
 
-        var request = new AdminEditProductRequest("Updated", "P002", 100, 50, null);
+        var request = new AdminEditProductRequest("Updated", "P002", 100, null);
         var result = await _sut.EditProductAsync(p1.Id, request, AdminId);
 
         result.IsFailure.Should().BeTrue();
@@ -111,7 +111,7 @@ public class AdminProductServiceTests : IDisposable
     {
         var product = await SeedProduct("P001");
 
-        var request = new AdminEditProductRequest("Updated", "P001", 200, 100, null);
+        var request = new AdminEditProductRequest("Updated", "P001", 200, null);
         var result = await _sut.EditProductAsync(product.Id, request, AdminId);
 
         result.IsSuccess.Should().BeTrue();

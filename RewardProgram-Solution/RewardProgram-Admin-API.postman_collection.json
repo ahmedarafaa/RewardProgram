@@ -713,7 +713,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"منتج تجريبي\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 10,\n  \"price\": 99.99,\n  \"category\": \"فئة تجريبية\"\n}",
+							"raw": "{\n  \"name\": \"منتج تجريبي\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 10,\n  \"category\": \"فئة تجريبية\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -895,7 +895,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"منتج معدل\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 15,\n  \"price\": 149.99,\n  \"category\": \"فئة معدلة\"\n}",
+							"raw": "{\n  \"name\": \"منتج معدل\",\n  \"productCode\": \"PROD001\",\n  \"pointValue\": 15,\n  \"category\": \"فئة معدلة\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"

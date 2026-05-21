@@ -55,12 +55,13 @@ public class AdminProductService : IAdminProductService
         if (codeExists)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductCodeAlreadyExists);
 
+        // Price is not set here — it is managed solely through the Excel import.
+        // A manually-added product keeps the Price column default (0) until imported.
         var product = new Product
         {
             Name = request.Name,
             ProductCode = request.ProductCode,
             PointValue = request.PointValue,
-            Price = request.Price,
             Category = request.Category
         };
 
@@ -86,10 +87,10 @@ public class AdminProductService : IAdminProductService
         if (codeExists)
             return Result.Failure<AdminProductResponse>(ProductErrors.ProductCodeAlreadyExists);
 
+        // Price is intentionally left untouched — it is managed only via Excel import.
         product.Name = request.Name;
         product.ProductCode = request.ProductCode;
         product.PointValue = request.PointValue;
-        product.Price = request.Price;
         product.Category = request.Category;
 
         await _context.SaveChangesAsync(ct);
