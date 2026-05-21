@@ -10,6 +10,9 @@ public static class AdminErpCustomerErrors
     public static readonly Error CustomerCodeAlreadyExists =
         new("ErpCustomer.CodeAlreadyExists", "كود العميل مسجل مسبقاً", 409);
 
+    public static readonly Error ShortAddressAlreadyExists =
+        new("ErpCustomer.ShortAddressAlreadyExists", "العنوان المختصر مستخدم مسبقاً", 409);
+
     public static readonly Error ErpCustomerInUse =
         new("ErpCustomer.InUse", "لا يمكن حذف عميل مرتبط ببيانات متجر أو حسابات مستخدمين", 400);
 

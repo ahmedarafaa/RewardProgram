@@ -110,6 +110,7 @@
   <data name="Product.HasBarcodes"><value>لا يمكن حذف منتج مرتبط بباركودات</value></data>
   <data name="ErpCustomer.NotFound"><value>العميل غير موجود</value></data>
   <data name="ErpCustomer.CodeAlreadyExists"><value>كود العميل مسجل مسبقاً</value></data>
+  <data name="ErpCustomer.ShortAddressAlreadyExists"><value>العنوان المختصر مستخدم مسبقاً</value></data>
   <data name="ErpCustomer.InUse"><value>لا يمكن حذف عميل مرتبط ببيانات متجر أو حسابات مستخدمين</value></data>
   <data name="ErpCustomer.Import.InvalidFile"><value>ملف غير صالح، يرجى رفع ملف Excel بصيغة xlsx</value></data>
   <data name="ErpCustomer.Import.FileTooLarge"><value>حجم الملف كبير جداً، الحد الأقصى 10 ميجابايت</value></data>

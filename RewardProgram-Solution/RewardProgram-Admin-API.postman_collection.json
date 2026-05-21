@@ -1032,7 +1032,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"customerCode\": \"CUST-001\",\n  \"customerName\": \"عميل تجريبي\"\n}",
+							"raw": "{\n  \"customerCode\": \"CUST-001\",\n  \"customerName\": \"عميل تجريبي\",\n  \"shortAddress\": \"RRRA2929\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1050,7 +1050,7 @@
 								"erp-customers"
 							]
 						},
-						"description": "Add an ERP customer. CustomerCode: required, max 50, unique. CustomerName: required, max 200. Re-adding a soft-deleted code revives that record."
+						"description": "Add an ERP customer. CustomerCode: required, max 50, unique. CustomerName: required, max 200. ShortAddress: optional — 4 letters + 4 digits, unique. Re-adding a soft-deleted code revives that record."
 					},
 					"event": [
 						{
@@ -1082,7 +1082,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"customerName\": \"عميل معدل\"\n}",
+							"raw": "{\n  \"customerName\": \"عميل معدل\",\n  \"shortAddress\": \"RRRA2929\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1108,7 +1108,7 @@
 								}
 							]
 						},
-						"description": "Edit an ERP customer. Only CustomerName can change — CustomerCode is immutable."
+						"description": "Edit an ERP customer. CustomerName and the optional ShortAddress (4 letters + 4 digits, unique) can change — CustomerCode is immutable. Pass shortAddress null/empty to clear it."
 					}
 				},
 				{

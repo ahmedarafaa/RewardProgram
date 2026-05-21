@@ -15,5 +15,10 @@ public class AdminAddErpCustomerRequestValidator : AbstractValidator<AdminAddErp
         RuleFor(x => x.CustomerName)
             .NotEmpty().WithMessage(L["ErpCustomer.CustomerName.NotEmpty"])
             .MaximumLength(200).WithMessage(L["ErpCustomer.CustomerName.MaxLength"]);
+
+        // ShortAddress is optional — only validated when supplied.
+        RuleFor(x => x.ShortAddress)
+            .Matches(@"^[A-Za-z]{4}\d{4}$").WithMessage(L["ShortAddress.InvalidFormat"])
+            .When(x => !string.IsNullOrWhiteSpace(x.ShortAddress));
     }
 }

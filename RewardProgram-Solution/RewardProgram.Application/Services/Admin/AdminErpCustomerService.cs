@@ -39,6 +39,7 @@ public class AdminErpCustomerService : IAdminErpCustomerService
     {
         var code = request.CustomerCode.Trim();
         var name = request.CustomerName.Trim();
+        var shortAddress = NormalizeShortAddress(request.ShortAddress);
 
         // Look across soft-deleted rows too: re-adding a code that belongs to a
         // soft-deleted customer revives that row (keeping its Id and history)
@@ -51,15 +52,24 @@ public class AdminErpCustomerService : IAdminErpCustomerService
             .OrderBy(e => e.IsDeleted)
             .FirstOrDefaultAsync(ct);
 
+        if (existing is { IsDeleted: false })
+            return Result.Failure<AdminErpCustomerResponse>(AdminErpCustomerErrors.CustomerCodeAlreadyExists);
+
+        // ShortAddress is uniquely indexed among active customers. The revive
+        // target (if any) is still soft-deleted here, so it is not counted
+        // against itself.
+        if (shortAddress is not null &&
+            await _context.ErpCustomers.AnyAsync(e => e.ShortAddress == shortAddress, ct))
+            return Result.Failure<AdminErpCustomerResponse>(AdminErpCustomerErrors.ShortAddressAlreadyExists);
+
         if (existing is not null)
         {
-            if (!existing.IsDeleted)
-                return Result.Failure<AdminErpCustomerResponse>(AdminErpCustomerErrors.CustomerCodeAlreadyExists);
-
+            // Soft-deleted customer with this code → revive it.
             existing.IsDeleted = false;
             existing.DeletedAt = null;
             existing.DeletedBy = null;
             existing.CustomerName = name;
+            existing.ShortAddress = shortAddress;
             await _context.SaveChangesAsync(ct);
 
             _logger.LogInformation("ERP customer '{Code}' revived by admin {AdminId}", code, adminUserId);
@@ -71,7 +81,8 @@ public class AdminErpCustomerService : IAdminErpCustomerService
         var customer = new ErpCustomer
         {
             CustomerCode = code,
-            CustomerName = name
+            CustomerName = name,
+            ShortAddress = shortAddress
         };
 
         await _context.ErpCustomers.AddAsync(customer, ct);
@@ -90,9 +101,18 @@ public class AdminErpCustomerService : IAdminErpCustomerService
         if (customer is null)
             return Result.Failure<AdminErpCustomerResponse>(AdminErpCustomerErrors.ErpCustomerNotFound);
 
+        var shortAddress = NormalizeShortAddress(request.ShortAddress);
+
+        // ShortAddress is uniquely indexed among active customers — exclude self.
+        if (shortAddress is not null &&
+            await _context.ErpCustomers.AnyAsync(
+                e => e.ShortAddress == shortAddress && e.Id != customer.Id, ct))
+            return Result.Failure<AdminErpCustomerResponse>(AdminErpCustomerErrors.ShortAddressAlreadyExists);
+
         // CustomerCode is immutable — it is the ERP key referenced by ShopData /
-        // profile foreign keys. Only the display name changes.
+        // profile foreign keys. Only the display name and short address change.
         customer.CustomerName = request.CustomerName.Trim();
+        customer.ShortAddress = shortAddress;
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("ERP customer '{Code}' updated by admin {AdminId}", customer.CustomerCode, adminUserId);
@@ -414,6 +434,11 @@ public class AdminErpCustomerService : IAdminErpCustomerService
             return true;
         return false;
     }
+
+    // Treats blank/whitespace ShortAddress as null so the value stays out of the
+    // unique filtered index (which covers IS NOT NULL rows) and clears cleanly.
+    private static string? NormalizeShortAddress(string? raw) =>
+        string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
 
     private static AdminErpCustomerResponse MapToResponse(
         ErpCustomer customer, bool hasShopData, int linkedUserCount) =>

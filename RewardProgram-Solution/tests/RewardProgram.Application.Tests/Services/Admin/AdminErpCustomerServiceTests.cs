@@ -51,8 +51,47 @@ public class AdminErpCustomerServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.CustomerCode.Should().Be("NEW-001");
         result.Value.CustomerName.Should().Be("New Customer");
+        result.Value.ShortAddress.Should().BeNull(); // optional, not supplied
         result.Value.HasShopData.Should().BeFalse();
         result.Value.LinkedUserCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AddErpCustomer_WithShortAddress_ShouldSucceed()
+    {
+        var request = new AdminAddErpCustomerRequest("NEW-002", "Addr Customer", "RRRA2929");
+
+        var result = await _sut.AddErpCustomerAsync(request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ShortAddress.Should().Be("RRRA2929");
+    }
+
+    [Fact]
+    public async Task AddErpCustomer_BlankShortAddress_ShouldStoreNull()
+    {
+        var request = new AdminAddErpCustomerRequest("NEW-003", "Blank Addr", "   ");
+
+        var result = await _sut.AddErpCustomerAsync(request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ShortAddress.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddErpCustomer_DuplicateShortAddress_ShouldFail()
+    {
+        _context.ErpCustomers.Add(new ErpCustomer
+        {
+            CustomerCode = "C001", CustomerName = "First", ShortAddress = "RRRA2929"
+        });
+        await _context.SaveChangesAsync();
+
+        var request = new AdminAddErpCustomerRequest("C002", "Second", "RRRA2929");
+        var result = await _sut.AddErpCustomerAsync(request, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(AdminErpCustomerErrors.ShortAddressAlreadyExists);
     }
 
     [Fact]
@@ -106,6 +145,69 @@ public class AdminErpCustomerServiceTests : IDisposable
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(AdminErpCustomerErrors.ErpCustomerNotFound);
+    }
+
+    [Fact]
+    public async Task EditErpCustomer_SetShortAddress_ShouldSucceed()
+    {
+        var customer = await SeedCustomer("C001");
+
+        var request = new AdminEditErpCustomerRequest("Updated", "ABCD1234");
+        var result = await _sut.EditErpCustomerAsync(customer.Id, request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ShortAddress.Should().Be("ABCD1234");
+    }
+
+    [Fact]
+    public async Task EditErpCustomer_KeepingOwnShortAddress_ShouldSucceed()
+    {
+        var customer = new ErpCustomer
+        {
+            CustomerCode = "C001", CustomerName = "X", ShortAddress = "ABCD1234"
+        };
+        _context.ErpCustomers.Add(customer);
+        await _context.SaveChangesAsync();
+
+        var request = new AdminEditErpCustomerRequest("X Updated", "ABCD1234");
+        var result = await _sut.EditErpCustomerAsync(customer.Id, request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ShortAddress.Should().Be("ABCD1234");
+    }
+
+    [Fact]
+    public async Task EditErpCustomer_DuplicateShortAddress_ShouldFail()
+    {
+        _context.ErpCustomers.Add(new ErpCustomer
+        {
+            CustomerCode = "C001", CustomerName = "First", ShortAddress = "RRRA2929"
+        });
+        await _context.SaveChangesAsync();
+        var second = await SeedCustomer("C002", "Second");
+
+        var request = new AdminEditErpCustomerRequest("Second", "RRRA2929");
+        var result = await _sut.EditErpCustomerAsync(second.Id, request, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(AdminErpCustomerErrors.ShortAddressAlreadyExists);
+    }
+
+    [Fact]
+    public async Task EditErpCustomer_ClearShortAddress_ShouldSetNull()
+    {
+        var customer = new ErpCustomer
+        {
+            CustomerCode = "C001", CustomerName = "X", ShortAddress = "ABCD1234"
+        };
+        _context.ErpCustomers.Add(customer);
+        await _context.SaveChangesAsync();
+
+        var request = new AdminEditErpCustomerRequest("X", null);
+        var result = await _sut.EditErpCustomerAsync(customer.Id, request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ShortAddress.Should().BeNull();
     }
 
     // ── Delete ──
