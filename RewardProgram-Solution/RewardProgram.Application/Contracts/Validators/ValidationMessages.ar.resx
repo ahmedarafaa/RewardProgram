@@ -92,7 +92,7 @@
 
   <!-- Admin Account -->
   <data name="AdminAccount.UsernameInvalid"><value>اسم المستخدم يجب أن يكون بين 3 و50 حرفاً ويحتوي فقط على حروف وأرقام والرموز . _ -</value></data>
-  <data name="AdminAccount.PasswordInvalid"><value>كلمة المرور يجب ألا تقل عن 8 أحرف</value></data>
+  <data name="AdminAccount.PasswordInvalid"><value>كلمة المرور يجب ألا تقل عن 8 أحرف وتحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</value></data>
 
   <!-- Barcode -->
   <data name="Barcode.Code.NotEmpty"><value>كود الباركود مطلوب</value></data>

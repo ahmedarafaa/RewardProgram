@@ -92,7 +92,7 @@
 
   <!-- Admin Account -->
   <data name="AdminAccount.UsernameInvalid"><value>Username must be 3–50 characters and contain only letters, numbers, and . _ -</value></data>
-  <data name="AdminAccount.PasswordInvalid"><value>Password must be at least 8 characters</value></data>
+  <data name="AdminAccount.PasswordInvalid"><value>Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a digit, and a special character</value></data>
 
   <!-- Barcode -->
   <data name="Barcode.Code.NotEmpty"><value>Barcode code is required</value></data>

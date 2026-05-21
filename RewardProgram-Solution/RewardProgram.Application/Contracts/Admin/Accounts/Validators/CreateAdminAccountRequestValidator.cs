@@ -18,8 +18,12 @@ public class CreateAdminAccountRequestValidator : AbstractValidator<CreateAdminA
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"]);
 
+        // Must satisfy ASP.NET Identity's password policy (lowercase + uppercase +
+        // digit + non-alphanumeric, 8+ chars) — otherwise Identity rejects the
+        // password after validation passes and the caller gets a generic failure.
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage(L["AdminAccount.PasswordInvalid"])
-            .MinimumLength(8).WithMessage(L["AdminAccount.PasswordInvalid"]);
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$")
+                .WithMessage(L["AdminAccount.PasswordInvalid"]);
     }
 }

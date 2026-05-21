@@ -13,9 +13,11 @@ public class UpdateAdminAccountRequestValidator : AbstractValidator<UpdateAdminA
             .MinimumLength(3).WithMessage(L["Name.MinLength"])
             .MaximumLength(100).WithMessage(L["Name.MaxLength"]);
 
-        // NewPassword is optional — only validated when supplied.
+        // NewPassword is optional — only validated when supplied. Must satisfy
+        // ASP.NET Identity's password policy (see CreateAdminAccountRequestValidator).
         RuleFor(x => x.NewPassword)
-            .MinimumLength(8).WithMessage(L["AdminAccount.PasswordInvalid"])
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$")
+                .WithMessage(L["AdminAccount.PasswordInvalid"])
             .When(x => !string.IsNullOrEmpty(x.NewPassword));
     }
 }
