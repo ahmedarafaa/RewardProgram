@@ -292,6 +292,15 @@ public class AdminProductService : IAdminProductService
         {
             rows = _importReader.Read(xlsxStream, MaxImportRows);
         }
+        catch (ProductImportHeaderException ex)
+        {
+            // The header row didn't yield the required columns — reject the file
+            // outright rather than mismapping a wrong-layout (e.g. code-first) file.
+            _logger.LogWarning(
+                "Product import: unrecognized columns, missing [{Missing}] (admin {AdminId})",
+                string.Join(", ", ex.MissingColumns), adminUserId);
+            return Result.Failure<ProductImportResultResponse>(ProductErrors.ProductImportMissingColumns);
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,

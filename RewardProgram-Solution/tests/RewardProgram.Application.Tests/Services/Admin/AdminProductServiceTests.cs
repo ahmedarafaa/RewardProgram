@@ -261,6 +261,18 @@ public class AdminProductServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportProducts_UnrecognizedColumns_ShouldFail()
+    {
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>())
+            .Returns(_ => throw new ProductImportHeaderException(["Name / الاسم"]));
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ProductErrors.ProductImportMissingColumns);
+    }
+
+    [Fact]
     public async Task ImportProducts_PriceExceedsColumnMax_ShouldReportErrorNotCrash()
     {
         _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>

@@ -112,6 +112,7 @@
   <data name="Product.Import.FileTooLarge"><value>حجم الملف كبير جداً، الحد الأقصى 10 ميجابايت</value></data>
   <data name="Product.Import.EmptyFile"><value>لا يحتوي الملف على أي صفوف بيانات</value></data>
   <data name="Product.Import.TooManyRows"><value>عدد الصفوف يتجاوز الحد الأقصى المسموح (10000)</value></data>
+  <data name="Product.Import.MissingColumns"><value>تعذّر التعرف على أعمدة الملف. يجب أن يحتوي الصف الأول على عناوين الأعمدة: الاسم، كود المنتج، قيمة النقاط، السعر</value></data>
   <data name="ProductImport.Row.NameInvalid"><value>اسم المنتج مطلوب ويجب ألا يتجاوز 200 حرف</value></data>
   <data name="ProductImport.Row.ProductCodeInvalid"><value>كود المنتج مطلوب ويجب ألا يتجاوز 50 حرف</value></data>
   <data name="ProductImport.Row.PointValueInvalid"><value>قيمة النقاط يجب أن تكون رقماً صحيحاً أكبر من صفر</value></data>

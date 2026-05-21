@@ -25,6 +25,10 @@ public static class ProductErrors
     public static readonly Error ProductImportTooManyRows =
         new("Product.Import.TooManyRows", "عدد الصفوف يتجاوز الحد الأقصى المسموح", 400);
 
+    public static readonly Error ProductImportMissingColumns =
+        new("Product.Import.MissingColumns",
+            "تعذّر التعرف على أعمدة الملف. يجب أن يحتوي الصف الأول على عناوين الأعمدة: الاسم، كود المنتج، قيمة النقاط، السعر", 400);
+
     public static readonly Error ProductImportFailed =
         new("Product.Import.Failed", "تعذّر حفظ بيانات الاستيراد، يرجى المحاولة مرة أخرى", 500);
 }

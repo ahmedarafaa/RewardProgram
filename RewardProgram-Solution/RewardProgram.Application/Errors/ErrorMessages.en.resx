@@ -112,6 +112,7 @@
   <data name="Product.Import.FileTooLarge"><value>File is too large. The maximum size is 10 MB.</value></data>
   <data name="Product.Import.EmptyFile"><value>The file does not contain any data rows.</value></data>
   <data name="Product.Import.TooManyRows"><value>The number of rows exceeds the allowed limit (10000).</value></data>
+  <data name="Product.Import.MissingColumns"><value>Could not recognize the file's columns. The first row must contain these column headers: Name, Product Code, Point Value, Price.</value></data>
   <data name="ProductImport.Row.NameInvalid"><value>Product name is required and must not exceed 200 characters.</value></data>
   <data name="ProductImport.Row.ProductCodeInvalid"><value>Product code is required and must not exceed 50 characters.</value></data>
   <data name="ProductImport.Row.PointValueInvalid"><value>Point value must be a whole number greater than zero.</value></data>
