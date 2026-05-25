@@ -763,7 +763,7 @@
 									"key": "file",
 									"type": "file",
 									"src": [],
-									"description": "Excel (.xlsx) workbook. Columns A-E: Name, ProductCode, Category, PointValue, Price (row 1 = header)."
+									"description": "Excel (.xlsx) workbook. The first row must have headers for Name, ProductCode, PointValue and Price (Category is optional) — Arabic or English aliases accepted and column order does not matter."
 								}
 							]
 						},
@@ -779,7 +779,7 @@
 								"import"
 							]
 						},
-						"description": "Bulk-import products from an .xlsx file. Each valid row is upserted by ProductCode (existing -> updated, new -> created). Invalid rows are skipped and listed in the per-row error report. Max 10000 rows, 10 MB file."
+						"description": "Bulk-import products from an .xlsx file. Columns are matched by header text (Arabic or English aliases) — order doesn't matter. Required headers: Name, ProductCode, PointValue, Price. Category is optional. Files missing any required header are rejected (no partial import). Each valid row is upserted by ProductCode (existing -> updated, new -> created). Invalid rows are skipped and listed in the per-row error report. Max 10000 rows, 10 MB file."
 					}
 				},
 				{
@@ -2333,7 +2333,7 @@
 							"host": [ "{{baseUrl}}" ],
 							"path": [ "api", "admin", "accounts" ]
 						},
-						"description": "Creates an Admin-role account. It starts with NO permissions — grant them via Set Admin Permissions."
+						"description": "Creates an Admin-role account. It starts with NO permissions — grant them via Set Admin Permissions.\n\n**Field rules:**\n- `username`: 3-50 chars, letters/digits/`._-` only.\n- `name`: 3-100 chars.\n- `password`: must satisfy ASP.NET Identity policy — at least 8 chars and contain an uppercase letter, a lowercase letter, a digit and a non-alphanumeric character."
 					}
 				},
 				{
@@ -2352,7 +2352,7 @@
 							"path": [ "api", "admin", "accounts", ":id" ],
 							"variable": [ { "key": "id", "value": "" } ]
 						},
-						"description": "Updates name / disabled state. newPassword is optional — leave empty to keep the current password. SystemAdmin accounts cannot be updated."
+						"description": "Updates name / disabled state. `newPassword` is optional — leave empty to keep the current password; when supplied it must satisfy the ASP.NET Identity policy (8+ chars with uppercase + lowercase + digit + non-alphanumeric). SystemAdmin accounts cannot be updated."
 					}
 				},
 				{

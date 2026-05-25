@@ -80,7 +80,7 @@
                     "send-otp"
                   ]
                 },
-                "description": "Send registration OTP. Checks mobile uniqueness.\n\nAuto-saves `pinId` from response."
+                "description": "Send registration OTP. Checks mobile uniqueness.\n\nDelivery: WhatsApp-first (falls back to SMS in-request if WhatsApp send fails synchronously). Use Resend OTP if the user reports the message didn't arrive.\n\nAuto-saves `pinId` from response."
               },
               "response": [],
               "event": [
@@ -131,7 +131,7 @@
                     "resend-otp"
                   ]
                 },
-                "description": "Resend OTP to a mobile number. Auto-saves new pinId."
+                "description": "Resend OTP to a mobile number. The previous verification (if any) is cancelled before a new one is sent.\n\nDelivery: SMS-first on resend (the user tapping resend is a strong signal the WhatsApp message didn't arrive). Falls back to WhatsApp in-request if SMS send fails synchronously.\n\nAuto-saves new `pinId` from response."
               },
               "response": [],
               "event": [
@@ -509,7 +509,7 @@
                     "technician"
                   ]
                 },
-                "description": "Register a new technician.\n\nName: 3+ letters only, no numbers.\nPostalCode: 5 digits.\n\nRequires verificationToken from Verify Registration OTP step."
+                "description": "Register a new technician.\n\nFields:\n- `name`: required, 3+ letters only (Arabic/English), no numbers.\n- `mobileNumber`: Saudi mobile (must match the number that received the OTP).\n- `cityId`: required, GUID from Lookups.\n- `district`: required free-text neighbourhood (no postal code is collected for technicians).\n- `invitationCode`: optional 8-char NanoID.\n\nRequires verificationToken from Verify Registration OTP step."
               },
               "response": []
             }
@@ -1529,7 +1529,7 @@
                 "request"
               ]
             },
-            "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `bankName`, and `accountHolderName` are required.\nFor Cash: bank fields are optional.\n\n**Cash method:** A 6-digit OTP is generated server-side and sent to the user's WhatsApp immediately on creation (valid 30 days). The user must present this OTP at cash handover time.\n\n**Response:** RedemptionRequestResponse with status, SAR amount, etc.\n\nRequires Seller or Technician JWT."
+            "description": "Request points redemption.\n\n**Method:** 1=Cash, 2=BankTransfer\n**pointsAmount:** Must be >= minimumRedemptionPoints (default 1000) and <= available balance.\n\nFor BankTransfer: `iban`, `accountNumber`, `accountName` and `swiftCode` are required.\nFor Cash: bank fields are optional.\n\n**Cash method:** A 6-digit OTP is generated server-side and pushed to the user's device on creation (valid **14 days**). The user must present this OTP at cash handover.\n\n**Response (RedemptionRequestResponse):**\n- `id`, `method`, `status` (1=Pending, 2=SalesManApproved, 3=ZoneManagerApproved, 4=Completed, 5=Rejected, 6=Cancelled)\n- `pointsAmount`, `sarRate`, `sarAmount`\n- bank fields (`iban`, `accountNumber`, `address`, `swiftCode`, `accountName`) when method=BankTransfer\n- `cashOtp` + `cashOtpExpiresAt` — populated only while the cash redemption is still in-flight AND the OTP has not expired; `null` once completed/rejected/cancelled or after expiry\n- `rejectionReason`, `createdAt`\n\nRequires Seller or Technician JWT."
           },
           "response": []
         },
@@ -1549,7 +1549,7 @@
                 "active"
               ]
             },
-            "description": "Get the current active (in-progress) redemption request, if any.\n\n**Response:** RedemptionRequestResponse or 404 if no active request.\n\nRequires Seller or Technician JWT."
+            "description": "Get the current active (in-progress) redemption request, if any.\n\n**Response:** RedemptionRequestResponse (same shape as Request Redemption) — includes `status` and, for cash redemptions, `cashOtp` + `cashOtpExpiresAt` while still in-flight and unexpired. Returns 404 if there is no active request.\n\nRequires Seller or Technician JWT."
           },
           "response": []
         },
@@ -1579,7 +1579,7 @@
                 }
               ]
             },
-            "description": "Get paginated redemption request history.\n\nRequires Seller or Technician JWT."
+            "description": "Get paginated redemption request history.\n\n**Response:** `PaginatedResult<RedemptionRequestResponse>` — each item includes `status` and, for cash redemptions still in-flight and unexpired, `cashOtp` + `cashOtpExpiresAt` (null for completed/rejected/cancelled/expired).\n\nRequires Seller or Technician JWT."
           },
           "response": []
         }
