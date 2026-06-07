@@ -320,6 +320,7 @@ public class AuthService : IAuthService
             }
 
             // ShopOwner always owns ShopData — create if missing, overwrite if exists
+            ShopData persistedShopData;
             if (existingShopData == null)
             {
                 var shopData = new ShopData
@@ -341,6 +342,7 @@ public class AuthService : IAuthService
                 };
                 await _context.ShopData.AddAsync(shopData, ct);
                 erpCustomer.ShortAddress = request.ShortAddress!;
+                persistedShopData = shopData;
             }
             else
             {
@@ -360,6 +362,7 @@ public class AuthService : IAuthService
                 existingShopData.UpdatedBy = user.Id;
                 existingShopData.UpdatedAt = DateTime.UtcNow;
                 erpCustomer.ShortAddress = request.ShortAddress!;
+                persistedShopData = existingShopData;
             }
 
             var profile = new ShopOwnerProfile
@@ -379,7 +382,7 @@ public class AuthService : IAuthService
                 user.Id,
                 MobileNumberHelper.Mask(mobile));
 
-            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, persistedShopData, ct));
         }
         catch (Exception ex)
         {
@@ -514,6 +517,7 @@ public class AuthService : IAuthService
             }
 
             // Create ShopData if needed
+            ShopData? persistedShopData = existingShopData;
             if (!shopDataExists)
             {
                 var shopDataStillMissing = !await _context.ShopData
@@ -540,6 +544,7 @@ public class AuthService : IAuthService
                     };
                     await _context.ShopData.AddAsync(shopData, ct);
                     erpCustomer.ShortAddress = request.ShortAddress!;
+                    persistedShopData = shopData;
                 }
             }
 
@@ -561,7 +566,12 @@ public class AuthService : IAuthService
                 MobileNumberHelper.Mask(mobile),
                 request.CustomerCode);
 
-            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
+            // Cover the rare race where another seller created the shop data
+            // between our pre-check and this transaction.
+            persistedShopData ??= await _context.ShopData
+                .FirstOrDefaultAsync(sd => sd.CustomerCode == request.CustomerCode, ct);
+
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, persistedShopData, ct));
         }
         catch (Exception ex)
         {
@@ -656,7 +666,7 @@ public class AuthService : IAuthService
                 user.Id,
                 MobileNumberHelper.Mask(mobile));
 
-            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, ct));
+            return Result.Success(await BuildRegisterResponseAsync(user.Id, inviteResult.Value, shopData: null, ct));
         }
         catch (Exception ex)
         {
@@ -867,17 +877,32 @@ public class AuthService : IAuthService
     }
 
     private async Task<RegisterResponse> BuildRegisterResponseAsync(
-        string userId, string? inviterId, CancellationToken ct)
+        string userId, string? inviterId, ShopData? shopData, CancellationToken ct)
     {
+        var shopDataResponse = shopData is null ? null : new RegisteredShopDataResponse(
+            shopData.CustomerCode,
+            shopData.StoreName,
+            shopData.VAT,
+            shopData.CRN,
+            shopData.ShortAddress,
+            shopData.District,
+            shopData.Street,
+            shopData.BuildingNumber,
+            shopData.PostalCode,
+            shopData.SubNumber,
+            shopData.CityId,
+            shopData.ShopImageUrl);
+
         if (inviterId is null)
-            return new RegisterResponse(userId, _localizer["Auth.RegisterSuccess"].Value);
+            return new RegisterResponse(
+                userId, _localizer["Auth.RegisterSuccess"].Value, ShopData: shopDataResponse);
 
         var bonus = await _context.RewardSettings
             .Select(s => (decimal?)s.InviteeRewardPoints)
             .FirstOrDefaultAsync(ct) ?? 50m;
 
         var message = _localizer["Auth.RegisterSuccessWithBonus", bonus].Value;
-        return new RegisterResponse(userId, message, bonus);
+        return new RegisterResponse(userId, message, bonus, shopDataResponse);
     }
 
     private async Task<string> GenerateUniqueInvitationCodeAsync(CancellationToken ct)
