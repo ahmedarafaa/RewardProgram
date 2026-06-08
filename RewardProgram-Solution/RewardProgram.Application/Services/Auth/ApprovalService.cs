@@ -274,29 +274,125 @@ public class ApprovalService : IApprovalService
             .Take(pageSize)
             .ToList();
 
-        // Resolve StoreName for the page in one batch
+        // Resolve the full detail for the page in batched lookups
+        // (mirrors GetPendingRequestsAsync so /list and /pending expose the same shape).
         var customerCodes = pageRows
             .Where(r => r.CustomerCode != null)
             .Select(r => r.CustomerCode!)
             .Distinct()
             .ToList();
 
-        var storeNameMap = customerCodes.Count > 0
+        // Shop data (StoreName, VAT, CRN, ShortAddress, ShopImageUrl) by CustomerCode
+        var shopDataMap = customerCodes.Count > 0
             ? await _context.ShopData
                 .Where(sd => customerCodes.Contains(sd.CustomerCode))
-                .ToDictionaryAsync(sd => sd.CustomerCode, sd => sd.StoreName, ct)
+                .ToDictionaryAsync(sd => sd.CustomerCode, sd => sd, ct)
+            : new Dictionary<string, ShopData>();
+
+        // ErpCustomer name by CustomerCode
+        var erpCustomerMap = customerCodes.Count > 0
+            ? await _context.ErpCustomers
+                .Where(e => customerCodes.Contains(e.CustomerCode))
+                .ToDictionaryAsync(e => e.CustomerCode, e => e.CustomerName, ct)
             : new Dictionary<string, string>();
 
-        var items = pageRows.Select(r => new ApprovalListItem(
-            r.UserId,
-            r.Name,
-            r.MobileNumber,
-            r.UserType,
-            r.CustomerCode != null && storeNameMap.TryGetValue(r.CustomerCode, out var sn) ? sn : null,
-            r.ReviewStatus,
-            r.CurrentStatus,
-            r.ActivityAt,
-            r.RejectionReason)).ToList();
+        // Per-user address + navigation names for the page, keyed by UserId.
+        var pageUserIds = pageRows.Select(r => r.UserId).Distinct().ToList();
+        var detailMap = await _userRepository.Query()
+            .Where(u => pageUserIds.Contains(u.Id))
+            .Select(u => new ApprovalListDetail(
+                u.Id,
+                u.NationalAddress != null ? u.NationalAddress.CityId : null,
+                u.NationalAddress != null ? u.NationalAddress.Street : null,
+                u.NationalAddress != null ? (int?)u.NationalAddress.BuildingNumber : null,
+                u.NationalAddress != null ? u.NationalAddress.PostalCode : null,
+                u.NationalAddress != null ? (int?)u.NationalAddress.SubNumber : null,
+                u.NationalAddress != null ? u.NationalAddress.District : null,
+                u.AssignedSalesMan != null ? u.AssignedSalesMan.Name : null,
+                u.InvitedByUser != null ? u.InvitedByUser.Name : null))
+            .ToDictionaryAsync(d => d.UserId, d => d, ct);
+
+        // Resolve city/region names per the active request culture (English vs Arabic).
+        var cityIds = detailMap.Values
+            .Where(d => d.CityId != null)
+            .Select(d => d.CityId!)
+            .Distinct()
+            .ToList();
+
+        var isEnglish = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            .Equals("en", StringComparison.OrdinalIgnoreCase);
+
+        var cities = await _context.Cities
+            .Where(c => cityIds.Contains(c.Id))
+            .Include(c => c.Region)
+            .ToDictionaryAsync(
+                c => c.Id,
+                c => new
+                {
+                    CityName = isEnglish ? c.NameEn : c.NameAr,
+                    RegionName = isEnglish ? c.Region.NameEn : c.Region.NameAr
+                },
+                ct);
+
+        var items = pageRows.Select(r =>
+        {
+            string? customerName = null;
+            string? storeName = null;
+            string? vat = null;
+            string? crn = null;
+            string? shortAddress = null;
+            string? shopImageUrl = null;
+
+            if (r.CustomerCode != null)
+            {
+                erpCustomerMap.TryGetValue(r.CustomerCode, out customerName);
+
+                if (shopDataMap.TryGetValue(r.CustomerCode, out var sd))
+                {
+                    storeName = sd.StoreName;
+                    vat = sd.VAT;
+                    crn = sd.CRN;
+                    shortAddress = sd.ShortAddress;
+                    shopImageUrl = sd.ShopImageUrl;
+                }
+            }
+
+            detailMap.TryGetValue(r.UserId, out var detail);
+
+            string? regionName = null;
+            string? cityName = null;
+            if (detail?.CityId != null && cities.TryGetValue(detail.CityId, out var cityInfo))
+            {
+                cityName = cityInfo.CityName;
+                regionName = cityInfo.RegionName;
+            }
+
+            return new ApprovalListItem(
+                r.UserId,
+                r.Name,
+                r.MobileNumber,
+                r.UserType,
+                r.CustomerCode,
+                customerName,
+                storeName,
+                vat,
+                crn,
+                shortAddress,
+                shopImageUrl,
+                regionName,
+                cityName,
+                detail?.Street,
+                detail?.BuildingNumber,
+                detail?.PostalCode,
+                detail?.SubNumber,
+                detail?.District,
+                detail?.AssignedSalesManName,
+                detail?.InvitedByName,
+                r.ReviewStatus,
+                r.CurrentStatus,
+                r.ActivityAt,
+                r.RejectionReason);
+        }).ToList();
 
         return Result.Success(new PaginatedResult<ApprovalListItem>(items, totalCount, page, pageSize));
     }
@@ -345,6 +441,17 @@ public class ApprovalService : IApprovalService
         RegistrationStatus CurrentStatus,
         DateTime ActivityAt,
         string? RejectionReason);
+
+    private sealed record ApprovalListDetail(
+        string UserId,
+        string? CityId,
+        string? Street,
+        int? BuildingNumber,
+        string? PostalCode,
+        int? SubNumber,
+        string? District,
+        string? AssignedSalesManName,
+        string? InvitedByName);
 
     public async Task<Result> ApproveAsync(string userId, string approverId, CancellationToken ct = default)
     {
