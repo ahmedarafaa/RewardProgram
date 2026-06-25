@@ -62,6 +62,8 @@ public class AdminRedemptionController : ControllerBase
         new(_l["Export.Header.CreatedAt"].Value, r => r.CreatedAt),
         new(_l["Export.Header.User"].Value, r => r.UserFullName),
         new(_l["Export.Header.Mobile"].Value, r => r.UserMobile),
+        new(_l["Export.Header.CustomerCode"].Value, r => r.CustomerCode),
+        new(_l["Export.Header.CustomerName"].Value, r => r.CustomerName),
         new(_l["Export.Header.Method"].Value, r => LocalizedEnum.Display(r.Method, _l)),
         new(_l["Export.Header.Status"].Value, r => LocalizedEnum.Display(r.Status, _l)),
         new(_l["Export.Header.Points"].Value, r => r.PointsAmount),

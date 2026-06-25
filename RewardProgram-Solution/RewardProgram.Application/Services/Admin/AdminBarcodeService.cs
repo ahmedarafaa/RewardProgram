@@ -249,6 +249,9 @@ public class AdminBarcodeService : IAdminBarcodeService
             s.Barcode.Status,
             s.User.Name,
             s.User.MobileNumber,
+            // Only Sellers carry a CustomerCode; Technicians have no shop association.
+            s.User.SellerProfile != null ? s.User.SellerProfile.CustomerCode : null,
+            s.User.SellerProfile != null ? s.User.SellerProfile.ErpCustomer.CustomerName : null,
             s.CreatedAt,
             s.Latitude,
             s.Longitude);

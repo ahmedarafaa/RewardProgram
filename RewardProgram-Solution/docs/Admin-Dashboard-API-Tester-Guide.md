@@ -635,7 +635,7 @@ All endpoints require **Bearer (Role: SystemAdmin)**.
 | page          | int (default 1) |       |
 | pageSize      | int (default 20)|       |
 
-- **Success (200):** `PaginatedResult<AdminScanListItemResponse { id, barcodeCode, productName, productCode, productPointValue, pointsAwarded, scannerRole, barcodeStatus, userName, userMobile, scannedAt, latitude?, longitude? }>`
+- **Success (200):** `PaginatedResult<AdminScanListItemResponse { id, barcodeCode, productName, productCode, productPointValue, pointsAwarded, scannerRole, barcodeStatus, userName, userMobile, customerCode?, customerName?, scannedAt, latitude?, longitude? }>` — `customerCode`/`customerName` are populated for Seller scans (via their shop's ERP customer); `null` for Technician scans.
 
 ---
 
@@ -843,7 +843,7 @@ The mobile-side flow has three approval levels (SalesMan → ZoneManager → Adm
 | page      | int (default 1)            |       |
 | pageSize  | int (default 20)           |       |
 
-- **Success (200):** `PaginatedResult<AdminRedemptionListItemResponse { id, userFullName, userMobile, method, status, pointsAmount, sarAmount, createdAt }>`
+- **Success (200):** `PaginatedResult<AdminRedemptionListItemResponse { id, userFullName, userMobile, customerCode?, customerName?, method, status, pointsAmount, sarAmount, createdAt }>` — `customerCode`/`customerName` are populated for Seller requests (via their shop's ERP customer); `null` for Technician requests.
 
 ---
 

@@ -101,6 +101,9 @@ public class AdminRedemptionService : IAdminRedemptionService
             r.Id,
             r.User.Name,
             r.User.MobileNumber,
+            // Only Sellers carry a CustomerCode; Technicians have no shop association.
+            r.User.SellerProfile != null ? r.User.SellerProfile.CustomerCode : null,
+            r.User.SellerProfile != null ? r.User.SellerProfile.ErpCustomer.CustomerName : null,
             r.Method,
             r.Status,
             r.PointsAmount,

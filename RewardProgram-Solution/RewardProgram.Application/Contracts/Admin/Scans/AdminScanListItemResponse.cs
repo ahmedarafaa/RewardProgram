@@ -13,6 +13,10 @@ public record AdminScanListItemResponse(
     BarcodeStatus BarcodeStatus,
     string UserName,
     string UserMobile,
+    // Customer (shop) the scanner belongs to. Populated for Sellers via their
+    // SellerProfile → ErpCustomer; null for Technicians (no customer code).
+    string? CustomerCode,
+    string? CustomerName,
     DateTime ScannedAt,
     double? Latitude,
     double? Longitude

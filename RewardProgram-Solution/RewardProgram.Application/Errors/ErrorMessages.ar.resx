@@ -287,6 +287,7 @@
   <data name="Export.Header.Region"><value>المنطقة</value></data>
   <data name="Export.Header.City"><value>المدينة</value></data>
   <data name="Export.Header.CustomerCode"><value>كود العميل</value></data>
+  <data name="Export.Header.CustomerName"><value>اسم العميل</value></data>
   <data name="Export.Header.StoreName"><value>اسم المتجر</value></data>
   <data name="Export.Header.IsDisabled"><value>معطّل</value></data>
   <data name="Export.Header.IsAccountDeleted"><value>الحساب محذوف</value></data>

@@ -58,6 +58,8 @@ public class AdminScanController : ControllerBase
         new(_l["Export.Header.ScannedAt"].Value, s => s.ScannedAt),
         new(_l["Export.Header.User"].Value, s => s.UserName),
         new(_l["Export.Header.Mobile"].Value, s => s.UserMobile),
+        new(_l["Export.Header.CustomerCode"].Value, s => s.CustomerCode),
+        new(_l["Export.Header.CustomerName"].Value, s => s.CustomerName),
         new(_l["Export.Header.ScannerRole"].Value, s => LocalizedEnum.Display(s.ScannerRole, _l)),
         new(_l["Export.Header.BarcodeCode"].Value, s => s.BarcodeCode),
         new(_l["Export.Header.Product"].Value, s => s.ProductName),
