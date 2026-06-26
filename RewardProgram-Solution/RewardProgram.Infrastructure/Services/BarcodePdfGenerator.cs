@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -14,7 +15,46 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     private const float LabelHeightMm = 25f;
     private const float PaddingMm = 1.5f;
     private const int BarcodeImageWidth = 250;
-    private const int BarcodeImageHeight = 50;
+    // Bars rendered at full label width; height kept short so the taller badge
+    // header + barcode + human-readable code all fit on one 25mm label.
+    private const int BarcodeImageHeight = 38;
+
+    // Brand badge (portrait circular mark) sits top-left, product name beside it.
+    // The header is tall enough for the badge to stay legible; the barcode below
+    // keeps its full width + quiet zones (best scan reliability).
+    private const float HeaderRowHeightMm = 11f;
+    private const float LogoWidthMm = 9f;
+
+    // Drop-in brand logo at wwwroot/images/barcode-logo.{png,jpg,jpeg}. Swappable
+    // without a rebuild; if absent, labels simply render without a logo.
+    private static readonly string[] LogoFileNames =
+        ["barcode-logo.png", "barcode-logo.jpg", "barcode-logo.jpeg"];
+
+    // Loaded once (singleton service) — null when no logo file is present.
+    private readonly Lazy<byte[]?> _logo;
+
+    public BarcodePdfGenerator(IWebHostEnvironment environment)
+    {
+        _logo = new Lazy<byte[]?>(
+            () => LoadLogo(environment),
+            System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
+    private static byte[]? LoadLogo(IWebHostEnvironment environment)
+    {
+        var webRoot = environment.WebRootPath
+            ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+        var imagesDir = Path.Combine(webRoot, "images");
+
+        foreach (var name in LogoFileNames)
+        {
+            var path = Path.Combine(imagesDir, name);
+            if (File.Exists(path))
+                return File.ReadAllBytes(path);
+        }
+
+        return null;
+    }
 
     [ThreadStatic]
     private static BarcodeWriterPixelData? _barcodeWriter;
@@ -33,6 +73,8 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
 
     public byte[] GeneratePdf(string productName, string productCode, List<string> barcodeCodes)
     {
+        var logo = _logo.Value;
+
         var document = Document.Create(container =>
         {
             foreach (var code in barcodeCodes)
@@ -45,11 +87,28 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
                     page.Content()
                         .Column(label =>
                         {
+                            // Header row: optional logo on the left, product name beside it.
                             label.Item()
-                                .AlignCenter()
-                                .Text(productName)
-                                .FontSize(5)
-                                .FontColor(Colors.Black);
+                                .Row(header =>
+                                {
+                                    if (logo is not null)
+                                    {
+                                        // Fixed box (both axes bounded) so the portrait badge
+                                        // scales to fit instead of overflowing the header.
+                                        header.ConstantItem(LogoWidthMm, Unit.Millimetre)
+                                            .Height(HeaderRowHeightMm, Unit.Millimetre)
+                                            .AlignLeft()
+                                            .AlignMiddle()
+                                            .Image(logo).FitArea();
+                                    }
+
+                                    header.RelativeItem()
+                                        .AlignMiddle()
+                                        .AlignCenter()
+                                        .Text(productName)
+                                        .FontSize(5)
+                                        .FontColor(Colors.Black);
+                                });
 
                             label.Item()
                                 .AlignCenter()
