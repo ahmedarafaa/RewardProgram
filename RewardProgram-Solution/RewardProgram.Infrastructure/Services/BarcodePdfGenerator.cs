@@ -14,16 +14,17 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     private const float LabelWidthMm = 50f;
     private const float LabelHeightMm = 25f;
     private const float PaddingMm = 1.5f;
-    private const int BarcodeImageWidth = 250;
-    // Bars rendered at full label width; height kept short so the taller badge
-    // header + barcode + human-readable code all fit on one 25mm label.
-    private const int BarcodeImageHeight = 38;
 
-    // Brand badge (portrait circular mark) sits top-left, product name beside it.
-    // The header is tall enough for the badge to stay legible; the barcode below
-    // keeps its full width + quiet zones (best scan reliability).
-    private const float HeaderRowHeightMm = 11f;
-    private const float LogoWidthMm = 9f;
+    // Logo fills the left column (vertically centered); the product name, barcode,
+    // and human-readable code stack in the right column beside it.
+    private const float LogoColumnWidthMm = 16f;
+    private const float ColumnGapMm = 1.5f;
+
+    // The barcode lives in the narrower right column. Generated at enough
+    // resolution (~3px/module) so ZXing renders crisp, well-separated bars;
+    // FitWidth then scales it to the column.
+    private const int BarcodeImageWidth = 600;
+    private const int BarcodeImageHeight = 150;
 
     // Drop-in brand logo at wwwroot/images/barcode-logo.{png,jpg,jpeg}. Swappable
     // without a rebuild; if absent, labels simply render without a logo.
@@ -85,41 +86,42 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
                     page.Margin(PaddingMm, Unit.Millimetre);
 
                     page.Content()
-                        .Column(label =>
+                        .AlignMiddle()
+                        .Row(row =>
                         {
-                            // Header row: optional logo on the left, product name beside it.
-                            label.Item()
-                                .Row(header =>
-                                {
-                                    if (logo is not null)
-                                    {
-                                        // Fixed box (both axes bounded) so the portrait badge
-                                        // scales to fit instead of overflowing the header.
-                                        header.ConstantItem(LogoWidthMm, Unit.Millimetre)
-                                            .Height(HeaderRowHeightMm, Unit.Millimetre)
-                                            .AlignLeft()
-                                            .AlignMiddle()
-                                            .Image(logo).FitArea();
-                                    }
+                            // Logo fills the left column, vertically centered.
+                            if (logo is not null)
+                            {
+                                row.ConstantItem(LogoColumnWidthMm, Unit.Millimetre)
+                                    .Height(LabelHeightMm - 2 * PaddingMm, Unit.Millimetre)
+                                    .AlignMiddle()
+                                    .AlignCenter()
+                                    .Image(logo).FitArea();
+                                row.ConstantItem(ColumnGapMm, Unit.Millimetre);
+                            }
 
-                                    header.RelativeItem()
-                                        .AlignMiddle()
+                            // Right column: product name, barcode, then the human-readable code.
+                            row.RelativeItem()
+                                .AlignMiddle()
+                                .Column(data =>
+                                {
+                                    data.Item()
                                         .AlignCenter()
                                         .Text(productName)
                                         .FontSize(5)
                                         .FontColor(Colors.Black);
+
+                                    data.Item()
+                                        .PaddingVertical(0.4f, Unit.Millimetre)
+                                        .AlignCenter()
+                                        .Image(GenerateBarcodeImage(code)).FitWidth();
+
+                                    data.Item()
+                                        .AlignCenter()
+                                        .Text(code)
+                                        .FontSize(5)
+                                        .FontColor(Colors.Black);
                                 });
-
-                            label.Item()
-                                .AlignCenter()
-                                .PaddingVertical(0.5f, Unit.Millimetre)
-                                .Image(GenerateBarcodeImage(code));
-
-                            label.Item()
-                                .AlignCenter()
-                                .Text(code)
-                                .FontSize(5)
-                                .FontColor(Colors.Black);
                         });
                 });
             }
