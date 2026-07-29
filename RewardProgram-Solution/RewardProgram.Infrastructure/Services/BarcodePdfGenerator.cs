@@ -103,6 +103,14 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
                                         .Text(productName)
                                         .FontSize(5)
                                         .FontColor(Colors.Black);
+
+                                    // Mirror the logo's width on the right so the name
+                                    // centres on the label itself rather than on the
+                                    // space left over beside the logo. Reserving the
+                                    // width rather than overlaying also means a long
+                                    // name can never run underneath the badge.
+                                    if (logo is not null)
+                                        strip.ConstantItem(LogoWidthMm + LogoGapMm, Unit.Millimetre);
                                 });
 
                             // Barcode across the full label width, then the readable code.
