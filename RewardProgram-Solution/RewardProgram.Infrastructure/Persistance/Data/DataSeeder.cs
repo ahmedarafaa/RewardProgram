@@ -37,6 +37,7 @@ public static class DataSeeder
         await SeedProductsAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
         await SeedContentAsync(context, logger);
+        await SeedPrintTestBarcodesAsync(context, logger);
 
         // Demo analytics data in Development & Staging (not UAT/Production)
         if (!isUat)
@@ -865,6 +866,64 @@ public static class DataSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seeded default RewardSettings (PointsToSarRate: 10)");
+    }
+
+    #endregion
+
+    #region Print Test Barcodes
+
+    // Codes printed on the Zebra print-test sheet handed to the client (2026-07-29).
+    // One unique code per printed label so each can be scanned exactly once — a repeated
+    // code would come back "already scanned" and read as a print failure.
+    // Letters match the variant marked on the label; digits-only codes belong to the
+    // variants that test the shorter Code Set C symbol.
+    private static readonly string[] PrintTestBarcodeCodes =
+    [
+        "PRNTTSTA2RAC", "PRNTTSTA3RAC",   // A - current design (expected to fail)
+        "PRNTTSTB2RAC", "PRNTTSTB3RAC",   // B - 12 chars, widest bars possible
+        "990000000031", "990000000032",   // C - 12 digits, 3 dots per bar
+        "990000000041", "990000000042",   // D - 12 digits, logo kept at left
+        "PRNTTSTE2RAC", "PRNTTSTE3RAC"    // E - 12 chars, 300dpi-only bar width
+    ];
+
+    private static async Task SeedPrintTestBarcodesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        var existing = await context.ProductBarcodes
+            .Where(b => PrintTestBarcodeCodes.Contains(b.Code))
+            .Select(b => b.Code)
+            .ToListAsync();
+
+        var missing = PrintTestBarcodeCodes.Except(existing).ToList();
+        if (missing.Count == 0)
+        {
+            logger.LogInformation("Print-test barcodes already seeded, skipping");
+            return;
+        }
+
+        // Deterministic product so the same label always reports the same product/points.
+        var product = await context.Products
+            .OrderBy(p => p.ProductCode)
+            .FirstOrDefaultAsync();
+
+        if (product is null)
+        {
+            logger.LogWarning("No products found — skipping print-test barcode seeding");
+            return;
+        }
+
+        context.ProductBarcodes.AddRange(missing.Select(code => new ProductBarcode
+        {
+            Code = code,
+            ProductId = product.Id,
+            Status = BarcodeStatus.Available,
+            CreatedBy = "DataSeeder:PrintTest"
+        }));
+
+        await context.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Seeded {Count} print-test barcodes against product {ProductCode}",
+            missing.Count, product.ProductCode);
     }
 
     #endregion
