@@ -12,19 +12,25 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     // Zebra label: 50mm x 25mm — one label per page
     private const float LabelWidthMm = 50f;
     private const float LabelHeightMm = 25f;
-    private const float PaddingMm = 1.5f;
+    private const float PaddingMm = 1f;
 
-    // Logo fills the left column (vertically centered); the product name, barcode,
-    // and human-readable code stack in the right column beside it.
-    private const float LogoColumnWidthMm = 16f;
-    private const float ColumnGapMm = 1.5f;
+    // Logo sits top-left with the product name beside it; the barcode spans the full
+    // label width underneath, centred. Giving the barcode the whole width is what
+    // makes the bars printable — beside a 16mm logo they were 1.18 printer dots wide,
+    // narrower than the head can resolve, so they printed as broken grey texture.
+    private const float TopStripHeightMm = 11f;
+
+    // The badge is taller than it is wide (aspect ~0.79), so it is sized by width and
+    // sets its own height inside the strip.
+    private const float LogoWidthMm = 8.5f;
+    private const float LogoGapMm = 1.5f;
 
     // The barcode is drawn as vector rectangles, not a bitmap. A bitmap has to be
     // resampled to the printer's dot grid, which left ~35% of a scanline through the
     // bars as mid-grey — neither black nor white. A thermal head cannot print grey, so
     // it either drops or dithers those pixels, which is what "faded" looks like on
     // paper. Vector edges are resolved by the printer's own RIP instead.
-    private const float BarcodeHeightMm = 7.4f;
+    private const float BarcodeHeightMm = 8f;
 
     // Code 128 requires a clear margin of at least 10 modules each side. The old bitmap
     // only got one by accident, from how ZXing centred the symbol in the image.
@@ -75,42 +81,42 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
                     page.Margin(PaddingMm, Unit.Millimetre);
 
                     page.Content()
-                        .AlignMiddle()
-                        .Row(row =>
+                        .Column(label =>
                         {
-                            // Logo fills the left column, vertically centered.
-                            if (logo is not null)
-                            {
-                                row.ConstantItem(LogoColumnWidthMm, Unit.Millimetre)
-                                    .Height(LabelHeightMm - 2 * PaddingMm, Unit.Millimetre)
-                                    .AlignMiddle()
-                                    .AlignCenter()
-                                    .Image(logo).FitArea();
-                                row.ConstantItem(ColumnGapMm, Unit.Millimetre);
-                            }
-
-                            // Right column: product name, barcode, then the human-readable code.
-                            row.RelativeItem()
-                                .AlignMiddle()
-                                .Column(data =>
+                            // Top strip: logo at the left, product name centred beside it.
+                            label.Item()
+                                .Height(TopStripHeightMm, Unit.Millimetre)
+                                .Row(strip =>
                                 {
-                                    data.Item()
+                                    if (logo is not null)
+                                    {
+                                        strip.ConstantItem(LogoWidthMm, Unit.Millimetre)
+                                            .AlignMiddle()
+                                            .Image(logo).FitWidth();
+
+                                        strip.ConstantItem(LogoGapMm, Unit.Millimetre);
+                                    }
+
+                                    strip.RelativeItem()
+                                        .AlignMiddle()
                                         .AlignCenter()
                                         .Text(productName)
                                         .FontSize(5)
                                         .FontColor(Colors.Black);
-
-                                    data.Item()
-                                        .PaddingVertical(0.4f, Unit.Millimetre)
-                                        .Height(BarcodeHeightMm, Unit.Millimetre)
-                                        .Element(barcode => DrawBarcode(barcode, code));
-
-                                    data.Item()
-                                        .AlignCenter()
-                                        .Text(code)
-                                        .FontSize(5)
-                                        .FontColor(Colors.Black);
                                 });
+
+                            // Barcode across the full label width, then the readable code.
+                            label.Item()
+                                .PaddingTop(0.4f, Unit.Millimetre)
+                                .Height(BarcodeHeightMm, Unit.Millimetre)
+                                .Element(barcode => DrawBarcode(barcode, code));
+
+                            label.Item()
+                                .PaddingTop(0.2f, Unit.Millimetre)
+                                .AlignCenter()
+                                .Text(code)
+                                .FontSize(5)
+                                .FontColor(Colors.Black);
                         });
                 });
             }
