@@ -4,5 +4,6 @@ public record AdminAddProductRequest(
     string Name,
     string ProductCode,
     int PointValue,
-    string? Category
+    string? Category,
+    string? NameEn = null
 );

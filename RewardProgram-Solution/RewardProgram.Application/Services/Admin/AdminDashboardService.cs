@@ -555,12 +555,13 @@ public class AdminDashboardService : IAdminDashboardService
         var topProductsRaw = await (
             from b in _context.ProductBarcodes.Where(b => b.DeletedAt == null)
             join p in _context.Products.Where(p => p.DeletedAt == null) on b.ProductId equals p.Id
-            group b by new { p.Id, p.Name, p.ProductCode } into g
+            group b by new { p.Id, p.Name, p.NameEn, p.ProductCode } into g
             orderby g.Count() descending
             select new
             {
                 g.Key.Id,
                 g.Key.Name,
+                g.Key.NameEn,
                 g.Key.ProductCode,
                 Total = g.Count(),
                 Scanned = g.Count(x => x.Status != BarcodeStatus.Available),
@@ -568,7 +569,7 @@ public class AdminDashboardService : IAdminDashboardService
             }
         ).Take(20).ToListAsync(ct);
         var topProducts = topProductsRaw
-            .Select(x => new ProductBarcodeItem(x.Id, x.Name, x.ProductCode, x.Total, x.Scanned, x.Consumed))
+            .Select(x => new ProductBarcodeItem(x.Id, x.Name, x.NameEn, x.ProductCode, x.Total, x.Scanned, x.Consumed))
             .ToList();
 
         return Result.Success(new BarcodeAnalyticsResponse(

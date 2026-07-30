@@ -80,6 +80,7 @@ public class AdminBarcodeController : ControllerBase
     [
         new(_l["Export.Header.BarcodeCode"].Value, b => b.Code),
         new(_l["Export.Header.Product"].Value, b => b.ProductName),
+        new(_l["Export.Header.ProductEn"].Value, b => b.ProductNameEn),
         new(_l["Export.Header.PointValue"].Value, b => b.PointValue),
         new(_l["Export.Header.Status"].Value, b => LocalizedEnum.Display(b.Status, _l)),
         new(_l["Export.Header.CreatedAt"].Value, b => b.CreatedAt),

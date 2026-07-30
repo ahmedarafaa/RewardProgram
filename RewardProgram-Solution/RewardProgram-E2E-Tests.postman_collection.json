@@ -6758,7 +6758,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"منتج اختبار\", \"productCode\": \"TEST-001\", \"pointValue\": 50, \"price\": 100.0, \"category\": \"اختبار\"}",
+              "raw": "{\"name\": \"منتج اختبار\", \"nameEn\": \"Test Product\", \"productCode\": \"TEST-001\", \"pointValue\": 50, \"price\": 100.0, \"category\": \"اختبار\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6879,7 +6879,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"منتج معدل\", \"productCode\": \"TEST-001\", \"pointValue\": 75, \"price\": 150.0, \"category\": \"اختبار\"}",
+              "raw": "{\"name\": \"منتج معدل\", \"nameEn\": \"Edited Test Product\", \"productCode\": \"TEST-001\", \"pointValue\": 75, \"price\": 150.0, \"category\": \"اختبار\"}",
               "options": {
                 "raw": {
                   "language": "json"

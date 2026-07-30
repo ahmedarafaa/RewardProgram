@@ -243,6 +243,7 @@ public class ScanService : IScanService
 
             return Result.Success(new ScanBarcodeResponse(
                 barcode.Product.Name,
+                barcode.Product.NameEn,
                 pointsForScanner,
                 scannerWallet.Balance,
                 barcode.Id,
@@ -297,6 +298,7 @@ public class ScanService : IScanService
                 s.Id,
                 s.Barcode.Code,
                 s.Barcode.Product.Name,
+                s.Barcode.Product.NameEn,
                 s.Barcode.Product.ProductCode,
                 s.Barcode.Product.PointValue,
                 s.PointsAwarded,

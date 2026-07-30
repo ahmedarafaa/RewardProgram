@@ -332,6 +332,152 @@ public class AdminProductServiceTests : IDisposable
         result.Error.Should().Be(ProductErrors.ProductImportTooManyRows);
     }
 
+    // ── English name (NameEn) ──
+
+    [Fact]
+    public async Task AddProduct_WithEnglishName_ShouldStoreTrimmed()
+    {
+        var request = new AdminAddProductRequest("منتج", "EN001", 10, null, "  LED BASE 1 × 20  ");
+
+        var result = await _sut.AddProductAsync(request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.NameEn.Should().Be("LED BASE 1 × 20");
+    }
+
+    [Fact]
+    public async Task AddProduct_WithBlankEnglishName_ShouldStoreNull()
+    {
+        var request = new AdminAddProductRequest("منتج", "EN002", 10, null, "   ");
+
+        var result = await _sut.AddProductAsync(request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.NameEn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EditProduct_OmittedEnglishName_ShouldLeaveExistingValue()
+    {
+        var product = await SeedProduct();
+        product.NameEn = "Existing English";
+        await _context.SaveChangesAsync();
+
+        // A client that predates the field sends no nameEn at all — that must not
+        // silently wipe the ERP English catalogue.
+        var request = new AdminEditProductRequest("Updated", 200, "New Cat");
+        var result = await _sut.EditProductAsync(product.Id, request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.NameEn.Should().Be("Existing English");
+    }
+
+    [Fact]
+    public async Task EditProduct_EmptyEnglishName_ShouldClearIt()
+    {
+        var product = await SeedProduct();
+        product.NameEn = "Existing English";
+        await _context.SaveChangesAsync();
+
+        var request = new AdminEditProductRequest("Updated", 200, null, "");
+        var result = await _sut.EditProductAsync(product.Id, request, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.NameEn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ListProducts_SearchByEnglishName_ShouldFilter()
+    {
+        var apple = await SeedProduct("P001", "تفاح");
+        apple.NameEn = "Apple";
+        await SeedProduct("P002", "موز");
+        await _context.SaveChangesAsync();
+
+        var query = new AdminProductListQuery("Apple", null);
+        var result = await _sut.ListProductsAsync(query);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().ContainSingle()
+            .Which.ProductCode.Should().Be("P001");
+    }
+
+    [Fact]
+    public async Task ImportProducts_WithEnglishNameColumn_ShouldSetIt()
+    {
+        await SeedProduct(code: "P001", name: "قديم");
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "محدث", "P001", "Cat", "120", "30", "Updated English"),
+            new(3, "جديد", "P999", "Cat", "200", "75", "Brand New English")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Failed.Should().Be(0);
+        (await _context.Products.FirstAsync(p => p.ProductCode == "P001"))
+            .NameEn.Should().Be("Updated English");
+        (await _context.Products.FirstAsync(p => p.ProductCode == "P999"))
+            .NameEn.Should().Be("Brand New English");
+    }
+
+    [Fact]
+    public async Task ImportProducts_WithoutEnglishNameColumn_ShouldPreserveExisting()
+    {
+        var product = await SeedProduct(code: "P001", name: "قديم");
+        product.NameEn = "Existing English";
+        await _context.SaveChangesAsync();
+
+        // NameEn omitted entirely — the shape of every product file uploaded before
+        // this feature existed.
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "محدث", "P001", "Cat", "120", "30")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        (await _context.Products.FirstAsync(p => p.ProductCode == "P001"))
+            .NameEn.Should().Be("Existing English");
+    }
+
+    [Fact]
+    public async Task ImportProducts_WithEmptyEnglishNameCell_ShouldClearIt()
+    {
+        var product = await SeedProduct(code: "P001", name: "قديم");
+        product.NameEn = "Existing English";
+        await _context.SaveChangesAsync();
+
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "محدث", "P001", "Cat", "120", "30", "")
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        (await _context.Products.FirstAsync(p => p.ProductCode == "P001"))
+            .NameEn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ImportProducts_EnglishNameTooLong_ShouldReportError()
+    {
+        _importReader.Read(Arg.Any<Stream>(), Arg.Any<int>()).Returns(new List<ProductImportRow>
+        {
+            new(2, "منتج", "P200", null, "100", "25", new string('x', 201))
+        });
+
+        var result = await _sut.ImportProductsAsync(Stream.Null, AdminId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Created.Should().Be(0);
+        result.Value.Failed.Should().Be(1);
+        result.Value.Errors.Should().ContainSingle().Which.RowNumber.Should().Be(2);
+    }
+
     // ── ListProducts ──
 
     [Fact]

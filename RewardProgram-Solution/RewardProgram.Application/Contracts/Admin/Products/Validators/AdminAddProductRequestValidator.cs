@@ -12,6 +12,10 @@ public class AdminAddProductRequestValidator : AbstractValidator<AdminAddProduct
             .NotEmpty().WithMessage(L["Product.Name.NotEmpty"])
             .MaximumLength(200).WithMessage(L["Product.Name.MaxLength"]);
 
+        RuleFor(x => x.NameEn)
+            .MaximumLength(200).WithMessage(L["Product.NameEn.MaxLength"])
+            .When(x => x.NameEn is not null);
+
         RuleFor(x => x.ProductCode)
             .NotEmpty().WithMessage(L["Product.ProductCode.NotEmpty"])
             .MaximumLength(50).WithMessage(L["Product.ProductCode.MaxLength"]);

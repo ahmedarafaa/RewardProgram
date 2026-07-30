@@ -13,6 +13,7 @@ public record BarcodeAnalyticsResponse(
 public record ProductBarcodeItem(
     string ProductId,
     string ProductName,
+    string? ProductNameEn,
     string ProductCode,
     int TotalBarcodes,
     int ScannedCount,

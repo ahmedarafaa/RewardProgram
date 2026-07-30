@@ -345,6 +345,7 @@ public class AdminDashboardController : ControllerBase
                     .AddSheet(_l["Export.Sheet.TopProductsByBarcodes"].Value, data.TopProductsByBarcodes,
                     [
                         new(_l["Export.Header.Product"].Value, p => p.ProductName),
+                        new(_l["Export.Header.ProductEn"].Value, p => p.ProductNameEn),
                         new(_l["Export.Header.ProductCode"].Value, p => p.ProductCode),
                         new(_l["Export.Header.TotalBarcodes"].Value, p => p.TotalBarcodes),
                         new(_l["Export.Header.ScannedCount"].Value, p => p.ScannedCount),

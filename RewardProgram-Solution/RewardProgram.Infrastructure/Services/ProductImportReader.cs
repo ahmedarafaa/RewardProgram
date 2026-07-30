@@ -22,6 +22,17 @@ public class ProductImportReader : IProductImportReader
         "name", "product name", "الاسم", "اسم الصنف", "اسم المنتج", "اسم"
     };
 
+    // English-name aliases are deliberately explicit ("english name", "name (en)"…)
+    // rather than the bare "product name" the ERP catalogue sheet uses for it —
+    // that header is already claimed above for the Arabic name, and re-pointing it
+    // would silently remap every file the existing importer accepts today.
+    private static readonly HashSet<string> NameEnAliases = new(StringComparer.Ordinal)
+    {
+        "name (en)", "name en", "nameen", "english name", "product name (en)",
+        "product name en", "الاسم بالإنجليزية", "الاسم الانجليزي",
+        "اسم المنتج بالإنجليزية", "الاسم بالانجليزية"
+    };
+
     private static readonly HashSet<string> CodeAliases = new(StringComparer.Ordinal)
     {
         "product code", "productcode", "code", "كود المنتج", "كود الصنف",
@@ -69,13 +80,21 @@ public class ProductImportReader : IProductImportReader
             var pointValue = ReadCell(row.Cell(columns.PointValue));
             var price = ReadCell(row.Cell(columns.Price));
 
+            // Left null when the file has no English-name column, which the service
+            // reads as "don't touch NameEn" — distinct from a present-but-empty cell,
+            // which deliberately clears it.
+            var nameEn = columns.NameEn is int nameEnColumn
+                ? ReadCell(row.Cell(nameEnColumn))
+                : null;
+
             // Skip rows that are entirely blank.
             if (name.Length == 0 && code.Length == 0 && category.Length == 0
-                && pointValue.Length == 0 && price.Length == 0)
+                && pointValue.Length == 0 && price.Length == 0
+                && string.IsNullOrEmpty(nameEn))
                 continue;
 
             result.Add(new ProductImportRow(
-                row.RowNumber(), name, code, category, pointValue, price));
+                row.RowNumber(), name, code, category, pointValue, price, nameEn));
 
             // Stop one row past the cap so the caller can reject an oversized
             // file without us materializing an unbounded list.
@@ -92,7 +111,7 @@ public class ProductImportReader : IProductImportReader
     // file in the wrong layout is rejected instead of silently mismapped.
     private static ResolvedColumns ResolveColumns(IXLRow headerRow)
     {
-        int? name = null, code = null, category = null, points = null, price = null;
+        int? name = null, nameEn = null, code = null, category = null, points = null, price = null;
 
         foreach (var cell in headerRow.CellsUsed())
         {
@@ -102,6 +121,7 @@ public class ProductImportReader : IProductImportReader
 
             var column = cell.Address.ColumnNumber;
             if (name is null && NameAliases.Contains(header)) name = column;
+            else if (nameEn is null && NameEnAliases.Contains(header)) nameEn = column;
             else if (code is null && CodeAliases.Contains(header)) code = column;
             else if (category is null && CategoryAliases.Contains(header)) category = column;
             else if (points is null && PointsAliases.Contains(header)) points = column;
@@ -117,7 +137,7 @@ public class ProductImportReader : IProductImportReader
         if (missing.Count > 0)
             throw new ProductImportHeaderException(missing);
 
-        return new ResolvedColumns(name!.Value, code!.Value, category, points!.Value, price!.Value);
+        return new ResolvedColumns(name!.Value, nameEn, code!.Value, category, points!.Value, price!.Value);
     }
 
     // Trim, lower-case (invariant) and collapse internal whitespace runs so
@@ -162,5 +182,5 @@ public class ProductImportReader : IProductImportReader
     }
 
     private readonly record struct ResolvedColumns(
-        int Name, int ProductCode, int? Category, int PointValue, int Price);
+        int Name, int? NameEn, int ProductCode, int? Category, int PointValue, int Price);
 }

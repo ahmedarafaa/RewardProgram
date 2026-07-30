@@ -133,6 +133,7 @@
   <data name="ProductImport.Row.PointValueInvalid"><value>قيمة النقاط يجب أن تكون رقماً صحيحاً أكبر من صفر</value></data>
   <data name="ProductImport.Row.PriceInvalid"><value>السعر يجب أن يكون رقماً موجباً لا يتجاوز 99,999,999.99 وبحد أقصى منزلتين عشريتين</value></data>
   <data name="ProductImport.Row.CategoryTooLong"><value>التصنيف يجب ألا يتجاوز 100 حرف</value></data>
+  <data name="ProductImport.Row.NameEnTooLong"><value>الاسم بالإنجليزية يجب ألا يتجاوز 200 حرف</value></data>
   <data name="ProductImport.Row.DuplicateInFile"><value>كود المنتج مكرر في الملف</value></data>
 
   <!-- Admin Account Errors -->
@@ -301,6 +302,9 @@
 
   <data name="Export.Header.BarcodeCode"><value>الباركود</value></data>
   <data name="Export.Header.Product"><value>المنتج</value></data>
+  <data name="Export.Header.ProductEn"><value>المنتج بالإنجليزية</value></data>
+  <!-- Must stay in the product importer's NameEn aliases so an export re-imports. -->
+  <data name="Export.Header.NameEn"><value>الاسم بالإنجليزية</value></data>
 
   <data name="Export.Header.ScannedAt"><value>تاريخ المسح</value></data>
   <data name="Export.Header.User"><value>المستخدم</value></data>

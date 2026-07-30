@@ -11,5 +11,8 @@ public record ProductImportRow(
     string? ProductCode,
     string? Category,
     string? PointValue,
-    string? Price
+    string? Price,
+    // Optional English name column. Null when the file has no such column at all,
+    // which leaves any existing English name on the matched product untouched.
+    string? NameEn = null
 );

@@ -6,6 +6,7 @@ public record AdminBarcodeListItemResponse(
     string Id,
     string Code,
     string ProductName,
+    string? ProductNameEn,
     int PointValue,
     BarcodeStatus Status,
     DateTime CreatedAt

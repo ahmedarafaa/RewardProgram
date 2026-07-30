@@ -16,6 +16,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(x => x.NameEn)
+            .HasMaxLength(200);
+
         builder.Property(x => x.ProductCode)
             .HasMaxLength(50)
             .IsRequired();
@@ -39,6 +42,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         // Indexes
         builder.HasIndex(x => x.ProductCode).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.Name);
+        // The admin product search matches NameEn alongside Name.
+        builder.HasIndex(x => x.NameEn);
         builder.HasIndex(x => x.Category);
 
         builder.HasQueryFilter(x => !x.IsDeleted);

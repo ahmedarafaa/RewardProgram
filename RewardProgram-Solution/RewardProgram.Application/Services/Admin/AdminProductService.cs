@@ -65,6 +65,7 @@ public class AdminProductService : IAdminProductService
         var product = new Product
         {
             Name = name,
+            NameEn = NormalizeNameEn(request.NameEn),
             ProductCode = code,
             PointValue = request.PointValue,
             Category = request.Category
@@ -91,6 +92,11 @@ public class AdminProductService : IAdminProductService
         product.Name = request.Name.Trim();
         product.PointValue = request.PointValue;
         product.Category = request.Category;
+
+        // A null NameEn means "not supplied" and leaves the ERP English name in
+        // place — only an explicitly sent value (including "") changes it.
+        if (request.NameEn is not null)
+            product.NameEn = NormalizeNameEn(request.NameEn);
 
         await _context.SaveChangesAsync(ct);
 
@@ -190,7 +196,9 @@ public class AdminProductService : IAdminProductService
         {
             var search = query.Search.Trim();
             dbQuery = dbQuery.Where(p =>
-                p.Name.Contains(search) || p.ProductCode.Contains(search));
+                p.Name.Contains(search)
+                || (p.NameEn != null && p.NameEn.Contains(search))
+                || p.ProductCode.Contains(search));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Category))
@@ -356,7 +364,7 @@ public class AdminProductService : IAdminProductService
             if (parsed is null)
                 continue;
 
-            var (name, code, pointValue, price, category) = parsed.Value;
+            var (name, code, pointValue, price, category, nameEn) = parsed.Value;
 
             // A code repeated within the same file is reported rather than
             // applied twice — the first occurrence already won the upsert.
@@ -373,6 +381,7 @@ public class AdminProductService : IAdminProductService
                 product.PointValue = pointValue;
                 product.Price = price;
                 product.Category = category;
+                ApplyImportedNameEn(product, nameEn);
                 updated++;
             }
             else if (softDeleted.TryGetValue(code, out var revived))
@@ -386,6 +395,7 @@ public class AdminProductService : IAdminProductService
                 revived.PointValue = pointValue;
                 revived.Price = price;
                 revived.Category = category;
+                ApplyImportedNameEn(revived, nameEn);
                 updated++;
             }
             else
@@ -393,6 +403,7 @@ public class AdminProductService : IAdminProductService
                 await _context.Products.AddAsync(new Product
                 {
                     Name = name,
+                    NameEn = NormalizeNameEn(nameEn),
                     ProductCode = code,
                     PointValue = pointValue,
                     Price = price,
@@ -427,12 +438,15 @@ public class AdminProductService : IAdminProductService
 
     // Validates one raw import row. On the first problem it appends a localized
     // ProductImportRowError and returns null; otherwise returns the parsed values.
-    private (string Name, string Code, int PointValue, decimal Price, string? Category)?
+    private (string Name, string Code, int PointValue, decimal Price, string? Category, string? NameEn)?
         ValidateRow(ProductImportRow row, List<ProductImportRowError> errors)
     {
         var name = row.Name?.Trim() ?? string.Empty;
         var code = row.ProductCode?.Trim() ?? string.Empty;
         var category = string.IsNullOrWhiteSpace(row.Category) ? null : row.Category.Trim();
+        // Kept null-vs-empty apart: null is "the file has no English column", empty
+        // is "the column is there and this cell was cleared".
+        var nameEn = row.NameEn?.Trim();
         var codeForError = code.Length > 0 ? code : null;
 
         if (name.Length is 0 or > 200)
@@ -475,7 +489,28 @@ public class AdminProductService : IAdminProductService
             return null;
         }
 
-        return (name, code, (int)pv, price, category);
+        if (nameEn is { Length: > 200 })
+        {
+            errors.Add(new ProductImportRowError(row.RowNumber, code,
+                _localizer["ProductImport.Row.NameEnTooLong"]));
+            return null;
+        }
+
+        return (name, code, (int)pv, price, category, nameEn);
+    }
+
+    // Trims the English name and collapses a blank one to null, so "no English name"
+    // is a single representation in the column rather than null-or-empty-string.
+    private static string? NormalizeNameEn(string? nameEn)
+        => string.IsNullOrWhiteSpace(nameEn) ? null : nameEn.Trim();
+
+    // A file without an English-name column must not wipe names already on record —
+    // that column is absent from every product file uploaded before this feature.
+    // A present-but-empty cell still clears the name, which is the deliberate edit.
+    private static void ApplyImportedNameEn(Product product, string? nameEn)
+    {
+        if (nameEn is not null)
+            product.NameEn = NormalizeNameEn(nameEn);
     }
 
     private static AdminProductResponse MapToResponse(Product product, int totalBarcodes, int availableBarcodes)
@@ -483,6 +518,7 @@ public class AdminProductService : IAdminProductService
         return new AdminProductResponse(
             product.Id,
             product.Name,
+            product.NameEn,
             product.ProductCode,
             product.PointValue,
             product.Price,

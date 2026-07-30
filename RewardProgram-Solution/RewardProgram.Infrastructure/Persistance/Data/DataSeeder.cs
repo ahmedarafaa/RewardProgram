@@ -35,6 +35,7 @@ public static class DataSeeder
         await SeedErpCustomersAsync(context, logger);
         await PatchErpCustomerShortAddressesAsync(context, logger);
         await SeedProductsAsync(context, logger);
+        await PatchProductEnglishNamesAsync(context, logger);
         await SeedRewardSettingsAsync(context, logger);
         await SeedContentAsync(context, logger);
         await SeedPrintTestBarcodesAsync(context, logger);
@@ -841,6 +842,89 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         logger.LogInformation("Seeded {Count} Products", products.Count);
+    }
+
+    /// <summary>
+    /// Fills <see cref="Product.NameEn"/> from the ERP English catalogue
+    /// (ProductNamesEn.csv). Patch-only by design: it never inserts a product, so a
+    /// code in the file that isn't already in the catalogue is simply ignored. Rows
+    /// that already carry an English name are left alone, which keeps an admin edit
+    /// from being overwritten on the next restart and makes the step idempotent.
+    /// </summary>
+    private static async Task PatchProductEnglishNamesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        // Only products still missing an English name are candidates — on an
+        // already-patched database this returns nothing and the step is a no-op.
+        var targets = await context.Products
+            .Where(p => p.NameEn == null)
+            .ToListAsync();
+
+        if (targets.Count == 0)
+        {
+            logger.LogInformation("Product English names already patched, skipping");
+            return;
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("ProductNamesEn.csv", StringComparison.OrdinalIgnoreCase));
+
+        if (resourceName is null)
+        {
+            logger.LogWarning("ProductNamesEn.csv embedded resource not found, skipping English name patch");
+            return;
+        }
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        // Skip header line (index 0): ProductCode;NameEn
+        var overlay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            // Split on the first separator only — an English name may legitimately
+            // contain further punctuation, and none of it should truncate the value.
+            var parts = line.Split(';', 2);
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[1]))
+            {
+                logger.LogWarning("Skipping malformed ProductNamesEn CSV line {LineNumber}: {Line}", i + 1, line);
+                continue;
+            }
+
+            overlay[parts[0].Trim()] = parts[1].Trim();
+        }
+
+        if (overlay.Count == 0) return;
+
+        // Matched in memory rather than through a WHERE ... IN: the catalogue is a
+        // small, bounded table and the overlay carries thousands of codes.
+        var patched = 0;
+        foreach (var product in targets)
+        {
+            if (!overlay.TryGetValue(product.ProductCode.Trim(), out var nameEn))
+                continue;
+
+            // UpdatedBy/UpdatedAt are stamped by the SaveChanges audit override, which
+            // overwrites whatever is set here — so don't pretend to attribute it.
+            product.NameEn = nameEn;
+            patched++;
+        }
+
+        if (patched == 0)
+        {
+            logger.LogInformation("No product matched the English name catalogue, skipping");
+            return;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation(
+            "Patched NameEn on {Count} Products ({Unmatched} left without an English name)",
+            patched, targets.Count - patched);
     }
 
     #endregion

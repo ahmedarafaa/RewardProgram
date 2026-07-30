@@ -90,7 +90,7 @@ public class AdminBarcodeService : IAdminBarcodeService
             request.Quantity, product.ProductCode, adminUserId);
 
         return Result.Success(new AdminGenerateBarcodesResponse(
-            request.Quantity, product.Name, product.ProductCode, codes.ToList()));
+            request.Quantity, product.Name, product.NameEn, product.ProductCode, codes.ToList()));
     }
 
     private static string GenerateUniqueCode(HashSet<string> existingCodes)
@@ -166,6 +166,7 @@ public class AdminBarcodeService : IAdminBarcodeService
             b.Id,
             b.Code,
             b.Product.Name,
+            b.Product.NameEn,
             b.Product.PointValue,
             b.Status,
             b.CreatedAt);
@@ -242,6 +243,7 @@ public class AdminBarcodeService : IAdminBarcodeService
             s.Id,
             s.Barcode.Code,
             s.Barcode.Product.Name,
+            s.Barcode.Product.NameEn,
             s.Barcode.Product.ProductCode,
             s.Barcode.Product.PointValue,
             s.PointsAwarded,

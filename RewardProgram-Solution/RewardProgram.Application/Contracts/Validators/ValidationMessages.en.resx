@@ -78,6 +78,7 @@
   <!-- Product -->
   <data name="Product.Name.NotEmpty"><value>Product name is required</value></data>
   <data name="Product.Name.MaxLength"><value>Product name must not exceed 200 characters</value></data>
+  <data name="Product.NameEn.MaxLength"><value>English product name must not exceed 200 characters</value></data>
   <data name="Product.Code.NotEmpty"><value>Product code is required</value></data>
   <data name="Product.Code.MaxLength"><value>Product code must not exceed 50 characters</value></data>
   <data name="Product.PointValue.GreaterThanZero"><value>Point value must be greater than zero</value></data>

@@ -96,6 +96,9 @@ public class AdminProductController : ControllerBase
     private IReadOnlyList<ExcelColumn<AdminProductResponse>> BuildProductExportColumns() =>
     [
         new(_l["Export.Header.Name"].Value, p => p.Name),
+        // Header text doubles as an import alias, so an exported sheet can be edited
+        // and uploaded back through /import without renaming a column.
+        new(_l["Export.Header.NameEn"].Value, p => p.NameEn),
         new(_l["Export.Header.ProductCode"].Value, p => p.ProductCode),
         new(_l["Export.Header.Category"].Value, p => p.Category),
         new(_l["Export.Header.PointValue"].Value, p => p.PointValue),

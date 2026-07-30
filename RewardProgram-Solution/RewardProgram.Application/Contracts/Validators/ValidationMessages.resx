@@ -78,6 +78,7 @@
   <!-- Product -->
   <data name="Product.Name.NotEmpty"><value>اسم المنتج مطلوب</value></data>
   <data name="Product.Name.MaxLength"><value>اسم المنتج يجب ألا يتجاوز 200 حرف</value></data>
+  <data name="Product.NameEn.MaxLength"><value>اسم المنتج بالإنجليزية يجب ألا يتجاوز 200 حرف</value></data>
   <data name="Product.Code.NotEmpty"><value>كود المنتج مطلوب</value></data>
   <data name="Product.Code.MaxLength"><value>كود المنتج يجب ألا يتجاوز 50 حرف</value></data>
   <data name="Product.PointValue.GreaterThanZero"><value>قيمة النقاط يجب أن تكون أكبر من صفر</value></data>
