@@ -20,6 +20,17 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
     // narrower than the head can resolve, so they printed as broken grey texture.
     private const float TopStripHeightMm = 11f;
 
+    // Arabic name first, English underneath it a shade smaller so the two lines read as
+    // primary/secondary. Both fit inside the strip: 5pt is ~1.76mm, and even if each
+    // name wraps to two lines the stack stays well under 11mm.
+    private const int NameFontSize = 5;
+    private const int NameEnFontSize = 4;
+
+    // Both names can wrap to two lines, and without a gap the last Arabic line and the
+    // first English one read as one paragraph. This separates the two blocks; the strip
+    // still has room for 2+2 wrapped lines plus the gap.
+    private const float NameGapMm = 0.9f;
+
     // The badge is taller than it is wide (aspect ~0.79), so it is sized by width and
     // sets its own height inside the strip.
     private const float LogoWidthMm = 8.5f;
@@ -67,9 +78,10 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
         return null;
     }
 
-    public byte[] GeneratePdf(string productName, string productCode, List<string> barcodeCodes)
+    public byte[] GeneratePdf(string productName, string? productNameEn, string productCode, List<string> barcodeCodes)
     {
         var logo = _logo.Value;
+        var nameEn = string.IsNullOrWhiteSpace(productNameEn) ? null : productNameEn.Trim();
 
         var document = Document.Create(container =>
         {
@@ -99,10 +111,27 @@ public class BarcodePdfGenerator : IBarcodePdfGenerator
 
                                     strip.RelativeItem()
                                         .AlignMiddle()
-                                        .AlignCenter()
-                                        .Text(productName)
-                                        .FontSize(5)
-                                        .FontColor(Colors.Black);
+                                        .Column(names =>
+                                        {
+                                            names.Item()
+                                                .AlignCenter()
+                                                .Text(productName)
+                                                .FontSize(NameFontSize)
+                                                .LineHeight(1)
+                                                .FontColor(Colors.Black);
+
+                                            // The English name is a second line rather than a
+                                            // wider one: the strip has the vertical room, and
+                                            // widening would eat into the logo column.
+                                            if (nameEn is not null)
+                                                names.Item()
+                                                    .PaddingTop(NameGapMm, Unit.Millimetre)
+                                                    .AlignCenter()
+                                                    .Text(nameEn)
+                                                    .FontSize(NameEnFontSize)
+                                                    .LineHeight(1)
+                                                    .FontColor(Colors.Black);
+                                        });
 
                                     // Mirror the logo's width on the right so the name
                                     // centres on the label itself rather than on the

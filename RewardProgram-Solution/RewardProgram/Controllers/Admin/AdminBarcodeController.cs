@@ -49,7 +49,7 @@ public class AdminBarcodeController : ControllerBase
             return result.ToProblem();
 
         var data = result.Value;
-        var pdfBytes = _pdfGenerator.GeneratePdf(data.ProductName, data.ProductCode, data.Codes);
+        var pdfBytes = _pdfGenerator.GeneratePdf(data.ProductName, data.ProductNameEn, data.ProductCode, data.Codes);
         var fileName = $"barcodes-{data.ProductCode}-{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
 
         return File(pdfBytes, "application/pdf", fileName);
