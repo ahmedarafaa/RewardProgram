@@ -1,5 +1,6 @@
 using System.Globalization;
 using ClosedXML.Excel;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Contracts.Admin.Products;
 using RewardProgram.Application.Interfaces;
 
@@ -7,53 +8,15 @@ namespace RewardProgram.Infrastructure.Services;
 
 /// <summary>
 /// ClosedXML-backed <see cref="IProductImportReader"/>. Columns are located by
-/// matching the first row's header text (Arabic or English) against a set of
-/// known aliases — the column ORDER in the uploaded file does not matter. A file
-/// exported from this app and a code-first ERP export both import correctly,
-/// because each is matched by header name rather than by position.
+/// matching the first row's header text (Arabic or English) against
+/// <see cref="ProductImportColumns"/> — the same map the downloadable template is
+/// generated from, so the two can never disagree. The column ORDER in the uploaded
+/// file does not matter: a file exported from this app and a code-first ERP export
+/// both import correctly, because each is matched by header name rather than by
+/// position.
 /// </summary>
 public class ProductImportReader : IProductImportReader
 {
-    // Header aliases, all compared after Normalize() (trim + lower-invariant +
-    // single-spaced). Each set covers this app's export header plus the ERP
-    // file's Arabic headers. Sets are kept disjoint so a header matches one field.
-    private static readonly HashSet<string> NameAliases = new(StringComparer.Ordinal)
-    {
-        "name", "product name", "الاسم", "اسم الصنف", "اسم المنتج", "اسم"
-    };
-
-    // English-name aliases are deliberately explicit ("english name", "name (en)"…)
-    // rather than the bare "product name" the ERP catalogue sheet uses for it —
-    // that header is already claimed above for the Arabic name, and re-pointing it
-    // would silently remap every file the existing importer accepts today.
-    private static readonly HashSet<string> NameEnAliases = new(StringComparer.Ordinal)
-    {
-        "name (en)", "name en", "nameen", "english name", "product name (en)",
-        "product name en", "الاسم بالإنجليزية", "الاسم الانجليزي",
-        "اسم المنتج بالإنجليزية", "الاسم بالانجليزية"
-    };
-
-    private static readonly HashSet<string> CodeAliases = new(StringComparer.Ordinal)
-    {
-        "product code", "productcode", "code", "كود المنتج", "كود الصنف",
-        "رمز المنتج", "رمز الصنف", "الكود", "كود"
-    };
-
-    private static readonly HashSet<string> CategoryAliases = new(StringComparer.Ordinal)
-    {
-        "category", "الفئة", "المجموعة", "التصنيف"
-    };
-
-    private static readonly HashSet<string> PointsAliases = new(StringComparer.Ordinal)
-    {
-        "point value", "pointvalue", "points", "قيمة النقاط", "النقاط", "نقاط"
-    };
-
-    private static readonly HashSet<string> PriceAliases = new(StringComparer.Ordinal)
-    {
-        "price (sar)", "price", "السعر (ر.س)", "السعر (ريال)", "السعر", "سعر"
-    };
-
     public IReadOnlyList<ProductImportRow> Read(Stream xlsxStream, int maxRows)
     {
         using var workbook = new XLWorkbook(xlsxStream);
@@ -72,18 +35,18 @@ public class ProductImportReader : IProductImportReader
         {
             var row = rows.Current;
 
-            var name = ReadCell(row.Cell(columns.Name));
-            var code = ReadCodeCell(row.Cell(columns.ProductCode));
-            var category = columns.Category is int categoryColumn
+            var name = ReadCell(row.Cell(columns[ProductImportColumns.Name]));
+            var code = ReadCodeCell(row.Cell(columns[ProductImportColumns.ProductCode]));
+            var category = columns.TryGetValue(ProductImportColumns.Category, out var categoryColumn)
                 ? ReadCell(row.Cell(categoryColumn))
                 : string.Empty;
-            var pointValue = ReadCell(row.Cell(columns.PointValue));
-            var price = ReadCell(row.Cell(columns.Price));
+            var pointValue = ReadCell(row.Cell(columns[ProductImportColumns.PointValue]));
+            var price = ReadCell(row.Cell(columns[ProductImportColumns.Price]));
 
             // Left null when the file has no English-name column, which the service
             // reads as "don't touch NameEn" — distinct from a present-but-empty cell,
             // which deliberately clears it.
-            var nameEn = columns.NameEn is int nameEnColumn
+            var nameEn = columns.TryGetValue(ProductImportColumns.NameEn, out var nameEnColumn)
                 ? ReadCell(row.Cell(nameEnColumn))
                 : null;
 
@@ -106,49 +69,20 @@ public class ProductImportReader : IProductImportReader
     }
 
     // Locates each field's column by header text. Required columns are Name,
-    // ProductCode, PointValue and Price; Category is optional. Throws
-    // ProductImportHeaderException listing any required column not found, so a
-    // file in the wrong layout is rejected instead of silently mismapped.
-    private static ResolvedColumns ResolveColumns(IXLRow headerRow)
+    // ProductCode, PointValue and Price; Category and Name (EN) are optional.
+    // Throws ProductImportHeaderException listing any required column not found,
+    // so a file in the wrong layout is rejected instead of silently mismapped.
+    private static Dictionary<ImportColumn, int> ResolveColumns(IXLRow headerRow)
     {
-        int? name = null, nameEn = null, code = null, category = null, points = null, price = null;
+        var resolved = ImportColumns.Resolve(
+            ProductImportColumns.All,
+            headerRow.CellsUsed().Select(c => (c.GetString(), c.Address.ColumnNumber)));
 
-        foreach (var cell in headerRow.CellsUsed())
-        {
-            var header = Normalize(cell.GetString());
-            if (header.Length == 0)
-                continue;
-
-            var column = cell.Address.ColumnNumber;
-            if (name is null && NameAliases.Contains(header)) name = column;
-            else if (nameEn is null && NameEnAliases.Contains(header)) nameEn = column;
-            else if (code is null && CodeAliases.Contains(header)) code = column;
-            else if (category is null && CategoryAliases.Contains(header)) category = column;
-            else if (points is null && PointsAliases.Contains(header)) points = column;
-            else if (price is null && PriceAliases.Contains(header)) price = column;
-        }
-
-        var missing = new List<string>();
-        if (name is null) missing.Add("Name / الاسم");
-        if (code is null) missing.Add("Product Code / كود المنتج");
-        if (points is null) missing.Add("Point Value / قيمة النقاط");
-        if (price is null) missing.Add("Price / السعر");
-
+        var missing = ImportColumns.MissingRequired(ProductImportColumns.All, resolved);
         if (missing.Count > 0)
             throw new ProductImportHeaderException(missing);
 
-        return new ResolvedColumns(name!.Value, nameEn, code!.Value, category, points!.Value, price!.Value);
-    }
-
-    // Trim, lower-case (invariant) and collapse internal whitespace runs so
-    // header matching tolerates casing and stray spaces.
-    private static string Normalize(string raw)
-    {
-        var trimmed = raw.Trim().ToLowerInvariant();
-        if (trimmed.Length == 0)
-            return string.Empty;
-
-        return string.Join(' ', trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return resolved;
     }
 
     // Numeric cells are normalized to an invariant-culture string so the service
@@ -180,7 +114,4 @@ public class ProductImportReader : IProductImportReader
             ? value.ToString("F0", CultureInfo.InvariantCulture)
             : value.ToString(CultureInfo.InvariantCulture);
     }
-
-    private readonly record struct ResolvedColumns(
-        int Name, int? NameEn, int ProductCode, int? Category, int PointValue, int Price);
 }

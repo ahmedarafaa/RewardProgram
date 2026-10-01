@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.ErpCustomers;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
@@ -15,7 +16,9 @@ namespace RewardProgram.Application.Services.Admin;
 public class AdminErpCustomerService : IAdminErpCustomerService
 {
     // ErpCustomers total ~3,200 — a generous ceiling that still bounds a single import.
-    private const int MaxImportRows = 20000;
+    // Shared with the upload endpoint and the template's instructions sheet so the
+    // documented limit and the enforced one stay the same number.
+    private const int MaxImportRows = ImportLimits.MaxErpCustomerRows;
 
     private readonly IApplicationDbContext _context;
     private readonly IErpCustomerImportReader _importReader;

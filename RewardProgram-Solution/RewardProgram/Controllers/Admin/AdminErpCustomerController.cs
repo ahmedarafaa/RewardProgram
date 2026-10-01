@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
 using RewardProgram.Application.Contracts.Admin.ErpCustomers;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
@@ -20,10 +21,6 @@ namespace RewardProgram.API.Controllers.Admin;
 [Authorize(Roles = UserRoles.AdminDashboard)]
 public class AdminErpCustomerController : ControllerBase
 {
-    // 10 MB upper bound on the uploaded workbook — well above any realistic
-    // customer list, while still rejecting accidental large files early.
-    private const long MaxImportFileBytes = 10 * 1024 * 1024;
-
     private readonly IAdminErpCustomerService _service;
     private readonly IExcelExporter _excelExporter;
     private readonly IStringLocalizer<ErrorMessages> _l;
@@ -110,6 +107,15 @@ public class AdminErpCustomerController : ControllerBase
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 
+    // The blank import workbook. Gated on ErpCustomersManage — the same permission as
+    // the import it feeds, so the button never 403s for the people who need it.
+    [HttpGet("import/template")]
+    [HasPermission(AdminPermissions.ErpCustomersManage)]
+    [Produces(ExcelExportHelper.ContentType)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public Task<IActionResult> DownloadImportTemplate(CancellationToken ct)
+        => this.ImportTemplateAsync(_excelExporter, _l, ImportTemplates.ErpCustomers, ct);
+
     [HttpPost("import")]
     [HasPermission(AdminPermissions.ErpCustomersManage)]
     [Consumes("multipart/form-data")]
@@ -121,7 +127,7 @@ public class AdminErpCustomerController : ControllerBase
         if (file is null || file.Length == 0)
             return Result.Failure(AdminErpCustomerErrors.ImportInvalidFile).ToProblem();
 
-        if (file.Length > MaxImportFileBytes)
+        if (file.Length > ImportLimits.MaxFileBytes)
             return Result.Failure(AdminErpCustomerErrors.ImportFileTooLarge).ToProblem();
 
         if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))

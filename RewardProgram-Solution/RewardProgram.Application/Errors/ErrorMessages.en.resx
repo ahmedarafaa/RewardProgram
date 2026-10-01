@@ -135,6 +135,29 @@
   <data name="ProductImport.Row.CategoryTooLong"><value>Category must not exceed 100 characters.</value></data>
   <data name="ProductImport.Row.NameEnTooLong"><value>English name must not exceed 200 characters.</value></data>
   <data name="ProductImport.Row.DuplicateInFile"><value>This product code appears more than once in the file.</value></data>
+  <!-- Product import template (downloadable blank workbook) -->
+  <data name="ImportTemplate.Sheet.Instructions"><value>Instructions</value></data>
+  <data name="ImportTemplate.Header.Column"><value>Column</value></data>
+  <data name="ImportTemplate.Header.Required"><value>Required</value></data>
+  <data name="ImportTemplate.Header.Description"><value>Description</value></data>
+  <data name="ImportTemplate.Header.Example"><value>Example</value></data>
+  <data name="ImportTemplate.Required.Yes"><value>Yes</value></data>
+  <data name="ImportTemplate.Required.No"><value>No</value></data>
+  <data name="ProductImport.Template.Description.Name"><value>Product name in Arabic. Up to 200 characters.</value></data>
+  <data name="ProductImport.Template.Description.NameEn"><value>Product name in English. Up to 200 characters. Delete this column entirely to leave existing English names unchanged.</value></data>
+  <data name="ProductImport.Template.Description.ProductCode"><value>Product code, up to 50 characters. Used to match rows against existing products.</value></data>
+  <data name="ProductImport.Template.Description.Category"><value>Category name, up to 100 characters. Leave blank if unused.</value></data>
+  <data name="ProductImport.Template.Description.PointValue"><value>Whole number greater than zero.</value></data>
+  <data name="ProductImport.Template.Description.Price"><value>Number up to 99,999,999.99 with at most 2 decimal places.</value></data>
+  <data name="ImportTemplate.Note.HeaderRow"><value>Enter one record per row, starting at row 2. Do not rename or delete the header row.</value></data>
+  <data name="ProductImport.Template.Note.Matching"><value>Rows are matched by Product Code: an existing code updates that product, a new code creates one.</value></data>
+  <data name="ImportTemplate.Note.FirstSheet"><value>Only the first sheet is imported. This sheet is ignored.</value></data>
+  <data name="ImportTemplate.Note.Limits"><value>Maximum {0} rows per file. The file must be .xlsx and smaller than {1} MB.</value></data>
+
+  <!-- ERP customer import template -->
+  <data name="ErpCustomerImport.Template.Description.CustomerCode"><value>Customer code, up to 50 characters. Used to match rows against existing customers.</value></data>
+  <data name="ErpCustomerImport.Template.Description.CustomerName"><value>Customer name, up to 200 characters.</value></data>
+  <data name="ErpCustomerImport.Template.Note.Matching"><value>Rows are matched by Customer Code: an existing code updates that customer, a new code creates one.</value></data>
 
   <!-- Admin Account Errors -->
   <data name="AdminAccount.NotFound"><value>Admin account not found</value></data>

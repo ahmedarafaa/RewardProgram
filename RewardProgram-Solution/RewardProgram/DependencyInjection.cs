@@ -92,6 +92,11 @@ public static class DependencyInjection
                 builder.WithOrigins(allowedOrigins)
                         .AllowAnyHeader()
                         .AllowAnyMethod()
+                        // Every .xlsx download (exports and the import template) carries
+                        // its file name in Content-Disposition. Browsers hide response
+                        // headers from cross-origin JS unless they are listed here, so
+                        // without this the dashboard cannot read the name it saves as.
+                        .WithExposedHeaders(Microsoft.Net.Http.Headers.HeaderNames.ContentDisposition)
             )
         );
 

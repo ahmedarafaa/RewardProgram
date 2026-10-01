@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Contracts.Admin.Products;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
@@ -16,8 +17,9 @@ namespace RewardProgram.Application.Services.Admin;
 
 public class AdminProductService : IAdminProductService
 {
-    // Products total ~1,100 — a generous ceiling that still bounds a single import.
-    private const int MaxImportRows = 10000;
+    // Shared with the upload endpoint and the template's instructions sheet so the
+    // documented limit and the enforced one stay the same number.
+    private const int MaxImportRows = ImportLimits.MaxProductRows;
 
     // Upper bound for the Price column (SQL decimal(10,2) → 8 integer digits).
     // A value past this would overflow on save and abort the whole batch.

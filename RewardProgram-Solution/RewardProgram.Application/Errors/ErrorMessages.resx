@@ -135,6 +135,29 @@
   <data name="ProductImport.Row.CategoryTooLong"><value>التصنيف يجب ألا يتجاوز 100 حرف</value></data>
   <data name="ProductImport.Row.NameEnTooLong"><value>الاسم بالإنجليزية يجب ألا يتجاوز 200 حرف</value></data>
   <data name="ProductImport.Row.DuplicateInFile"><value>كود المنتج مكرر في الملف</value></data>
+  <!-- Product import template (downloadable blank workbook) -->
+  <data name="ImportTemplate.Sheet.Instructions"><value>التعليمات</value></data>
+  <data name="ImportTemplate.Header.Column"><value>العمود</value></data>
+  <data name="ImportTemplate.Header.Required"><value>مطلوب</value></data>
+  <data name="ImportTemplate.Header.Description"><value>الوصف</value></data>
+  <data name="ImportTemplate.Header.Example"><value>مثال</value></data>
+  <data name="ImportTemplate.Required.Yes"><value>نعم</value></data>
+  <data name="ImportTemplate.Required.No"><value>لا</value></data>
+  <data name="ProductImport.Template.Description.Name"><value>اسم المنتج بالعربية، بحد أقصى 200 حرف</value></data>
+  <data name="ProductImport.Template.Description.NameEn"><value>اسم المنتج بالإنجليزية، بحد أقصى 200 حرف. احذف العمود بالكامل للإبقاء على الأسماء الإنجليزية الحالية دون تغيير</value></data>
+  <data name="ProductImport.Template.Description.ProductCode"><value>كود المنتج، بحد أقصى 50 حرف. يُستخدم لمطابقة الصفوف مع المنتجات الحالية</value></data>
+  <data name="ProductImport.Template.Description.Category"><value>اسم الفئة، بحد أقصى 100 حرف. اتركه فارغاً إن لم يكن مستخدماً</value></data>
+  <data name="ProductImport.Template.Description.PointValue"><value>رقم صحيح أكبر من صفر</value></data>
+  <data name="ProductImport.Template.Description.Price"><value>رقم لا يتجاوز 99,999,999.99 وبحد أقصى منزلتين عشريتين</value></data>
+  <data name="ImportTemplate.Note.HeaderRow"><value>أدخل سجلاً واحداً في كل صف ابتداءً من الصف الثاني، ولا تُعدّل أو تحذف صف العناوين</value></data>
+  <data name="ProductImport.Template.Note.Matching"><value>تتم مطابقة الصفوف عن طريق كود المنتج: الكود الموجود يُحدّث المنتج، والكود الجديد يُنشئ منتجاً جديداً</value></data>
+  <data name="ImportTemplate.Note.FirstSheet"><value>يتم استيراد الورقة الأولى فقط، ويتم تجاهل هذه الورقة</value></data>
+  <data name="ImportTemplate.Note.Limits"><value>الحد الأقصى {0} صف في الملف، ويجب أن يكون بصيغة xlsx وبحجم أقل من {1} ميجابايت</value></data>
+
+  <!-- ERP customer import template -->
+  <data name="ErpCustomerImport.Template.Description.CustomerCode"><value>كود العميل، بحد أقصى 50 حرف. يُستخدم لمطابقة الصفوف مع العملاء الحاليين</value></data>
+  <data name="ErpCustomerImport.Template.Description.CustomerName"><value>اسم العميل، بحد أقصى 200 حرف</value></data>
+  <data name="ErpCustomerImport.Template.Note.Matching"><value>تتم مطابقة الصفوف عن طريق كود العميل: الكود الموجود يُحدّث العميل، والكود الجديد يُنشئ عميلاً جديداً</value></data>
 
   <!-- Admin Account Errors -->
   <data name="AdminAccount.NotFound"><value>حساب المسؤول غير موجود</value></data>

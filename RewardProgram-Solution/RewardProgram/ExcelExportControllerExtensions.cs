@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using Microsoft.Net.Http.Headers;
 using RewardProgram.Application.Abstractions;
+using RewardProgram.Application.Contracts.Admin.Imports;
+using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 
@@ -49,8 +52,38 @@ public static class ExcelExportControllerExtensions
         return BuildFileResponse(controller, stream, fileBaseName);
     }
 
+    // The blank import workbook for one importer: header row generated from the same
+    // column map that importer's parser matches against, so "download, fill, upload"
+    // cannot fail on headers.
+    public static Task<IActionResult> ImportTemplateAsync(
+        this ControllerBase controller,
+        IExcelExporter exporter,
+        IStringLocalizer<ErrorMessages> localizer,
+        ImportTemplateDefinition definition,
+        CancellationToken ct)
+        => controller.WorkbookFileAsync(
+            exporter,
+            definition.FileName,
+            builder => ImportTemplateBuilder.Build(builder, localizer, definition),
+            ct);
+
+    // Workbook download with an exact, caller-supplied file name — for generated
+    // documents like the import templates, whose name is part of the contract and
+    // must not carry the export endpoints' timestamp suffix.
+    public static async Task<IActionResult> WorkbookFileAsync(
+        this ControllerBase controller,
+        IExcelExporter exporter,
+        string fileName,
+        Action<IExcelWorkbookBuilder> build,
+        CancellationToken ct)
+    {
+        var stream = new MemoryStream();
+        await exporter.WriteMultiSheetAsync(stream, build, ct);
+        return BuildFileResponse(controller, stream, fileName, timestamp: false);
+    }
+
     private static FileStreamResult BuildFileResponse(
-        ControllerBase controller, MemoryStream stream, string fileBaseName)
+        ControllerBase controller, MemoryStream stream, string fileBaseName, bool timestamp = true)
     {
         stream.Position = 0;
 
@@ -63,6 +96,6 @@ public static class ExcelExportControllerExtensions
         return controller.File(
             stream,
             ExcelExportHelper.ContentType,
-            ExcelExportHelper.TimestampedFileName(fileBaseName));
+            timestamp ? ExcelExportHelper.TimestampedFileName(fileBaseName) : fileBaseName);
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Contracts.Admin.Products;
 using RewardProgram.Application.Errors;
 using RewardProgram.Application.Helpers;
@@ -45,9 +46,16 @@ public class AdminProductController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    // 10 MB upper bound on the uploaded workbook — well above any realistic
-    // product catalogue, while still rejecting accidental large files early.
-    private const long MaxImportFileBytes = 10 * 1024 * 1024;
+    // The blank import workbook: header row generated from the same column map the
+    // parser matches against, so "download, fill, upload" cannot fail on headers.
+    // Gated on ProductsManage — the same permission as the import it feeds, so the
+    // button never 403s for the people who need it.
+    [HttpGet("import/template")]
+    [HasPermission(AdminPermissions.ProductsManage)]
+    [Produces(ExcelExportHelper.ContentType)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public Task<IActionResult> DownloadImportTemplate(CancellationToken ct)
+        => this.ImportTemplateAsync(_excelExporter, _l, ImportTemplates.Products, ct);
 
     [HttpPost("import")]
     [HasPermission(AdminPermissions.ProductsManage)]
@@ -60,7 +68,7 @@ public class AdminProductController : ControllerBase
         if (file is null || file.Length == 0)
             return Result.Failure(ProductErrors.ProductImportInvalidFile).ToProblem();
 
-        if (file.Length > MaxImportFileBytes)
+        if (file.Length > ImportLimits.MaxFileBytes)
             return Result.Failure(ProductErrors.ProductImportFileTooLarge).ToProblem();
 
         if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))

@@ -1,30 +1,20 @@
 using System.Globalization;
 using ClosedXML.Excel;
 using RewardProgram.Application.Contracts.Admin.ErpCustomers;
+using RewardProgram.Application.Contracts.Admin.Imports;
 using RewardProgram.Application.Interfaces;
 
 namespace RewardProgram.Infrastructure.Services;
 
 /// <summary>
 /// ClosedXML-backed <see cref="IErpCustomerImportReader"/>. The two columns
-/// (CustomerCode, CustomerName) are located by matching the first row's header
-/// text (Arabic or English) against known aliases — column order does not matter.
+/// (CustomerCode, CustomerName) are located by matching the first row's header text
+/// (Arabic or English) against <see cref="ErpCustomerImportColumns"/> — the same map
+/// the downloadable template is generated from, so the two can never disagree.
+/// Column order does not matter.
 /// </summary>
 public class ErpCustomerImportReader : IErpCustomerImportReader
 {
-    // Header aliases, compared after Normalize() (trim + lower-invariant + single-spaced).
-    private static readonly HashSet<string> CodeAliases = new(StringComparer.Ordinal)
-    {
-        "customer code", "customercode", "code", "كود العميل", "كود الصنف",
-        "رمز العميل", "الكود", "كود"
-    };
-
-    private static readonly HashSet<string> NameAliases = new(StringComparer.Ordinal)
-    {
-        "customer name", "customername", "name", "اسم العميل", "اسم الصنف",
-        "الاسم", "اسم"
-    };
-
     public IReadOnlyList<ErpCustomerImportRow> Read(Stream xlsxStream, int maxRows)
     {
         using var workbook = new XLWorkbook(xlsxStream);
@@ -42,8 +32,8 @@ public class ErpCustomerImportReader : IErpCustomerImportReader
         while (rows.MoveNext())
         {
             var row = rows.Current;
-            var code = ReadCell(row.Cell(columns.Code));
-            var name = ReadCell(row.Cell(columns.Name));
+            var code = ReadCell(row.Cell(columns[ErpCustomerImportColumns.CustomerCode]));
+            var name = ReadCell(row.Cell(columns[ErpCustomerImportColumns.CustomerName]));
 
             // Skip rows that are entirely blank.
             if (code.Length == 0 && name.Length == 0)
@@ -62,40 +52,17 @@ public class ErpCustomerImportReader : IErpCustomerImportReader
 
     // Locates the two columns by header text. Both are required; throws
     // ErpCustomerImportHeaderException listing any not found.
-    private static (int Code, int Name) ResolveColumns(IXLRow headerRow)
+    private static Dictionary<ImportColumn, int> ResolveColumns(IXLRow headerRow)
     {
-        int? code = null, name = null;
+        var resolved = ImportColumns.Resolve(
+            ErpCustomerImportColumns.All,
+            headerRow.CellsUsed().Select(c => (c.GetString(), c.Address.ColumnNumber)));
 
-        foreach (var cell in headerRow.CellsUsed())
-        {
-            var header = Normalize(cell.GetString());
-            if (header.Length == 0)
-                continue;
-
-            var column = cell.Address.ColumnNumber;
-            if (code is null && CodeAliases.Contains(header)) code = column;
-            else if (name is null && NameAliases.Contains(header)) name = column;
-        }
-
-        var missing = new List<string>();
-        if (code is null) missing.Add("Customer Code / كود العميل");
-        if (name is null) missing.Add("Customer Name / اسم العميل");
-
+        var missing = ImportColumns.MissingRequired(ErpCustomerImportColumns.All, resolved);
         if (missing.Count > 0)
             throw new ErpCustomerImportHeaderException(missing);
 
-        return (code!.Value, name!.Value);
-    }
-
-    // Trim, lower-case (invariant) and collapse internal whitespace runs so
-    // header matching tolerates casing and stray spaces.
-    private static string Normalize(string raw)
-    {
-        var trimmed = raw.Trim().ToLowerInvariant();
-        if (trimmed.Length == 0)
-            return string.Empty;
-
-        return string.Join(' ', trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return resolved;
     }
 
     // Code and Name are identifiers/text. A numeric cell is rendered without a
