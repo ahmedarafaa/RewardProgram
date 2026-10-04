@@ -150,4 +150,7 @@
   <data name="Content.WorkingHours.NotEmpty"><value>ساعات العمل مطلوبة</value></data>
   <data name="Content.WorkingHours.MaxLength"><value>ساعات العمل يجب ألا تتجاوز 200 حرف</value></data>
   <data name="Content.Body.NotEmpty"><value>المحتوى مطلوب</value></data>
+  <data name="StaffRoles.NotEmpty"><value>يجب تحديد دور واحد على الأقل</value></data>
+  <data name="StaffRoles.Invalid"><value>الأدوار المسموح بها هي SalesMan و ZoneManager فقط</value></data>
+  <data name="StaffRoles.Duplicate"><value>تم تكرار نفس الدور أكثر من مرة</value></data>
 </root>

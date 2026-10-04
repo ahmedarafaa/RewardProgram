@@ -31,6 +31,25 @@ public static class MobileNumberHelper
         return trimmed;
     }
 
+    /// <summary>
+    /// Turns a (possibly partial) number typed into a search box into a fragment
+    /// that matches the stored international form. Admins type local numbers
+    /// ("0597…") but mobiles are stored as "+966597…", so a raw Contains misses.
+    /// Leading "00" becomes "+"; a single leading "0" is dropped. Non-numeric
+    /// input (e.g. a name) is returned unchanged.
+    /// </summary>
+    public static string ToSearchFragment(string search)
+    {
+        var trimmed = search.Trim();
+        if (trimmed.Length < 2 || !trimmed.All(char.IsDigit))
+            return trimmed;
+
+        if (trimmed.StartsWith("00"))
+            return "+" + trimmed[2..];
+
+        return trimmed[0] == '0' ? trimmed[1..] : trimmed;
+    }
+
     public static string Mask(string mobileNumber)
     {
         if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length < 4)

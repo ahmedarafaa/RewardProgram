@@ -150,4 +150,7 @@
   <data name="Content.WorkingHours.NotEmpty"><value>Working hours is required</value></data>
   <data name="Content.WorkingHours.MaxLength"><value>Working hours must not exceed 200 characters</value></data>
   <data name="Content.Body.NotEmpty"><value>Content is required</value></data>
+  <data name="StaffRoles.NotEmpty"><value>At least one role must be selected</value></data>
+  <data name="StaffRoles.Invalid"><value>Allowed roles are SalesMan and ZoneManager only</value></data>
+  <data name="StaffRoles.Duplicate"><value>The same role was listed more than once</value></data>
 </root>

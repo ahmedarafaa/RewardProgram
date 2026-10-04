@@ -69,6 +69,21 @@ public static class AdminUserErrors
     public static readonly Error ReassignmentTargetNotZoneManager =
         new("Admin.ReassignmentTargetNotZoneManager", "المستخدم المستهدف ليس مدير منطقة", 400);
 
+    public static readonly Error ReassignmentTargetInactive =
+        new("Admin.ReassignmentTargetInactive", "لا يمكن نقل المدن أو المنطقة إلى حساب معطل أو محذوف", 400);
+
+    public static readonly Error ReassignTerritoryBeforeDisable =
+        new("Admin.ReassignTerritoryBeforeDisable", "يجب إعادة تعيين المدن أو المنطقة التابعة لهذا المستخدم قبل تعطيله", 400);
+
+    public static readonly Error CannotToggleDeletedUser =
+        new("Admin.CannotToggleDeletedUser", "لا يمكن تغيير حالة حساب محذوف، قم باستعادته أولاً", 400);
+
+    public static readonly Error CannotRestoreArchivedRegistration =
+        new("Admin.CannotRestoreArchivedRegistration", "لا يمكن استعادة طلب تسجيل مرفوض تمت أرشفته", 400);
+
+    public static readonly Error DuplicateCityReassignment =
+        new("Admin.DuplicateCityReassignment", "تم تكرار نفس المدينة أكثر من مرة في قائمة إعادة التعيين", 400);
+
     public static readonly Error CityNotOwnedBySalesMan =
         new("Admin.CityNotOwnedBySalesMan", "المدينة ليست تابعة لهذا المندوب", 400);
 
@@ -83,4 +98,19 @@ public static class AdminUserErrors
 
     public static readonly Error AccountNotDeleted =
         new("Admin.AccountNotDeleted", "الحساب غير محذوف، لا يمكن استعادته", 400);
+
+    // ── Staff role set (SalesMan / ZoneManager / both) ──
+
+    public static readonly Error UserNotStaff =
+        new("Admin.UserNotStaff", "هذا الإجراء متاح فقط لحسابات مندوبي المبيعات ومديري المناطق", 400);
+
+    public static readonly Error InvalidStaffRole =
+        new("Admin.InvalidStaffRole", "الأدوار المسموح بها هي مندوب مبيعات و/أو مدير منطقة", 400);
+
+    public static readonly Error CannotChangeRolesOfInactiveUser =
+        new("Admin.CannotChangeRolesOfInactiveUser", "لا يمكن تغيير أدوار حساب معطل أو محذوف", 400);
+
+    public static readonly Error OtherRoleTerritoryMustBeHandedOff =
+        new("Admin.OtherRoleTerritoryMustBeHandedOff",
+            "هذا المستخدم يملك مدناً أو منطقة بدوره الآخر — أعد تعيينها أو أزل الدور الآخر أولاً", 400);
 }

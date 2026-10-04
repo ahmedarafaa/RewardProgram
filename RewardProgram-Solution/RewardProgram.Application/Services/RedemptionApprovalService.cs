@@ -560,18 +560,23 @@ public class RedemptionApprovalService : IRedemptionApprovalService
             or RedemptionRequestStatus.AdminApproved)
             return Result.Failure(RedemptionErrors.NotPendingApproval);
 
+        // A disabled or deleted approver may still hold an unexpired access token —
+        // refuse here too so an SM/ZM switched off mid-session can't keep approving.
         var approver = await _userRepository.FindByIdAsync(approverId, ct);
-        if (approver is null)
+        if (approver is null || approver.IsDisabled || approver.IsAccountDeleted)
             return Result.Failure(RedemptionErrors.NotAuthorizedToApprove);
 
         var roles = await _userRepository.GetRolesAsync(approver);
 
-        // Role check
+        // Role check. PendingAdmin accepts both dashboard roles: an Admin account only
+        // reaches this through AdminRedemptionController, which already requires the
+        // Redemptions.Manage permission.
         var hasRole = redemptionRequest.Status switch
         {
             RedemptionRequestStatus.PendingSalesMan when roles.Contains(UserRoles.SalesMan) => true,
             RedemptionRequestStatus.PendingZoneManager when roles.Contains(UserRoles.ZoneManager) => true,
-            RedemptionRequestStatus.PendingAdmin when roles.Contains(UserRoles.SystemAdmin) => true,
+            RedemptionRequestStatus.PendingAdmin
+                when roles.Contains(UserRoles.SystemAdmin) || roles.Contains(UserRoles.Admin) => true,
             _ => false
         };
 

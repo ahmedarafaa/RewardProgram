@@ -36,4 +36,8 @@ public interface IAdminUserService
 
     // Restore deleted account
     Task<Result> RestoreUserAsync(string userId, string adminUserId, CancellationToken ct = default);
+
+    // Staff role set — SalesMan / ZoneManager / both. In-place: keeps id, mobile and
+    // approval history; roles being removed hand off their territory in the same call.
+    Task<Result<AdminStaffRolesResponse>> SetStaffRolesAsync(string userId, AdminSetStaffRolesRequest request, string adminUserId, CancellationToken ct = default);
 }

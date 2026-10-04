@@ -68,6 +68,44 @@ public class AdminUserService : IAdminUserService
         _cache.Remove(ZmRoleCacheKey);
     }
 
+    // ── Staff role membership ──
+    // A staff account may hold SalesMan, ZoneManager or BOTH Identity roles while
+    // UserType stores only one "primary" value. Every territory/ownership rule must
+    // therefore look at role membership, not UserType — otherwise a dual-role user
+    // whose primary type is ZoneManager can never be handed a city (and vice versa).
+
+    private static readonly string[] StaffRoleNames = [UserRoles.SalesMan, UserRoles.ZoneManager];
+
+    /// <summary>Identity role rows of the user, restricted to the two staff roles.</summary>
+    private async Task<HashSet<string>> GetStaffRoleRowsAsync(ApplicationUser user)
+    {
+        var rows = await _userRepository.GetRolesAsync(user);
+        return (rows ?? []).Where(r => StaffRoleNames.Contains(r, StringComparer.Ordinal))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Effective staff roles: the Identity rows, or — for legacy accounts that were
+    /// created without a role row — the primary UserType.
+    /// </summary>
+    private static HashSet<string> EffectiveStaffRoles(ApplicationUser user, HashSet<string> rows)
+    {
+        if (rows.Count > 0) return rows;
+        var fallback = new HashSet<string>(StringComparer.Ordinal);
+        if (user.UserType == UserType.SalesMan) fallback.Add(UserRoles.SalesMan);
+        if (user.UserType == UserType.ZoneManager) fallback.Add(UserRoles.ZoneManager);
+        return fallback;
+    }
+
+    private async Task<HashSet<string>> GetEffectiveStaffRolesAsync(ApplicationUser user) =>
+        EffectiveStaffRoles(user, await GetStaffRoleRowsAsync(user));
+
+    private async Task<bool> IsSalesManAsync(ApplicationUser user) =>
+        (await GetEffectiveStaffRolesAsync(user)).Contains(UserRoles.SalesMan);
+
+    private async Task<bool> IsZoneManagerAsync(ApplicationUser user) =>
+        (await GetEffectiveStaffRolesAsync(user)).Contains(UserRoles.ZoneManager);
+
     #region Add User
 
     public async Task<Result<AdminAddUserResponse>> AddSalesManAsync(
@@ -81,7 +119,8 @@ public class AdminUserService : IAdminUserService
                 ? AdminUserErrors.MobileBelongsToDeletedAccount
                 : AdminUserErrors.MobileAlreadyExists);
 
-        var cityIds = request.CityIds ?? [];
+        // Distinct: a repeated id would otherwise fail the count check below as "not found".
+        var cityIds = (request.CityIds ?? []).Distinct().ToList();
         List<Domain.Entities.Users.City> cities = [];
 
         if (cityIds.Count > 0)
@@ -319,8 +358,9 @@ public class AdminUserService : IAdminUserService
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim();
+            var mobileFragment = MobileNumberHelper.ToSearchFragment(search);
             usersQuery = usersQuery.Where(u =>
-                u.Name.Contains(search) || u.MobileNumber.Contains(search));
+                u.Name.Contains(search) || u.MobileNumber.Contains(mobileFragment));
         }
 
         if (query.UserType.HasValue)
@@ -599,6 +639,7 @@ public class AdminUserService : IAdminUserService
             if (zmRoleUserIds.Contains(u.Id)) roles.Add(UserRoles.ZoneManager);
             if (smRoleUserIds.Contains(u.Id)) roles.Add(UserRoles.SalesMan);
             if (roles.Count == 0) roles.Add(u.UserType.ToString());
+            var isDualRole = zmRoleUserIds.Contains(u.Id) && smRoleUserIds.Contains(u.Id);
 
             var ownedCities = ownedCitiesBySm.TryGetValue(u.Id, out var oc)
                 ? oc
@@ -618,7 +659,7 @@ public class AdminUserService : IAdminUserService
                 deletionSource, u.RestoredAt,
                 u.CreatedAt,
                 regionName, regionNameEn, cityName, cityNameEn,
-                customerCode, storeName, roles,
+                customerCode, storeName, roles, isDualRole,
                 ownedCities, managedRegion);
         }).ToList();
 
@@ -768,6 +809,7 @@ public class AdminUserService : IAdminUserService
             user.IsDisabled, user.IsAccountDeleted, user.AccountDeletedAt,
             deletionSource, user.RestoredAt,
             user.CreatedAt, roles,
+            roles.Contains(UserRoles.SalesMan) && roles.Contains(UserRoles.ZoneManager),
             address, shop, ownedCities, managedRegion,
             user.InvitationCode, user.InvitedByUserId, user.InviterRewardCount);
 
@@ -789,12 +831,22 @@ public class AdminUserService : IAdminUserService
         if (user.UserType == UserType.SystemAdmin)
             return Result.Failure<AdminToggleStatusResponse>(AdminUserErrors.UserIsSystemAdmin);
 
+        // Deleted accounts are managed through restore; flipping IsDisabled here would
+        // list a still-deleted user as active.
+        if (user.IsAccountDeleted)
+            return Result.Failure<AdminToggleStatusResponse>(AdminUserErrors.CannotToggleDeletedUser);
+
+        // Disabling an SM/ZM who still owns territory would leave new registrations and
+        // redemptions routed to someone who can't log in — same rule as delete.
+        if (!user.IsDisabled && await OwnsTerritoryAsync(user, ct))
+            return Result.Failure<AdminToggleStatusResponse>(AdminUserErrors.ReassignTerritoryBeforeDisable);
+
         user.IsDisabled = !user.IsDisabled;
 
-        // When disabling, also bump the security stamp (forces existing access tokens
-        // signed before the bump to be rejected at the next validation), clear FCM,
-        // and revoke refresh tokens via bulk SQL so any in-flight refresh sessions
-        // are killed immediately rather than living for the 365-day refresh lifetime.
+        // When disabling, clear FCM and revoke refresh tokens via bulk SQL so any
+        // in-flight refresh sessions are killed immediately rather than living for
+        // the 365-day refresh lifetime. Live access tokens are rejected by the
+        // account-status check on JWT validation.
         if (user.IsDisabled)
         {
             user.FcmToken = null;
@@ -813,6 +865,10 @@ public class AdminUserService : IAdminUserService
             await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
         }
 
+        // Either direction: a disable must bite the live access token now, and a
+        // re-enable must not wait out a cached "inactive".
+        AccountStatusCache.Invalidate(_cache, userId);
+
         // Conservative cache invalidation: SM/ZM disable/enable shifts who shows in
         // active queues; clear so the next ListUsers reload picks up the change.
         if (user.UserType is UserType.SalesMan or UserType.ZoneManager)
@@ -827,6 +883,13 @@ public class AdminUserService : IAdminUserService
 
         return Result.Success(new AdminToggleStatusResponse(user.Id, user.IsDisabled, message));
     }
+
+    // Checks BOTH territory kinds regardless of the primary UserType: a dual-role
+    // user may own cities while typed ZoneManager (or a region while typed SalesMan).
+    private async Task<bool> OwnsTerritoryAsync(ApplicationUser user, CancellationToken ct) =>
+        user.UserType is UserType.SalesMan or UserType.ZoneManager
+        && (await _context.Cities.AnyAsync(c => c.ApprovalSalesManId == user.Id, ct)
+            || await _context.Regions.AnyAsync(r => r.ZoneManagerId == user.Id, ct));
 
     #endregion
 
@@ -937,14 +1000,20 @@ public class AdminUserService : IAdminUserService
         if (toSalesMan == null)
             return Result.Failure(AdminUserErrors.UserNotFound);
 
-        if (toSalesMan.UserType != UserType.SalesMan)
+        if (!await IsSalesManAsync(toSalesMan))
             return Result.Failure(AdminUserErrors.ReassignmentTargetNotSalesMan);
 
+        // An inactive owner can't log in, so anything routed to him would sit pending forever.
+        if (toSalesMan.IsAccountDeleted || toSalesMan.IsDisabled)
+            return Result.Failure(AdminUserErrors.ReassignmentTargetInactive);
+
+        // Distinct: a repeated id would otherwise fail the count check as "not found".
+        var requestedCityIds = request.CityIds.Distinct().ToList();
         var cities = await _context.Cities
-            .Where(c => request.CityIds.Contains(c.Id) && c.IsActive && !c.IsDeleted)
+            .Where(c => requestedCityIds.Contains(c.Id) && c.IsActive && !c.IsDeleted)
             .ToListAsync(ct);
 
-        if (cities.Count != request.CityIds.Count)
+        if (cities.Count != requestedCityIds.Count)
             return Result.Failure(AdminUserErrors.SomeCitiesNotFound);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -1004,8 +1073,11 @@ public class AdminUserService : IAdminUserService
         if (toZoneManager == null)
             return Result.Failure(AdminUserErrors.UserNotFound);
 
-        if (toZoneManager.UserType != UserType.ZoneManager)
+        if (!await IsZoneManagerAsync(toZoneManager))
             return Result.Failure(AdminUserErrors.ReassignmentTargetNotZoneManager);
+
+        if (toZoneManager.IsAccountDeleted || toZoneManager.IsDisabled)
+            return Result.Failure(AdminUserErrors.ReassignmentTargetInactive);
 
         var region = await _context.Regions
             .FirstOrDefaultAsync(r => r.Id == request.RegionId && r.IsActive && !r.IsDeleted, ct);
@@ -1065,65 +1137,28 @@ public class AdminUserService : IAdminUserService
         if (user == null)
             return Result.Failure(AdminUserErrors.UserNotFound);
 
-        if (user.UserType != UserType.SalesMan)
+        if (!await IsSalesManAsync(user))
             return Result.Failure(AdminUserErrors.UserTypeMismatch);
+
+        // Dual-role guard: this body only hands off cities. If the account also
+        // manages a region as ZoneManager, deleting here would orphan that region.
+        if (await _context.Regions.AnyAsync(r => r.ZoneManagerId == userId, ct))
+            return Result.Failure(AdminUserErrors.OtherRoleTerritoryMustBeHandedOff);
 
         // Load current cities owned by this SM
         var currentCities = await _context.Cities
             .Where(c => c.ApprovalSalesManId == userId)
             .ToListAsync(ct);
 
-        var currentCityIds = currentCities.Select(c => c.Id).ToHashSet();
-        var reassignmentMap = request.CityReassignments
-            .ToDictionary(r => r.CityId, r => r.NewSalesManId);
-
-        // Every current city must be reassigned
-        if (currentCityIds.Count != reassignmentMap.Count
-            || !currentCityIds.All(id => reassignmentMap.ContainsKey(id)))
-            return Result.Failure(AdminUserErrors.AllCitiesMustBeReassigned);
-
-        // No reassignment target can be this SM himself
-        if (reassignmentMap.Values.Any(id => id == userId))
-            return Result.Failure(AdminUserErrors.CannotReassignToSelf);
-
-        // Validate all target SM IDs
-        var targetIds = reassignmentMap.Values.Distinct().ToList();
-        var targets = await _userRepository.Query()
-            .Where(u => targetIds.Contains(u.Id))
-            .ToListAsync(ct);
-
-        if (targets.Count != targetIds.Count
-            || targets.Any(u => u.UserType != UserType.SalesMan))
-            return Result.Failure(AdminUserErrors.ReassignmentTargetNotSalesMan);
+        var handoff = await ValidateCityHandoffAsync(userId, currentCities, request.CityReassignments, ct);
+        if (handoff.IsFailure)
+            return Result.Failure(handoff.Error);
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
 
         try
         {
-            foreach (var city in currentCities)
-            {
-                city.ApprovalSalesManId = reassignmentMap[city.Id];
-                city.UpdatedBy = adminUserId;
-                city.UpdatedAt = DateTime.UtcNow;
-            }
-
-            // Update AssignedSalesManId only for PENDING users in these cities.
-            // Approved users keep their historical AssignedSalesManId for audit
-            // trail (per S19: reassignment must not overwrite approval history).
-            var usersInCities = await _userRepository.Query()
-                .Where(u => u.UserType != UserType.SalesMan
-                    && u.UserType != UserType.ZoneManager
-                    && u.UserType != UserType.SystemAdmin
-                    && u.RegistrationStatus == RegistrationStatus.PendingSalesman
-                    && u.NationalAddress != null
-                    && currentCityIds.Contains(u.NationalAddress.CityId))
-                .ToListAsync(ct);
-
-            foreach (var u in usersInCities)
-            {
-                var cityId = u.NationalAddress!.CityId;
-                u.AssignedSalesManId = reassignmentMap[cityId];
-            }
+            await HandOffCitiesAsync(currentCities, handoff.Value, adminUserId, ct);
 
             // Soft-delete the SM
             user.IsDisabled = true;
@@ -1149,6 +1184,7 @@ public class AdminUserService : IAdminUserService
             // Bulk-revoke refresh tokens AFTER commit so a deleted SM cannot
             // keep refreshing access tokens via the 365-day refresh lifetime.
             await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+            AccountStatusCache.Invalidate(_cache, userId);
             InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} deleted SalesMan {UserId} (reassigned {Count} cities)",
@@ -1177,32 +1213,22 @@ public class AdminUserService : IAdminUserService
         if (user == null)
             return Result.Failure(AdminUserErrors.UserNotFound);
 
-        if (user.UserType != UserType.ZoneManager)
+        if (!await IsZoneManagerAsync(user))
             return Result.Failure(AdminUserErrors.UserTypeMismatch);
+
+        // Dual-role guard: this body only hands off a region. If the account also
+        // owns cities as SalesMan, deleting here would orphan those cities.
+        if (await _context.Cities.AnyAsync(c => c.ApprovalSalesManId == userId, ct))
+            return Result.Failure(AdminUserErrors.OtherRoleTerritoryMustBeHandedOff);
 
         var managedRegion = await _context.Regions
             .FirstOrDefaultAsync(r => r.ZoneManagerId == userId, ct);
 
         if (managedRegion != null)
         {
-            if (string.IsNullOrEmpty(request.NewZoneManagerId))
-                return Result.Failure(AdminUserErrors.ReplacementZoneManagerRequired);
-
-            if (request.NewZoneManagerId == userId)
-                return Result.Failure(AdminUserErrors.CannotReassignToSelf);
-
-            var replacement = await _userRepository.FindByIdAsync(request.NewZoneManagerId, ct);
-            if (replacement == null)
-                return Result.Failure(AdminUserErrors.UserNotFound);
-
-            if (replacement.UserType != UserType.ZoneManager)
-                return Result.Failure(AdminUserErrors.ReassignmentTargetNotZoneManager);
-
-            // Enforce Region.ZoneManagerId unique index: replacement must not already manage another region
-            var replacementAlreadyAssigned = await _context.Regions
-                .AnyAsync(r => r.ZoneManagerId == request.NewZoneManagerId && r.Id != managedRegion.Id, ct);
-            if (replacementAlreadyAssigned)
-                return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
+            var handoff = await ValidateRegionHandoffAsync(userId, managedRegion, request.NewZoneManagerId, ct);
+            if (handoff.IsFailure)
+                return handoff;
         }
 
         await using var transaction = await _context.BeginTransactionAsync(ct);
@@ -1239,6 +1265,7 @@ public class AdminUserService : IAdminUserService
             // Bulk-revoke refresh tokens AFTER commit so a deleted ZM cannot
             // keep refreshing access tokens via the 365-day refresh lifetime.
             await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+            AccountStatusCache.Invalidate(_cache, userId);
             InvalidateRoleMembershipCache();
 
             _logger.LogInformation("Admin {AdminId} deleted ZoneManager {UserId} (region {RegionId} → {NewZmId})",
@@ -1260,6 +1287,362 @@ public class AdminUserService : IAdminUserService
         }
     }
 
+    // ── Shared territory hand-off (used by delete and by staff-role changes) ──
+
+    /// <summary>
+    /// Validates that <paramref name="reassignments"/> hands every city in
+    /// <paramref name="ownedCities"/> to an active SalesMan other than
+    /// <paramref name="fromUserId"/>. Returns cityId → newSalesManId.
+    /// </summary>
+    private async Task<Result<Dictionary<string, string>>> ValidateCityHandoffAsync(
+        string fromUserId,
+        List<City> ownedCities,
+        List<AdminCityReassignment>? reassignments,
+        CancellationToken ct)
+    {
+        reassignments ??= [];
+
+        // A city listed twice is ambiguous (which SM gets it?) and would otherwise
+        // throw from ToDictionary as a 500.
+        if (reassignments.Select(r => r.CityId).Distinct().Count() != reassignments.Count)
+            return Result.Failure<Dictionary<string, string>>(AdminUserErrors.DuplicateCityReassignment);
+
+        var map = reassignments.ToDictionary(r => r.CityId, r => r.NewSalesManId);
+        var ownedIds = ownedCities.Select(c => c.Id).ToHashSet();
+
+        if (map.Keys.Any(id => !ownedIds.Contains(id)))
+            return Result.Failure<Dictionary<string, string>>(AdminUserErrors.CityNotOwnedBySalesMan);
+
+        // Every current city must be reassigned
+        if (ownedIds.Any(id => !map.ContainsKey(id)))
+            return Result.Failure<Dictionary<string, string>>(AdminUserErrors.AllCitiesMustBeReassigned);
+
+        if (map.Values.Any(id => id == fromUserId))
+            return Result.Failure<Dictionary<string, string>>(AdminUserErrors.CannotReassignToSelf);
+
+        var targetIds = map.Values.Distinct().ToList();
+        if (targetIds.Count > 0)
+        {
+            var targets = await _userRepository.Query()
+                .Where(u => targetIds.Contains(u.Id))
+                .ToListAsync(ct);
+
+            if (targets.Count != targetIds.Count)
+                return Result.Failure<Dictionary<string, string>>(AdminUserErrors.ReassignmentTargetNotSalesMan);
+
+            foreach (var target in targets)
+            {
+                if (!await IsSalesManAsync(target))
+                    return Result.Failure<Dictionary<string, string>>(AdminUserErrors.ReassignmentTargetNotSalesMan);
+            }
+
+            if (targets.Any(u => u.IsAccountDeleted || u.IsDisabled))
+                return Result.Failure<Dictionary<string, string>>(AdminUserErrors.ReassignmentTargetInactive);
+        }
+
+        return Result.Success(map);
+    }
+
+    /// <summary>
+    /// Validates <paramref name="newZoneManagerId"/> as the replacement for
+    /// <paramref name="managedRegion"/>: required, not self, an active ZoneManager,
+    /// and not already managing another region.
+    /// </summary>
+    private async Task<Result> ValidateRegionHandoffAsync(
+        string fromUserId, Region managedRegion, string? newZoneManagerId, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(newZoneManagerId))
+            return Result.Failure(AdminUserErrors.ReplacementZoneManagerRequired);
+
+        if (newZoneManagerId == fromUserId)
+            return Result.Failure(AdminUserErrors.CannotReassignToSelf);
+
+        var replacement = await _userRepository.FindByIdAsync(newZoneManagerId, ct);
+        if (replacement == null)
+            return Result.Failure(AdminUserErrors.UserNotFound);
+
+        if (!await IsZoneManagerAsync(replacement))
+            return Result.Failure(AdminUserErrors.ReassignmentTargetNotZoneManager);
+
+        if (replacement.IsAccountDeleted || replacement.IsDisabled)
+            return Result.Failure(AdminUserErrors.ReassignmentTargetInactive);
+
+        // Enforce Region.ZoneManagerId unique index: replacement must not already manage another region
+        var replacementAlreadyAssigned = await _context.Regions
+            .AnyAsync(r => r.ZoneManagerId == newZoneManagerId && r.Id != managedRegion.Id, ct);
+        if (replacementAlreadyAssigned)
+            return Result.Failure(AdminUserErrors.ZoneManagerAlreadyAssigned);
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Points each city at its new SalesMan and rewires PENDING registrations in
+    /// those cities. Approved users keep their historical AssignedSalesManId (the SM
+    /// who approved them) for audit trail — per S19. Caller owns the transaction.
+    /// </summary>
+    private async Task HandOffCitiesAsync(
+        List<City> cities,
+        IReadOnlyDictionary<string, string> newSalesManByCity,
+        string adminUserId,
+        CancellationToken ct)
+    {
+        if (cities.Count == 0) return;
+
+        foreach (var city in cities)
+        {
+            city.ApprovalSalesManId = newSalesManByCity[city.Id];
+            city.UpdatedBy = adminUserId;
+            city.UpdatedAt = DateTime.UtcNow;
+        }
+
+        var cityIds = cities.Select(c => c.Id).ToList();
+        var pendingUsers = await _userRepository.Query()
+            .Where(u => u.UserType != UserType.SalesMan
+                && u.UserType != UserType.ZoneManager
+                && u.UserType != UserType.SystemAdmin
+                && u.RegistrationStatus == RegistrationStatus.PendingSalesman
+                && u.NationalAddress != null
+                && cityIds.Contains(u.NationalAddress.CityId))
+            .ToListAsync(ct);
+
+        foreach (var u in pendingUsers)
+            u.AssignedSalesManId = newSalesManByCity[u.NationalAddress!.CityId];
+    }
+
+    #endregion
+
+    #region Staff Roles
+
+    public async Task<Result<AdminStaffRolesResponse>> SetStaffRolesAsync(
+        string userId, AdminSetStaffRolesRequest request, string adminUserId, CancellationToken ct = default)
+    {
+        var user = await _userRepository.FindByIdAsync(userId, ct);
+        if (user == null)
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UserNotFound);
+
+        if (user.UserType == UserType.SystemAdmin)
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UserIsSystemAdmin);
+
+        if (user.UserType is not (UserType.SalesMan or UserType.ZoneManager))
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UserNotStaff);
+
+        // Deleted accounts go through restore; disabled ones through toggle-status.
+        // Changing roles on either would silently re-route approvals to someone who can't log in.
+        if (user.IsAccountDeleted || user.IsDisabled)
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.CannotChangeRolesOfInactiveUser);
+
+        // Normalise the requested set (case-insensitive, de-duplicated).
+        var target = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var raw in request.Roles ?? [])
+        {
+            var match = StaffRoleNames.FirstOrDefault(n => n.Equals(raw?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (match is null)
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.InvalidStaffRole);
+            target.Add(match);
+        }
+        if (target.Count == 0)
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.InvalidStaffRole);
+
+        var roleRows = await GetStaffRoleRowsAsync(user);
+        var current = EffectiveStaffRoles(user, roleRows);
+
+        var removeSm = current.Contains(UserRoles.SalesMan) && !target.Contains(UserRoles.SalesMan);
+        var addSm = !current.Contains(UserRoles.SalesMan) && target.Contains(UserRoles.SalesMan);
+        var removeZm = current.Contains(UserRoles.ZoneManager) && !target.Contains(UserRoles.ZoneManager);
+        var addZm = !current.Contains(UserRoles.ZoneManager) && target.Contains(UserRoles.ZoneManager);
+
+        if (!removeSm && !addSm && !removeZm && !addZm)
+            return Result.Success(BuildStaffRolesResponse(user, current, _localizer["AdminUser.StaffRolesUnchanged"].Value));
+
+        // ── Removing SalesMan: every owned city must be handed to another SM ──
+        List<City> ownedCities = [];
+        Dictionary<string, string> cityHandoff = [];
+        if (removeSm)
+        {
+            ownedCities = await _context.Cities
+                .Where(c => c.ApprovalSalesManId == userId)
+                .ToListAsync(ct);
+
+            var handoff = await ValidateCityHandoffAsync(userId, ownedCities, request.CityReassignments, ct);
+            if (handoff.IsFailure)
+                return Result.Failure<AdminStaffRolesResponse>(handoff.Error);
+            cityHandoff = handoff.Value;
+        }
+
+        // ── Removing ZoneManager: the managed region (if any) needs a replacement ──
+        Region? managedRegion = null;
+        if (removeZm)
+        {
+            managedRegion = await _context.Regions
+                .FirstOrDefaultAsync(r => r.ZoneManagerId == userId, ct);
+
+            if (managedRegion != null)
+            {
+                var handoff = await ValidateRegionHandoffAsync(userId, managedRegion, request.NewZoneManagerId, ct);
+                if (handoff.IsFailure)
+                    return Result.Failure<AdminStaffRolesResponse>(handoff.Error);
+            }
+        }
+
+        // ── Adding SalesMan: optional starting cities, each must be unassigned ──
+        List<City> newCities = [];
+        if (addSm && request.CityIds is { Count: > 0 })
+        {
+            var cityIds = request.CityIds.Distinct().ToList();
+            newCities = await _context.Cities
+                .Where(c => cityIds.Contains(c.Id) && c.IsActive && !c.IsDeleted)
+                .ToListAsync(ct);
+
+            if (newCities.Count != cityIds.Count)
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.SomeCitiesNotFound);
+
+            if (newCities.Any(c => !string.IsNullOrEmpty(c.ApprovalSalesManId)))
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.CityAlreadyHasSalesMan);
+        }
+
+        // ── Adding ZoneManager: optional region, must have no ZM ──
+        Region? newRegion = null;
+        if (addZm && !string.IsNullOrEmpty(request.RegionId))
+        {
+            newRegion = await _context.Regions
+                .FirstOrDefaultAsync(r => r.Id == request.RegionId && r.IsActive && !r.IsDeleted, ct);
+
+            if (newRegion == null)
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.RegionNotFound);
+
+            if (!string.IsNullOrEmpty(newRegion.ZoneManagerId))
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.RegionAlreadyHasZoneManager);
+        }
+
+        await using var transaction = await _context.BeginTransactionAsync(ct);
+
+        try
+        {
+            // Territory first, so a failure here rolls back before Identity is touched.
+            if (removeSm)
+                await HandOffCitiesAsync(ownedCities, cityHandoff, adminUserId, ct);
+
+            if (removeZm && managedRegion != null)
+            {
+                managedRegion.ZoneManagerId = request.NewZoneManagerId;
+                managedRegion.UpdatedBy = adminUserId;
+                managedRegion.UpdatedAt = DateTime.UtcNow;
+            }
+
+            if (addSm && newCities.Count > 0)
+            {
+                var toSelf = newCities.ToDictionary(c => c.Id, _ => userId);
+                await HandOffCitiesAsync(newCities, toSelf, adminUserId, ct);
+            }
+
+            if (addZm && newRegion != null)
+            {
+                newRegion.ZoneManagerId = userId;
+                newRegion.UpdatedBy = adminUserId;
+                newRegion.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Identity role rows. Driven by the ACTUAL rows (not the UserType fallback) so a
+            // legacy account with no row gets one added and we never remove a row that isn't there.
+            var rolesToRemove = roleRows.Where(r => !target.Contains(r)).ToList();
+            var rolesToAdd = target.Where(r => !roleRows.Contains(r)).ToList();
+
+            if (rolesToRemove.Count > 0)
+            {
+                var removeResult = await _userRepository.RemoveFromRolesAsync(user, rolesToRemove);
+                if (!removeResult.Succeeded)
+                {
+                    await transaction.RollbackAsync(ct);
+                    _logger.LogError("Admin: Failed to remove roles [{Roles}] from user {UserId}: {Errors}",
+                        string.Join(",", rolesToRemove), userId,
+                        string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+                    return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UpdateUserFailed);
+                }
+            }
+
+            foreach (var role in rolesToAdd)
+            {
+                var addResult = await _userRepository.AddToRoleAsync(user, role);
+                if (!addResult.Succeeded)
+                {
+                    await transaction.RollbackAsync(ct);
+                    _logger.LogError("Admin: Failed to add role {Role} to user {UserId}: {Errors}",
+                        role, userId, string.Join(", ", addResult.Errors.Select(e => e.Description)));
+                    return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UpdateUserFailed);
+                }
+            }
+
+            // Primary type is STICKY: it stays while its role remains in the set, and only
+            // changes when that role is removed. Adding a second role never flips it — the
+            // seeded dual-role accounts are typed SalesMan and must stay that way.
+            var primaryRole = user.UserType == UserType.ZoneManager ? UserRoles.ZoneManager : UserRoles.SalesMan;
+            if (!target.Contains(primaryRole))
+                user.UserType = target.Contains(UserRoles.ZoneManager) ? UserType.ZoneManager : UserType.SalesMan;
+
+            var updateResult = await _userRepository.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                await transaction.RollbackAsync(ct);
+                _logger.LogError("Admin: Failed to update user {UserId} after role change: {Errors}",
+                    userId, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UpdateUserFailed);
+            }
+
+            // The old role set is baked into the live access token; bump the stamp so it
+            // cannot be used as proof of the old role anywhere that checks it.
+            var stampResult = await _userRepository.UpdateSecurityStampAsync(user);
+            if (!stampResult.Succeeded)
+            {
+                await transaction.RollbackAsync(ct);
+                _logger.LogError("Admin: Failed to update security stamp for user {UserId}: {Errors}",
+                    userId, string.Join(", ", stampResult.Errors.Select(e => e.Description)));
+                return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UpdateUserFailed);
+            }
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            // After commit: kill refresh sessions so the user must sign in and receive a
+            // token carrying the new role set. Caches: account-status (JWT hook) and the
+            // SM/ZM membership sets behind the admin users list.
+            await _userRepository.RevokeAllRefreshTokensAsync(userId, ct);
+            AccountStatusCache.Invalidate(_cache, userId);
+            InvalidateRoleMembershipCache();
+
+            _logger.LogInformation(
+                "Admin {AdminId} changed staff roles of user {UserId}: [{From}] → [{To}] (cities handed off: {Cities}, region handed off: {Region}, new cities: {NewCities}, new region: {NewRegion})",
+                adminUserId, userId, string.Join(",", current.Order()), string.Join(",", target.Order()),
+                ownedCities.Count, managedRegion?.Id ?? "(none)", newCities.Count, newRegion?.Id ?? "(none)");
+
+            return Result.Success(BuildStaffRolesResponse(user, target, _localizer["AdminUser.StaffRolesUpdated"].Value));
+        }
+        catch (DbUpdateException ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogWarning(ex, "Admin: DB conflict changing staff roles of user {UserId} (likely concurrent territory change)", userId);
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.ConcurrencyConflict);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(ex, "Admin: Failed to change staff roles of user {UserId}", userId);
+            return Result.Failure<AdminStaffRolesResponse>(AdminUserErrors.UpdateUserFailed);
+        }
+    }
+
+    private static AdminStaffRolesResponse BuildStaffRolesResponse(
+        ApplicationUser user, HashSet<string> roles, string message)
+    {
+        // Stable order: ZoneManager first, then SalesMan — same as the list endpoint.
+        var ordered = new List<string>(2);
+        if (roles.Contains(UserRoles.ZoneManager)) ordered.Add(UserRoles.ZoneManager);
+        if (roles.Contains(UserRoles.SalesMan)) ordered.Add(UserRoles.SalesMan);
+
+        return new AdminStaffRolesResponse(
+            user.Id, user.Name, user.UserType, ordered, ordered.Count == 2, message);
+    }
+
     #endregion
 
     #region Restore Account
@@ -1275,6 +1658,12 @@ public class AdminUserService : IAdminUserService
 
         if (!user.IsAccountDeleted)
             return Result.Failure(AdminUserErrors.AccountNotDeleted);
+
+        // A rejected registration archived to free its number (DEL_<ticks>_ prefix,
+        // see ArchiveRejectedUserByMobileAsync) is not an account — "restoring" it
+        // yields a Rejected user with a mangled mobile that can never log in.
+        if (user.MobileNumber.StartsWith("DEL_", StringComparison.Ordinal))
+            return Result.Failure(AdminUserErrors.CannotRestoreArchivedRegistration);
 
         // Restore as idle: cities/regions were reassigned at delete time and are NOT
         // automatically returned. Admin can reassign via existing endpoints if needed.
@@ -1298,6 +1687,7 @@ public class AdminUserService : IAdminUserService
         // Role membership cache may need refresh — a restored SM/ZM is once again
         // an active member of their role from the admin list's perspective.
         InvalidateRoleMembershipCache();
+        AccountStatusCache.Invalidate(_cache, userId);
 
         _logger.LogInformation(
             "Admin {AdminId} restored user {UserId} (type {UserType}, source {DeletionSource})",

@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using RewardProgram.Application.Abstractions;
 using RewardProgram.Application.Contracts.Admin.Accounts;
 using RewardProgram.Application.Errors;
+using RewardProgram.Application.Helpers;
 using RewardProgram.Application.Interfaces;
 using RewardProgram.Application.Interfaces.Admin;
 using RewardProgram.Domain.Constants;
@@ -23,17 +25,20 @@ public class AdminAccountService : IAdminAccountService
     private readonly IApplicationDbContext _context;
     private readonly IStringLocalizer<ErrorMessages> _localizer;
     private readonly ILogger<AdminAccountService> _logger;
+    private readonly IMemoryCache _cache;
 
     public AdminAccountService(
         IUserRepository userRepository,
         IApplicationDbContext context,
         IStringLocalizer<ErrorMessages> localizer,
-        ILogger<AdminAccountService> logger)
+        ILogger<AdminAccountService> logger,
+        IMemoryCache cache)
     {
         _userRepository = userRepository;
         _context = context;
         _localizer = localizer;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<Result<List<AdminAccountListItem>>> ListAsync(CancellationToken ct = default)
@@ -150,20 +155,27 @@ public class AdminAccountService : IAdminAccountService
         if (!updateResult.Succeeded)
             return Result.Failure<AdminAccountDetailResponse>(AdminAccountErrors.UpdateFailed);
 
-        if (!string.IsNullOrEmpty(request.NewPassword))
+        var passwordChanged = !string.IsNullOrEmpty(request.NewPassword);
+        if (passwordChanged)
         {
-            var passwordResult = await _userRepository.SetPasswordAsync(user, request.NewPassword);
+            var passwordResult = await _userRepository.SetPasswordAsync(user, request.NewPassword!);
             if (!passwordResult.Succeeded)
                 return Result.Failure<AdminAccountDetailResponse>(AdminAccountErrors.UpdateFailed);
         }
 
-        // A disabled admin must lose any live session immediately: kill refresh
-        // tokens and bump the security stamp so existing access tokens are rejected.
-        if (request.IsDisabled)
+        // A disabled admin must lose any live session immediately, and so must
+        // whoever holds the old password's sessions after a reset (the usual reason
+        // to reset is a leaked password). Revoking refresh tokens stops new access
+        // tokens being minted; the cache drop makes the JWT account-status check
+        // reject a disabled admin's current access token on the next request.
+        if (request.IsDisabled || passwordChanged)
         {
             await _userRepository.RevokeAllRefreshTokensAsync(user.Id, ct);
             await _userRepository.UpdateSecurityStampAsync(user);
         }
+
+        if (request.IsDisabled)
+            AccountStatusCache.Invalidate(_cache, user.Id);
 
         _logger.LogInformation("Admin account {UserId} updated", user.Id);
         return Result.Success(await BuildDetailAsync(user, isSystemAdmin: false, ct));
@@ -213,6 +225,7 @@ public class AdminAccountService : IAdminAccountService
             }
 
             await transaction.CommitAsync(ct);
+            AccountStatusCache.Invalidate(_cache, id);
             _logger.LogInformation("Admin account {UserId} deleted", id);
             return Result.Success();
         }

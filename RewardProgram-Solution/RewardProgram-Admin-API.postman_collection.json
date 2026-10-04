@@ -694,6 +694,48 @@
 						},
 						"description": "Restore a previously soft-deleted account. Clears `IsAccountDeleted`, `AccountDeletedAt`, and `IsDisabled`. The user logs in normally with their existing mobile number — which is exactly why we still block creating a new account with that mobile while the original is in the deleted state.\n\nFor SalesMan / ZoneManager: the account comes back **idle** — cities and regions were reassigned at delete time and are not automatically returned. Use `POST cities/reassign` or `POST regions/reassign` if you want to give them ownership again.\n\nFails with 400 `Admin.AccountNotDeleted` if the user is not in a deleted state, 403 `Admin.UserIsSystemAdmin` for the system admin account, or 404 if the user doesn't exist."
 					}
+				},
+				{
+					"name": "Set Staff Roles (SM ⇄ ZM ⇄ dual)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roles\": [\"ZoneManager\"],\n  \"cityReassignments\": [\n    { \"cityId\": \"city-id-1\", \"newSalesManId\": \"other-salesman-id\" }\n  ],\n  \"newZoneManagerId\": null,\n  \"regionId\": \"region-id-or-null\",\n  \"cityIds\": []\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/:userId/staff-roles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								":userId",
+								"staff-roles"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "SalesMan or ZoneManager user ID (active, not deleted)"
+								}
+							]
+						},
+						"description": "Replace the staff role set of an SM/ZM account **in place** — the user keeps their id, mobile and approval history. `roles` is the TARGET set: `[\"SalesMan\"]`, `[\"ZoneManager\"]` or both (dual-role). The service diffs it against the current roles:\n\n- **Removing SalesMan** → `cityReassignments` must cover every city the user owns, exactly once, each to another active SalesMan (empty array when idle).\n- **Removing ZoneManager** → `newZoneManagerId` is required if the user manages a region; must be another active ZoneManager not already managing a region.\n- **Adding SalesMan** → optional `cityIds`, each must currently have no SalesMan.\n- **Adding ZoneManager** → optional `regionId`, must currently have no ZoneManager.\n\nPrimary `userType` is sticky: it stays as-is while its role remains in the set (adding a role never changes it) and switches to the remaining role only when the primary role is removed. Existing dual-role users are typed SalesMan (4). Same set as current → 200 with `AdminUser.StaffRolesUnchanged`, nothing written.\n\nOn success the user's refresh tokens are revoked and the security stamp bumped — **they must sign in again** to get a token with the new roles.\n\nErrors: 400 `Admin.UserNotStaff`, `Admin.InvalidStaffRole`, `Admin.CannotChangeRolesOfInactiveUser`, `Admin.AllCitiesMustBeReassigned`, `Admin.CityNotOwnedBySalesMan`, `Admin.DuplicateCityReassignment`, `Admin.CannotReassignToSelf`, `Admin.ReassignmentTargetNotSalesMan`, `Admin.ReassignmentTargetNotZoneManager`, `Admin.ReassignmentTargetInactive`, `Admin.ReplacementZoneManagerRequired`, `Admin.SomeCitiesNotFound`, `Admin.RegionNotFound`; 409 `Admin.CityAlreadyHasSalesMan`, `Admin.RegionAlreadyHasZoneManager`, `Admin.ZoneManagerAlreadyAssigned`, `Admin.ConcurrencyConflict`; 403 `Admin.UserIsSystemAdmin`; 404 `Admin.UserNotFound`.\n\nResponse: `{ userId, name, userType, roles[], isDualRole, message }`."
+					}
 				}
 			]
 		},

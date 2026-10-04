@@ -230,6 +230,30 @@ public class AdminUserController : ControllerBase
 
     #endregion
 
+    #region Staff Roles
+
+    /// <summary>
+    /// Replace the staff role set (SalesMan / ZoneManager / both) of an SM/ZM account.
+    /// Converts SM⇄ZM, promotes to dual-role or demotes back to a single role without
+    /// deleting the account. Roles being removed must hand off their territory in the body.
+    /// On success the user's refresh tokens are revoked — they must sign in again.
+    /// </summary>
+    [HttpPut("{id}/staff-roles")]
+    [HasPermission(AdminPermissions.UsersManage)]
+    [ProducesResponseType(typeof(AdminStaffRolesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SetStaffRoles(string id, [FromBody] AdminSetStaffRolesRequest request, CancellationToken ct)
+    {
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _adminUserService.SetStaffRolesAsync(id, request, adminId, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+    #endregion
+
     #region Restore Account
 
     [HttpPost("{id}/restore")]

@@ -28,6 +28,11 @@ public record AdminUserListItemResponse(
     string? CustomerCode,
     string? StoreName,
     IReadOnlyList<string> Roles,
+    // True when the account holds BOTH the SalesMan and ZoneManager roles. Such a
+    // user appears under both the SM and ZM tabs and approves as either; the UI
+    // should badge the row so the admin knows a single-role action won't cover
+    // the other role's territory.
+    bool IsDualRole,
     IReadOnlyList<NamedRef> OwnedCities,
     NamedRef? ManagedRegion
 );

@@ -322,6 +322,10 @@ public static class DependencyInjection
                 ValidAudiences = new[] { jwtSettings.Audience, jwtSettings.AdminAudience },
                 ClockSkew = TimeSpan.FromSeconds(30)
             };
+            o.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = AccountStatusTokenValidator.ValidateAsync
+            };
         });
 
         return services;

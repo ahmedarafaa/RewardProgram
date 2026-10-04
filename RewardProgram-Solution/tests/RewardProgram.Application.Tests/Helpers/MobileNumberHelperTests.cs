@@ -62,6 +62,30 @@ public class MobileNumberHelperTests
         MobileNumberHelper.Normalize("051234").Should().Be("051234");
     }
 
+    // ── ToSearchFragment ──
+
+    [Theory]
+    [InlineData("0597261921", "597261921")]   // full local Saudi number
+    [InlineData("0597", "597")]               // partial local number
+    [InlineData("00966597261921", "+966597261921")]
+    [InlineData("+966597", "+966597")]        // already international
+    [InlineData("966597", "966597")]
+    [InlineData(" 0597 ", "597")]
+    public void ToSearchFragment_Numbers_ShouldMatchStoredForm(string input, string expected)
+    {
+        MobileNumberHelper.ToSearchFragment(input).Should().Be(expected);
+        "+966597261921".Should().Contain(expected);
+    }
+
+    [Theory]
+    [InlineData("محمد")]
+    [InlineData("Ahmed 05")]
+    [InlineData("0")]
+    public void ToSearchFragment_NonNumericOrTooShort_ShouldReturnTrimmedInput(string input)
+    {
+        MobileNumberHelper.ToSearchFragment(input).Should().Be(input.Trim());
+    }
+
     // ── Mask ──
 
     [Fact]

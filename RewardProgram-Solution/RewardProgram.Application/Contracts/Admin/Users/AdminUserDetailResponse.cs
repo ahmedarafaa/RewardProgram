@@ -15,6 +15,8 @@ public record AdminUserDetailResponse(
     DateTime? RestoredAt,
     DateTime CreatedAt,
     IReadOnlyList<string> Roles,
+    // True when the account holds BOTH SalesMan and ZoneManager (see list response).
+    bool IsDualRole,
 
     // Home address (ShopOwner / Seller / Technician — null for staff)
     AdminUserAddress? Address,

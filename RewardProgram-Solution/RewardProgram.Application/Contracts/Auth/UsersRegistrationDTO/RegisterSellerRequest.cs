@@ -17,3 +17,4 @@ public record RegisterSellerRequest(
     NationalAddressResponse? NationalAddress,
     string? InvitationCode
 );
+

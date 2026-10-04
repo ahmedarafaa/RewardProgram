@@ -86,4 +86,20 @@ public class AuthorizationTests : IClassFixture<TestWebApplicationFactory>
         response.StatusCode.Should().NotBe(HttpStatusCode.Unauthorized);
         response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
     }
+
+    // ── Account status: a valid token stops working once the account is switched off ──
+
+    [Theory]
+    [InlineData(TestWebApplicationFactory.DisabledSellerId)]
+    [InlineData(TestWebApplicationFactory.DeletedSellerId)]
+    [InlineData("no-such-user")]
+    public async Task ValidToken_ForInactiveOrMissingAccount_ShouldReturn401(string userId)
+    {
+        var client = new TestWebApplicationFactory().CreateClient();
+        JwtTokenHelper.AddAuthHeader(client, userId, UserRoles.Seller);
+
+        var response = await client.GetAsync("/api/wallet/balance");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
 }

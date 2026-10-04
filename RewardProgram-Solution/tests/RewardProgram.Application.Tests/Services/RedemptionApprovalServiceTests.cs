@@ -165,6 +165,45 @@ public class RedemptionApprovalServiceTests : IDisposable
         result.Error.Should().Be(RedemptionErrors.NotAuthorizedToApprove);
     }
 
+    [Fact]
+    public async Task Reject_PendingAdmin_ByPermissionedAdminAccount_ShouldSucceed()
+    {
+        // Admin-role dashboard accounts reach this via AdminRedemptionController,
+        // which already gates on Redemptions.Manage — the service must not demand SystemAdmin.
+        var (_, request) = await SeedPendingRedemption("user-1", RedemptionRequestStatus.PendingAdmin);
+        SetupApprover("admin-2", UserRoles.Admin);
+
+        var result = await _sut.RejectAsync(new RejectRedemptionRequest(request.Id, "Not eligible"), "admin-2");
+
+        result.IsSuccess.Should().BeTrue();
+        (await _context.RedemptionRequests.FindAsync(request.Id))!.Status.Should().Be(RedemptionRequestStatus.Rejected);
+    }
+
+    [Fact]
+    public async Task Approve_PendingAdmin_BySalesMan_ShouldFail()
+    {
+        var (_, request) = await SeedPendingRedemption("user-1", RedemptionRequestStatus.PendingAdmin);
+        SetupApprover("sm-1", UserRoles.SalesMan);
+
+        var result = await _sut.ApproveAsync(new ApproveRedemptionRequest(request.Id), "sm-1");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(RedemptionErrors.NotAuthorizedToApprove);
+    }
+
+    [Fact]
+    public async Task Reject_ByDisabledApprover_ShouldFail()
+    {
+        var (_, request) = await SeedPendingRedemption("user-1", RedemptionRequestStatus.PendingSalesMan);
+        SetupApprover("sm-1", UserRoles.SalesMan);
+        (await _userRepo.FindByIdAsync("sm-1"))!.IsDisabled = true;
+
+        var result = await _sut.RejectAsync(new RejectRedemptionRequest(request.Id, "x"), "sm-1");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(RedemptionErrors.NotAuthorizedToApprove);
+    }
+
     // ── Approve: Status Transitions ──
 
     [Fact]

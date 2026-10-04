@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using RewardProgram.Application.Contracts.Admin.Accounts;
@@ -25,7 +27,8 @@ public class AdminAccountServiceTests : IDisposable
             _userRepo,
             _context,
             new StubLocalizer<ErrorMessages>(),
-            Substitute.For<ILogger<AdminAccountService>>());
+            Substitute.For<ILogger<AdminAccountService>>(),
+            new MemoryCache(new MemoryCacheOptions()));
     }
 
     public void Dispose() => _context.Dispose();
@@ -123,5 +126,30 @@ public class AdminAccountServiceTests : IDisposable
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(AdminAccountErrors.UsernameAlreadyExists);
+    }
+
+    [Fact]
+    public async Task Update_PasswordReset_ShouldRevokeExistingSessions()
+    {
+        var user = MockUser("a1", UserRoles.Admin);
+        _userRepo.UpdateAsync(user).Returns(IdentityResult.Success);
+        _userRepo.SetPasswordAsync(user, "NewPass@123").Returns(IdentityResult.Success);
+
+        var result = await _sut.UpdateAsync("a1", new UpdateAdminAccountRequest("Admin User", false, "NewPass@123"));
+
+        result.IsSuccess.Should().BeTrue();
+        await _userRepo.Received(1).RevokeAllRefreshTokensAsync("a1", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Update_NameOnly_ShouldNotRevokeSessions()
+    {
+        var user = MockUser("a1", UserRoles.Admin);
+        _userRepo.UpdateAsync(user).Returns(IdentityResult.Success);
+
+        var result = await _sut.UpdateAsync("a1", new UpdateAdminAccountRequest("Renamed Admin", false, null));
+
+        result.IsSuccess.Should().BeTrue();
+        await _userRepo.DidNotReceive().RevokeAllRefreshTokensAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }

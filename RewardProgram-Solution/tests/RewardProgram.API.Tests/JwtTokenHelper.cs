@@ -7,8 +7,9 @@ namespace RewardProgram.API.Tests;
 
 public static class JwtTokenHelper
 {
-    // Must match the JWT key in appsettings.json test config
-    private const string TestKey = "REPLACE_WITH_SECURE_KEY_IN_ENVIRONMENT";
+    // Fed to the app as Jwt:Key by TestWebApplicationFactory. Startup refuses the
+    // appsettings placeholder and keys under 32 chars, so tests need their own.
+    public const string TestKey = "api-tests-signing-key-not-a-secret-0123456789";
     private const string Issuer = "RewardApp";
     private const string Audience = "RewardApp users";
 
